@@ -275,20 +275,25 @@ func main() {
 				}
 			}
 
-			lastPostInfo := Message{}
-			if err := db.Get(&lastPostInfo, "SELECT recipient_id, content, created_at FROM messages WHERE submitter_user_id = ? ORDER BY datetime(created_at) DESC LIMIT 1", submittedMsg.UID); err != nil {
+			// make lastpostinfo an array in order to avoid false positive error
+			// when user posts for the first time
+			lastPostInfos := []Message{}
+			if err := db.Select(&lastPostInfos, "SELECT recipient_id, content, created_at FROM messages WHERE submitter_user_id = ? ORDER BY datetime(created_at) DESC LIMIT 1", submittedMsg.UID); err != nil {
 				return err
 			}
 
-			if submittedMsg.RecipientID == lastPostInfo.RecipientID && submittedMsg.Content == lastPostInfo.Content {
-				return &ResponseError{
-					StatusCode: http.StatusBadRequest,
-					Message:    "You have posted a similar message to a similar recipient.",
-				}
-			} else if submittedMsg.CreatedAt.Sub(lastPostInfo.CreatedAt) < 10*time.Minute {
-				return &ResponseError{
-					StatusCode: http.StatusTooManyRequests,
-					Message:    "You are being limited to post every 10 minutes.",
+			if len(lastPostInfos) != 0 {
+				lastPostInfo := lastPostInfos[0]
+				if submittedMsg.RecipientID == lastPostInfo.RecipientID && submittedMsg.Content == lastPostInfo.Content {
+					return &ResponseError{
+						StatusCode: http.StatusBadRequest,
+						Message:    "You have posted a similar message to a similar recipient.",
+					}
+				} else if submittedMsg.CreatedAt.Sub(lastPostInfo.CreatedAt) < 10*time.Minute {
+					return &ResponseError{
+						StatusCode: http.StatusTooManyRequests,
+						Message:    "You are being limited to post every 10 minutes.",
+					}
 				}
 			}
 
