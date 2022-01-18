@@ -2,8 +2,13 @@
   <main class="bg-pink-200 min-h-screen flex">
     <div class="bg-white max-w-4xl w-full mx-auto self-start mt-4 p-12 rounded-lg">
       <div class="text-center pb-12">
-        <p class="text-2xl mb-2 text-gray-500">Messages for </p>
-        <h2 class="text-5xl font-bold">{{ $route.params.recipientId }}</h2>
+        <template v-if="$route.params.recipientId">
+          <p class="text-2xl mb-2 text-gray-500">Messages for </p>
+          <h2 class="text-5xl font-bold">{{ $route.params.recipientId }}</h2>
+        </template>
+        <template v-else>
+          <h2 class="text-5xl font-bold">Recent Wall</h2>
+        </template>
       </div>
 
       <div v-if="messages.length != 0" class="flex flex-wrap items-stretch justify-center">
@@ -52,7 +57,7 @@ export default {
   },
   methods: {
     async loadMessages(): Promise<void> {
-      const recipientId = this.$route.params.recipientId;
+      const recipientId = this.$route.params.recipientId ?? '';
       const resp = await fetch(import.meta.env.VITE_BACKEND_URL + `/messages/${recipientId}`);
       const json = await resp.json();
 

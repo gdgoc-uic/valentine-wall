@@ -227,6 +227,7 @@ func main() {
 	r := chi.NewRouter()
 	r.Use(middleware.Logger)
 	// r.Use(recoverer)
+	r.Use(middleware.CleanPath)
 	r.Use(cors.Handler(cors.Options{
 		AllowedOrigins:   []string{frontendUrl, baseUrl},
 		AllowCredentials: true,
@@ -247,6 +248,16 @@ func main() {
 	}))
 
 	jsonOnly := middleware.AllowContentType("application/json")
+
+	r.Get("/messages", wrapHandler(func(rw http.ResponseWriter, r *http.Request) error {
+		messages := []Message{}
+		if err := db.Select(&messages, "SELECT id, recipient_id, content, has_replied, created_at, updated_at FROM messages"); err != nil {
+			return err
+		}
+		return json.NewEncoder(rw).Encode(map[string]interface{}{
+			"messages": messages,
+		})
+	}))
 
 	r.With(jsonOnly, verifyUser(firebaseApp)).
 		Post("/messages", wrapHandler(func(rw http.ResponseWriter, r *http.Request) error {

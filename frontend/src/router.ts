@@ -15,7 +15,7 @@ const router = createRouter({
     },
     {
       name: 'message-wall-page',
-      path: '/wall/:recipientId',
+      path: '/wall/:recipientId?',
       component: () => import('./pages/Wall.vue'),
       meta: {
         pageTitle: 'Message Wall | UIC Valentines Wall'
