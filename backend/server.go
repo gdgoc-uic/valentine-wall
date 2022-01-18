@@ -54,7 +54,7 @@ type Message struct {
 	UpdatedAt   time.Time `db:"updated_at" json:"updated_at"`
 }
 
-type SubmittedMessage struct {
+type RawMessage struct {
 	Message
 	UID string `db:"submitter_user_id" json:"uid" validate:"required"`
 }
@@ -263,7 +263,7 @@ func main() {
 		Post("/messages", wrapHandler(func(rw http.ResponseWriter, r *http.Request) error {
 			token := r.Context().Value("authToken").(*auth.Token)
 
-			var submittedMsg SubmittedMessage
+			var submittedMsg RawMessage
 			if err := json.NewDecoder(r.Body).Decode(&submittedMsg); err != nil {
 				return err
 			}
