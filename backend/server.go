@@ -59,6 +59,13 @@ type RawMessage struct {
 	UID string `db:"submitter_user_id" json:"uid" validate:"required"`
 }
 
+type MessageReply struct {
+	MessageID string    `db:"message_id" json:"message_id"`
+	Content   string    `db:"content" json:"content"`
+	CreatedAt time.Time `db:"created_at" json:"created_at"`
+	UpdatedAt time.Time `db:"updated_at" json:"updated_at"`
+}
+
 type ResponseError struct {
 	StatusCode int    `json:"-"`
 	WError     error  `json:"-"`
@@ -125,29 +132,37 @@ func wrapHandler(handler func(http.ResponseWriter, *http.Request) error, encoder
 	})
 }
 
+func getAuthToken(r *http.Request, firebaseApp *firebase.App) (*auth.Token, error) {
+	authHeader := r.Header.Get("Authorization")
+	if len(authHeader) == 0 || !strings.HasPrefix(authHeader, "Bearer ") {
+		return nil, &ResponseError{
+			StatusCode: http.StatusForbidden,
+		}
+	}
+
+	authClient, err := firebaseApp.Auth(r.Context())
+	if err != nil {
+		return nil, err
+	}
+
+	idToken := strings.TrimPrefix(authHeader, "Bearer ")
+	token, err := authClient.VerifyIDToken(r.Context(), idToken)
+	if err != nil {
+		return nil, &ResponseError{
+			WError:     err,
+			StatusCode: http.StatusForbidden,
+		}
+	}
+
+	return token, nil
+}
+
 func verifyUser(firebaseApp *firebase.App) func(http.Handler) http.Handler {
 	return func(next http.Handler) http.Handler {
 		return wrapHandler(func(rw http.ResponseWriter, r *http.Request) error {
-			// validate user
-			authHeader := r.Header.Get("Authorization")
-			if len(authHeader) == 0 || !strings.HasPrefix(authHeader, "Bearer ") {
-				return &ResponseError{
-					StatusCode: http.StatusForbidden,
-				}
-			}
-
-			authClient, err := firebaseApp.Auth(r.Context())
+			token, err := getAuthToken(r, firebaseApp)
 			if err != nil {
 				return err
-			}
-
-			idToken := strings.TrimPrefix(authHeader, "Bearer ")
-			token, err := authClient.VerifyIDToken(r.Context(), idToken)
-			if err != nil {
-				return &ResponseError{
-					WError:     err,
-					StatusCode: http.StatusForbidden,
-				}
 			}
 
 			ctx := context.WithValue(r.Context(), "authToken", token)
@@ -371,9 +386,37 @@ func main() {
 		})
 	}
 
-	r.With(getMessage).Get("/messages/{recipientId}/{messageId}", wrapHandler(func(rw http.ResponseWriter, rr *http.Request) error {
-		message := rr.Context().Value("gotMessage").(Message)
-		return jsonEncode(rw, message)
+	getRawMessage := func(next http.Handler) http.Handler {
+		return http.HandlerFunc(func(rw http.ResponseWriter, rr *http.Request) {
+			recipientId := chi.URLParam(rr, "recipientId")
+			messageId := chi.URLParam(rr, "messageId")
+			message := RawMessage{}
+			if err := db.Get(&message, "SELECT * FROM messages WHERE id = ? AND recipient_id = ?", messageId, recipientId); err != nil {
+				log.Println(err)
+				r.NotFoundHandler().ServeHTTP(rw, rr)
+				return
+			}
+
+			newCtx := context.WithValue(rr.Context(), "gotMessage", message)
+			next.ServeHTTP(rw, rr.WithContext(newCtx))
+			return
+		})
+	}
+
+	r.With(getRawMessage).Get("/messages/{recipientId}/{messageId}", wrapHandler(func(rw http.ResponseWriter, rr *http.Request) error {
+		message := rr.Context().Value("gotMessage").(RawMessage)
+
+
+		var reply *MessageReply
+		if token, _ := getAuthToken(rr, firebaseApp); token != nil && (token.UID == message.UID || token.UID == message.RecipientID) {
+			// ignore error
+			_ = db.Get(&reply, "SELECT * FROM message_replies WHERE message_id = ?", message.ID)
+		}
+
+		return jsonEncode(rw, map[string]interface{}{
+			"message": message,
+			"reply":   reply,
+		})
 	}))
 
 	r.With(jsonOnly, verifyUser(firebaseApp), getMessage).

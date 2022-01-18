@@ -40,6 +40,12 @@
             </button>
           </div>
         </div>
+
+        <!-- TODO: Add reply box -->
+        <div v-if="reply" class="w-full bg-white rounded-lg divide-y-2">
+          <p>Reply</p>
+          <p>{{ reply.content }}</p>
+        </div>
       </template>
       <template v-else>
         <div class="w-full bg-white p-14 rounded-lg flex flex-col items-center text-center">
@@ -85,7 +91,8 @@ export default {
   },
   data() {
     return {
-      message: null as never as Record<string, string>,
+      message: null as never as Record<string, any>,
+      reply: null as never as Record<string, any>,
       notFound: false,
       openReplyModal: false,
       hasLinkCopied: false
@@ -96,7 +103,8 @@ export default {
       const resp = await fetch(import.meta.env.VITE_BACKEND_URL + `/messages/${this.$route.params.recipientId}/${this.$route.params.messageId}`);
       if (resp.status == 200) {
         const json = await resp.json();
-        this.message = json;
+        this.message = json['message'];
+        this.reply = json['reply'];
       } else if (resp.status == 404) {
         this.notFound = true;
       }
