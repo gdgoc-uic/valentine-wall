@@ -1,0 +1,45 @@
+services:
+  backend:
+    container_name: backend
+    build:
+      context: .
+      dockerfile: ./backend/Dockerfile
+      args:
+        env: ${ENV}
+        database_prefix: ${DATABASE_PREFIX}
+        firebase_config: ${FIREBASE_CONFIG}
+    ports:
+      - '4000:4000'
+    volumes:
+      - '${PWD}/${DATABASE_PREFIX}_${ENV}.db:/${DATABASE_PREFIX}_${ENV}.db'
+      - '${PWD}/${FIREBASE_CONFIG}:/${FIREBASE_CONFIG}'
+    environment:
+      - ENV
+      - BASE_URL=${BACKEND_URL}
+      - FRONTEND_URL
+      - FIREBASE_CONFIG
+      - DATABASE_PREFIX
+      - SESSION_COOKIE_NAME
+      - TWITTER_CLIENT_ID
+      - TWITTER_CLIENT_SECRET
+      - TWITTER_CALLBACK_URL
+  frontend:
+    container_name: frontend
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+      args:
+        ENV: ${ENV}
+    ports:
+      - '3000:3000'
+    volumes:
+      - ${PWD}/frontend:/app
+    environment:
+      - NODE_ENV=${ENV}
+      - VITE_BACKEND_URL=${BACKEND_URL}
+      - VITE_FIREBASE_API_KEY=${FIREBASE_API_KEY}
+      - VITE_FIREBASE_AUTH_DOMAIN=${FIREBASE_AUTH_DOMAIN}
+      - VITE_FIREBASE_STORAGE_BUCKET=${FIREBASE_STORAGE_BUCKET}
+      - VITE_FIREBASE_MESSAGING_SENDER_ID=${FIREBASE_MESSAGING_SENDER_ID}
+      - VITE_FIREBASE_APP_ID=${FIREBASE_APP_ID}
+      - VITE_FIREBASE_MEASUREMENT_ID=${FIREBASE_MEASUREMENT_ID}
