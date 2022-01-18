@@ -81,6 +81,7 @@ export default {
             this.content = '';
             logEvent(analytics, 'post-message');
             notify(this, { type: 'success', text: json['message'] });
+            this.$emit('update:open', false);
           } else if ('error_message' in json) {
             throw new Error(json['error_message']);
           } else {
