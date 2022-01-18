@@ -34,6 +34,7 @@
               </button>
             </template>
 
+            <!-- TODO: rework share button -->
             <button @click="copyURL" :class="[hasLinkCopied ? 'hover:bg-green-100' : 'hover:bg-gray-100']" class="flex-1 normal-case btn btn-md border-none space-x-2 bg-white text-gray-900">
               <icon-link :class="[hasLinkCopied ? 'text-green-600' : 'text-gray-500']" />
               <span>{{ hasLinkCopied ? 'Copied!' : 'Copy URL' }}</span>
