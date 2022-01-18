@@ -212,7 +212,7 @@ func main() {
 	store.Options.SameSite = http.SameSiteDefaultMode
 	store.Options.HttpOnly = true
 
-	firebaseApp, err := firebase.NewApp(context.Background(), nil, nil)
+	firebaseApp, err := firebase.NewApp(context.Background(), nil)
 	if err != nil {
 		log.Fatalln(err)
 	}
