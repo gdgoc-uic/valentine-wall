@@ -406,6 +406,10 @@ func main() {
 	r.With(getRawMessage).Get("/messages/{recipientId}/{messageId}", wrapHandler(func(rw http.ResponseWriter, rr *http.Request) error {
 		message := rr.Context().Value("gotMessage").(RawMessage)
 
+		// generate image if ?image query
+		if rr.URL.Query().Has("image") {
+			return generateImagePNG(rw, imageTypeTwitter, message.Message)
+		}
 
 		var reply *MessageReply
 		if token, _ := getAuthToken(rr, firebaseApp); token != nil && (token.UID == message.UID || token.UID == message.RecipientID) {
