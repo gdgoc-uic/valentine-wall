@@ -1,4 +1,9 @@
 development:
   dialect: sqlite3
-  datasource: dev.db
+  datasource: ${DATABASE_PREFIX}_development.db
+  dir: migrations/
+
+production:
+  dialect: sqlite3
+  datasource: ${DATABASE_PREFIX}_production.db
   dir: migrations/

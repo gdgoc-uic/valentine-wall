@@ -8,13 +8,12 @@ import (
 
 	"github.com/dghubble/oauth1"
 	twitterOauth1 "github.com/dghubble/oauth1/twitter"
-	"github.com/joho/godotenv"
 )
 
 // uninit'ed variables
+var databasePrefix = "valentine-wall"
 var databasePath string
 var baseUrl string
-var firebaseAdminFilePath string
 var twitterOauth1Config *oauth1.Config
 
 // init'ed variables
@@ -25,10 +24,8 @@ var targetEnv = "development"
 
 func configureDatabasePath(env string) string {
 	switch env {
-	case "development":
-		return "./dev.db"
-	case "production":
-		return "./prod.db"
+	case "development", "production", "staging":
+		return fmt.Sprintf("./%s_%s.db", databasePrefix, env)
 	default:
 		log.Fatalf("invalid environment '%s'\n", env)
 		return ""
@@ -36,9 +33,9 @@ func configureDatabasePath(env string) string {
 }
 
 func init() {
-	if err := godotenv.Load("../.server.env"); err != nil {
-		log.Fatalln(err)
-	}
+	// if err := godotenv.Load("./.server.env"); err != nil {
+	// 	log.Fatalln(err)
+	// }
 
 	twitterOauth1Config = &oauth1.Config{
 		ConsumerKey:    os.Getenv("TWITTER_CLIENT_ID"),
@@ -59,9 +56,7 @@ func init() {
 		sessionName = gotSessionName
 	}
 
-	if gotFirebaseAdminFilePath, exists := os.LookupEnv("FIREBASE_ADMIN_FILE_PATH"); exists {
-		firebaseAdminFilePath = gotFirebaseAdminFilePath
-	} else {
+	if _, exists := os.LookupEnv("FIREBASE_CONFIG"); !exists {
 		log.Fatalln("path to firebase admin file is required")
 	}
 
@@ -73,6 +68,10 @@ func init() {
 		baseUrl = gotBaseUrl
 	} else {
 		baseUrl = fmt.Sprintf("http://localhost:%d", serverPort)
+	}
+
+	if gotDatabasePrefix, exists := os.LookupEnv("DATABASE_PREFIX"); exists {
+		databasePath = gotDatabasePrefix
 	}
 
 	if gotTargetEnv, exists := os.LookupEnv("ENV"); exists {

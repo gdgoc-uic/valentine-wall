@@ -25,7 +25,6 @@ import (
 
 	firebase "firebase.google.com/go"
 	"firebase.google.com/go/auth"
-	"google.golang.org/api/option"
 
 	"github.com/dghubble/oauth1"
 )
@@ -187,14 +186,33 @@ func wrapSqlResult(res sql.Result, customErrorMessage ...string) error {
 	return nil
 }
 
+// func recoverer(next http.Handler) http.Handler {
+// 	return wrapHandler(func(w http.ResponseWriter, r *http.Request) error {
+// 		if rvr := recover(); rvr != nil && rvr != http.ErrAbortHandler {
+// 			logEntry := middleware.GetLogEntry(r)
+// 			if logEntry != nil {
+// 				logEntry.Panic(rvr, debug.Stack())
+// 			} else {
+// 				middleware.PrintPrettyStack(rvr)
+// 			}
+
+// 			return &ResponseError{
+// 				StatusCode: http.StatusInternalServerError,
+// 			}
+// 		}
+
+// 		next.ServeHTTP(w, r)
+// 		return nil
+// 	})
+// }
+
 func main() {
 	// TODO:
 	store := sessions.NewCookieStore([]byte("TEST_123"))
 	store.Options.SameSite = http.SameSiteDefaultMode
 	store.Options.HttpOnly = true
 
-	opt := option.WithCredentialsFile(firebaseAdminFilePath)
-	firebaseApp, err := firebase.NewApp(context.Background(), nil, opt)
+	firebaseApp, err := firebase.NewApp(context.Background(), nil, nil)
 	if err != nil {
 		log.Fatalln(err)
 	}
@@ -208,6 +226,7 @@ func main() {
 
 	r := chi.NewRouter()
 	r.Use(middleware.Logger)
+	// r.Use(recoverer)
 	r.Use(cors.Handler(cors.Options{
 		AllowedOrigins:   []string{frontendUrl, baseUrl},
 		AllowCredentials: true,
