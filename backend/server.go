@@ -33,6 +33,24 @@ import (
 
 var validator = goValidator.New()
 
+type Gift struct {
+	ID    int    `json:"id"`
+	UID   string `json:"uid"`
+	Label string `json:"label"`
+}
+
+var giftList = []Gift{
+	{1, "sunflower", "Sunflower"},
+	{2, "rose", "Rose"},
+	{3, "balloons", "Balloons"},
+	{4, "teddy-bear", "Teddy Bear"},
+	{5, "ring", "Ring"},
+	{6, "money", "Money"},
+	{7, "heart", "Heart"},
+	{8, "chocolate", "Chocolate"},
+	{9, "pizza", "Pizza"},
+}
+
 type EmailSender interface {
 	Message(mg *mailgun.MailgunImpl, toRecipientEmail string) *mailgun.Message
 }
@@ -63,6 +81,7 @@ type Message struct {
 	RecipientID string    `db:"recipient_id" json:"recipient_id" validate:"required,len=12"`
 	Content     string    `db:"content" json:"content" validate:"required,max=240"`
 	HasReplied  bool      `db:"has_replied" json:"has_replied"`
+	GiftID      *int      `db:"gift_id" json:"gift_id" validate:"numeric"`
 	CreatedAt   time.Time `db:"created_at" json:"created_at"`
 	UpdatedAt   time.Time `db:"updated_at" json:"updated_at"`
 }
@@ -84,7 +103,7 @@ type RawMessage struct {
 
 type MessageReply struct {
 	MessageID string    `db:"message_id" json:"message_id"`
-	Content   string    `db:"content" json:"content"`
+	Content   string    `db:"content" json:"content" validate:"required"`
 	CreatedAt time.Time `db:"created_at" json:"created_at"`
 	UpdatedAt time.Time `db:"updated_at" json:"updated_at"`
 }
@@ -425,9 +444,13 @@ func main() {
 	jsonOnly := middleware.AllowContentType("application/json")
 	appVerifyUser := verifyUser(firebaseApp)
 
+	r.Get("/gifts", wrapHandler(func(rw http.ResponseWriter, r *http.Request) error {
+		return json.NewEncoder(rw).Encode(giftList)
+	}))
+
 	r.Get("/messages", wrapHandler(func(rw http.ResponseWriter, r *http.Request) error {
 		messages := []Message{}
-		if err := db.Select(&messages, "SELECT id, recipient_id, content, has_replied, created_at, updated_at FROM messages"); err != nil {
+		if err := db.Select(&messages, "SELECT id, recipient_id, content, has_replied, gift_id, created_at, updated_at FROM messages"); err != nil {
 			return err
 		}
 		return json.NewEncoder(rw).Encode(map[string]interface{}{
@@ -445,11 +468,16 @@ func main() {
 				return err
 			}
 
-			submittedMsg.CreatedAt = time.Now()
 			if token.UID != submittedMsg.UID {
 				return &ResponseError{
 					StatusCode: http.StatusBadRequest,
 				}
+			}
+
+			submittedMsg.CreatedAt = time.Now()
+			// set to null if none
+			if *submittedMsg.GiftID == -1 {
+				submittedMsg.GiftID = nil
 			}
 
 			// make lastpostinfo an array in order to avoid false positive error
@@ -474,6 +502,7 @@ func main() {
 				}
 			}
 
+			// TODO: improve validation
 			if err := validator.Struct(&submittedMsg); err != nil {
 				if validatorErrors, vOk := err.(goValidator.ValidationErrors); vOk {
 					errs := []string{}
@@ -497,7 +526,7 @@ func main() {
 			}
 
 			submittedMsg.ID = id
-			res, err := db.NamedExec("INSERT INTO messages (id, recipient_id, content, submitter_user_id) VALUES (:id, :recipient_id, :content, :submitter_user_id)", &submittedMsg)
+			res, err := db.NamedExec("INSERT INTO messages (id, recipient_id, content, gift_id, submitter_user_id) VALUES (:id, :recipient_id, :content, :gift_id, :submitter_user_id)", &submittedMsg)
 			if err != nil {
 				return err
 			}
@@ -524,7 +553,7 @@ func main() {
 	r.Get("/messages/{recipientId}", wrapHandler(func(rw http.ResponseWriter, rr *http.Request) error {
 		recipientId := chi.URLParam(rr, "recipientId")
 		messages := []Message{}
-		if err := db.Select(&messages, "SELECT id, recipient_id, content, has_replied, created_at, updated_at FROM messages WHERE recipient_id = ?", recipientId); err != nil {
+		if err := db.Select(&messages, "SELECT id, recipient_id, content, has_replied, gift_id, created_at, updated_at FROM messages WHERE recipient_id = ?", recipientId); err != nil {
 			return err
 		}
 
@@ -575,7 +604,7 @@ func main() {
 					log.Println(err)
 				}
 			}
-		} else {
+		} else if tErr != nil {
 			log.Println(tErr.Error())
 		}
 

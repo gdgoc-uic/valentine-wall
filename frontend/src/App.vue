@@ -42,6 +42,7 @@ import SubmitIDModal from "./components/SubmitIDModal.vue";
 export default defineComponent({
   components: { BasicAlert, SubmitIdModal: SubmitIDModal },
   mounted() {
+    this.$store.dispatch('getGiftList');
     auth.onAuthStateChanged((user) => {
       this.$store.dispatch('onReceiveUser', user);
     });

@@ -456,6 +456,13 @@
     protobufjs "^6.10.0"
     yargs "^16.2.0"
 
+"@iconify-json/twemoji@^1.0.2":
+  version "1.0.2"
+  resolved "https://registry.yarnpkg.com/@iconify-json/twemoji/-/twemoji-1.0.2.tgz#7589388acbb95ca0a2dc08483d59e896e16e8c14"
+  integrity sha512-kr1WiObcPMU4bJDLVH8x0tk5WaP95QFVsVIdNUMpbzYgx5vBa8lx9LKhOv+D6y+Co+bCAIP9N97ObaRM1fe4Kg==
+  dependencies:
+    "@iconify/types" "^1.0.10"
+
 "@iconify-json/uil@^1.0.2":
   version "1.0.2"
   resolved "https://registry.yarnpkg.com/@iconify-json/uil/-/uil-1.0.2.tgz#9e6145646067c5b8d02ee16de64acf0ecf64107d"

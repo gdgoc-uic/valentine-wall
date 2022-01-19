@@ -1,13 +1,17 @@
-import { logEvent, setUserId, setUserProperties } from 'firebase/analytics';
+import { setUserId, setUserProperties } from 'firebase/analytics';
 import { GoogleAuthProvider, signInWithPopup, User } from 'firebase/auth';
 import { createStore } from 'vuex';
 import { analytics, auth } from './firebase';
 
 // NOTE: snake_case because JSON response is in snake_case
 interface UserConnection {
-  provider: string,
-  refresh_token: string,
-  expires_at: Date
+  provider: string
+}
+
+interface Gift {
+  id: number
+  uid: string
+  label: string
 }
 
 export interface State {
@@ -19,7 +23,8 @@ export interface State {
     connections: UserConnection[]
   },
   isAuthLoading: boolean,
-  isIDModalOpen: boolean
+  isIDModalOpen: boolean,
+  giftList: Gift[]
 }
 
 export default createStore<State>({
@@ -33,7 +38,8 @@ export default createStore<State>({
         connections: []
       },
       isAuthLoading: true,
-      isIDModalOpen: false
+      isIDModalOpen: false,
+      giftList: []
     }
   },
 
@@ -58,6 +64,9 @@ export default createStore<State>({
     },
     SET_USER_CONNECTIONS(state, payload: UserConnection[]) {
       state.user.connections = payload;
+    },
+    SET_GIFT_LIST(state, payload: Gift[]) {
+      state.giftList = payload;
     }
   },
 
@@ -142,6 +151,14 @@ export default createStore<State>({
       commit('SET_USER_EMAIL', '');
       commit('SET_USER_ACCESS_TOKEN', '');
       commit('SET_USER_ASSOCIATED_ID', '');
+    },
+    async getGiftList({ commit }) {
+      const resp = await fetch(import.meta.env.VITE_BACKEND_URL + '/gifts');
+      const json = await resp.json();
+      if (resp.status < 200 || resp.status > 299) {
+        throw new Error(json['error_message']);
+      }
+      commit('SET_GIFT_LIST', json);
     }
   }
 });
