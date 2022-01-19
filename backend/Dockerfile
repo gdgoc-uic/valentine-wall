@@ -24,5 +24,7 @@ RUN update-ca-certificates
 COPY ${google_application_credentials} .
 COPY --from=builder /app .
 
+RUN usermod -u 1000 www-data
+
 EXPOSE 4000
 ENTRYPOINT ["./backend-server"]
