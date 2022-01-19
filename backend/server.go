@@ -108,6 +108,8 @@ type ResponseError struct {
 func (re *ResponseError) Error() string {
 	if re.WError != nil {
 		return re.WError.Error()
+	} else if len(re.Message) == 0 {
+		return http.StatusText(re.StatusCode)
 	} else {
 		return re.Message
 	}
@@ -397,12 +399,16 @@ func main() {
 	r.Use(middleware.Logger)
 	// r.Use(recoverer)
 	r.Use(middleware.CleanPath)
-	r.Use(cors.Handler(cors.Options{
-		AllowedOrigins:   []string{frontendUrl, baseUrl},
-		AllowCredentials: true,
-		AllowedHeaders:   []string{"Content-Type", "Authorization"},
-		Debug:            targetEnv == "development",
-	}))
+
+	// enable cors only on development or when frontend is not the same as base
+	if targetEnv == "development" || frontendUrl != baseUrl {
+		r.Use(cors.Handler(cors.Options{
+			AllowedOrigins:   []string{frontendUrl, baseUrl},
+			AllowCredentials: true,
+			AllowedHeaders:   []string{"Content-Type", "Authorization"},
+			Debug:            targetEnv == "development",
+		}))
+	}
 
 	r.NotFound(wrapHandler(func(rw http.ResponseWriter, r *http.Request) error {
 		return &ResponseError{
