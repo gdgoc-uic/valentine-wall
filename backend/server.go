@@ -10,6 +10,7 @@ import (
 	"log"
 	"mime/multipart"
 	"net/http"
+	"os"
 	"strings"
 	"time"
 
@@ -18,6 +19,7 @@ import (
 	"github.com/go-chi/cors"
 	goValidator "github.com/go-playground/validator/v10"
 	"github.com/gorilla/sessions"
+	"google.golang.org/api/option"
 
 	"github.com/jmoiron/sqlx"
 	goNanoid "github.com/matoous/go-nanoid/v2"
@@ -227,7 +229,8 @@ func main() {
 	store.Options.SameSite = http.SameSiteDefaultMode
 	store.Options.HttpOnly = true
 
-	firebaseApp, err := firebase.NewApp(context.Background(), nil)
+	opt := option.WithCredentialsFile(os.Getenv("FIREBASE_CONFIG"))
+	firebaseApp, err := firebase.NewApp(context.Background(), nil, opt)
 	if err != nil {
 		log.Fatalln(err)
 	}
