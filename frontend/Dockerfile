@@ -1,4 +1,4 @@
-FROM node:16.13.2 AS base-node
+FROM node:16.13.2-alpine AS base-node
 WORKDIR /app
 
 ARG env
