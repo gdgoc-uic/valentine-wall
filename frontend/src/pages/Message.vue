@@ -43,9 +43,9 @@
         </div>
 
         <!-- TODO: Add reply box -->
-        <div v-if="reply" class="w-full bg-white rounded-lg divide-y-2">
-          <p>Reply</p>
-          <p>{{ reply.content }}</p>
+        <div v-if="reply" class="w-full bg-white rounded-lg p-12">
+          <p class="text-gray-500 mb-2">{{ message.recipient_id }} replied</p>
+          <p class="text-2xl">{{ reply.content }}</p>
         </div>
       </template>
       <template v-else>
@@ -101,7 +101,10 @@ export default {
   },
   methods: {
     async loadMessage() {
-      const resp = await fetch(import.meta.env.VITE_BACKEND_URL + `/messages/${this.$route.params.recipientId}/${this.$route.params.messageId}`);
+      const resp = await fetch(import.meta.env.VITE_BACKEND_URL + `/messages/${this.$route.params.recipientId}/${this.$route.params.messageId}`, {
+        headers: this.$store.getters.headers
+      });
+
       if (resp.status == 200) {
         const json = await resp.json();
         this.message = json['message'];

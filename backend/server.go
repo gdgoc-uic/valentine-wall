@@ -559,10 +559,18 @@ func main() {
 			return generateImagePNG(rw, imageTypeTwitter, message.Message)
 		}
 
-		var reply *MessageReply
-		if token, _, _ := getAuthToken(rr, firebaseApp); token != nil && (token.UID == message.UID || token.UID == message.RecipientID) {
-			// ignore error
-			_ = db.Get(&reply, "SELECT * FROM message_replies WHERE message_id = ?", message.ID)
+		// get reply if possible
+		reply := &MessageReply{}
+		if token, authClient, tErr := getAuthToken(rr, firebaseApp); message.HasReplied && token != nil {
+			gotRecipientUser, _ := getUserBySID(db, authClient, message.RecipientID)
+			if token.UID == message.UID || (gotRecipientUser != nil && token.UID == gotRecipientUser.UID) {
+				// ignore error
+				if err := db.Get(reply, "SELECT * FROM message_replies WHERE message_id = ?", message.ID); err != nil {
+					log.Println(err)
+				}
+			}
+		} else {
+			log.Println(tErr.Error())
 		}
 
 		return jsonEncode(rw, map[string]interface{}{
