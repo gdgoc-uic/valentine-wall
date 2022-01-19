@@ -1,34 +1,28 @@
-FROM golang:1.17.6-alpine
-
-ARG env
-ARG database_prefix
-ARG firebase_config
-
-ENV ENV=${env}
-ENV DATABASE_PREFIX=${database_prefix}
-ENV FIREBASE_CONFIG=${firebase_config}
+FROM golang:1.17.6 AS builder
 
 WORKDIR /app
 
-RUN apk add build-base sqlite
-
-COPY ./go.mod ./
-COPY ./go.sum ./
+COPY ./go.mod .
+COPY ./go.sum .
 COPY ./backend .
 
-# Download deps
+# Download deps and build
 RUN go mod download
-RUN go install github.com/rubenv/sql-migrate/sql-migrate@latest
+RUN go build -o ./backend-server
 
-# Run migrations
-RUN touch ${DATABASE_PREFIX}_${ENV}.db
-RUN sql-migrate up -env ${ENV}
+# FROM scratch
+FROM debian:buster-slim
 
-# Build
+WORKDIR /app
+ARG firebase_config
+
+RUN apt-get update \
+ && apt-get install -y --no-install-recommends ca-certificates
+
+RUN update-ca-certificates
+
 COPY ${firebase_config} .
-RUN ls
-RUN go build -o /backend-server
+COPY --from=builder /app .
 
 EXPOSE 4000
-
-ENTRYPOINT ["/backend-server"]
+ENTRYPOINT ["./backend-server"]
