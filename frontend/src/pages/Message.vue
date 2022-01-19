@@ -1,5 +1,6 @@
 <template>
   <div class="bg-pink-200 min-h-screen flex">
+    <!-- TODO: include support for gifts in a fun way -->
     <div class="max-w-3xl w-full mx-auto pt-4 flex flex-col space-y-4 self-start">
       <div class="text-center">
         <router-link :to="{ name: 'home-page' }" class="text-6xl py-4 text-white font-bold">Valentine Wall</router-link>

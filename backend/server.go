@@ -109,6 +109,7 @@ type MessageReply struct {
 }
 
 // TODO: Add mail template
+// TODO: include emojis to mails
 func (mr MessageReply) Message(mg *mailgun.MailgunImpl, toRecipientEmail string) *mailgun.Message {
 	return mg.NewMessage(
 		fmt.Sprintf("Mr. Kupido <mailgun@%s>", mailgunDomain),
