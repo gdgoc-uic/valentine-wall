@@ -1,9 +1,11 @@
 package main
 
 import (
+	"database/sql"
 	"errors"
 	"fmt"
 	"log"
+	"net/http"
 	"os"
 
 	"github.com/jmoiron/sqlx"
@@ -48,4 +50,21 @@ func initializeDb() *sqlx.DB {
 	}
 
 	return db
+}
+
+func wrapSqlResult(res sql.Result, customErrorMessage ...string) error {
+	rowsAffected, err := res.RowsAffected()
+	if err != nil {
+		return err
+	} else if rowsAffected == 0 {
+		errMessage := "Unable to process your submission. Please try again."
+		if len(customErrorMessage) != 0 {
+			errMessage = customErrorMessage[0]
+		}
+		return &ResponseError{
+			StatusCode: http.StatusUnprocessableEntity,
+			Message:    errMessage,
+		}
+	}
+	return nil
 }

@@ -16,6 +16,8 @@ var databasePath string
 var baseUrl string
 var twitterOauth1Config *oauth1.Config
 var gAppCredPath string
+var mailgunApiKey string
+var mailgunDomain string
 
 // init'ed variables
 var serverPort = 4000

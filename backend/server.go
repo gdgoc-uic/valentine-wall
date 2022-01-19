@@ -3,7 +3,6 @@ package main
 import (
 	"bytes"
 	"context"
-	"database/sql"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -18,6 +17,7 @@ import (
 	"github.com/go-chi/cors"
 	goValidator "github.com/go-playground/validator/v10"
 	"github.com/gorilla/sessions"
+	"github.com/jmoiron/sqlx"
 	"google.golang.org/api/option"
 
 	goNanoid "github.com/matoous/go-nanoid/v2"
@@ -27,9 +27,22 @@ import (
 	"firebase.google.com/go/v4/auth"
 
 	"github.com/dghubble/oauth1"
+
+	"github.com/mailgun/mailgun-go/v4"
 )
 
 var validator = goValidator.New()
+
+type EmailSender interface {
+	Message(mg *mailgun.MailgunImpl, toRecipientEmail string) *mailgun.Message
+}
+
+func sendEmail(mg *mailgun.MailgunImpl, ms EmailSender, toRecipient string) (string, string, error) {
+	msg := ms.Message(mg, toRecipient)
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+	return mg.Send(ctx, msg)
+}
 
 type UserConnection struct {
 	UserID      string `db:"user_id" json:"-"`
@@ -54,6 +67,16 @@ type Message struct {
 	UpdatedAt   time.Time `db:"updated_at" json:"updated_at"`
 }
 
+// TODO: Add mail template
+func (msg Message) Message(mg *mailgun.MailgunImpl, toRecipientEmail string) *mailgun.Message {
+	return mg.NewMessage(
+		fmt.Sprintf("Mr. Kupido <mailgun@%s>", mailgunDomain),
+		"You've got a message!",
+		msg.Content,
+		toRecipientEmail,
+	)
+}
+
 type RawMessage struct {
 	Message
 	UID string `db:"submitter_user_id" json:"uid" validate:"required"`
@@ -64,6 +87,16 @@ type MessageReply struct {
 	Content   string    `db:"content" json:"content"`
 	CreatedAt time.Time `db:"created_at" json:"created_at"`
 	UpdatedAt time.Time `db:"updated_at" json:"updated_at"`
+}
+
+// TODO: Add mail template
+func (mr MessageReply) Message(mg *mailgun.MailgunImpl, toRecipientEmail string) *mailgun.Message {
+	return mg.NewMessage(
+		fmt.Sprintf("Mr. Kupido <mailgun@%s>", mailgunDomain),
+		"Your message has received a reply!",
+		mr.Content,
+		toRecipientEmail,
+	)
 }
 
 type ResponseError struct {
@@ -132,41 +165,42 @@ func wrapHandler(handler func(http.ResponseWriter, *http.Request) error, encoder
 	})
 }
 
-func getAuthToken(r *http.Request, firebaseApp *firebase.App) (*auth.Token, error) {
+func getAuthToken(r *http.Request, firebaseApp *firebase.App) (*auth.Token, *auth.Client, error) {
 	authHeader := r.Header.Get("Authorization")
 	if len(authHeader) == 0 || !strings.HasPrefix(authHeader, "Bearer ") {
-		return nil, &ResponseError{
+		return nil, nil, &ResponseError{
 			StatusCode: http.StatusForbidden,
 		}
 	}
 
 	authClient, err := firebaseApp.Auth(r.Context())
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 
 	idToken := strings.TrimPrefix(authHeader, "Bearer ")
 	token, err := authClient.VerifyIDToken(r.Context(), idToken)
 	if err != nil {
-		return nil, &ResponseError{
+		return nil, nil, &ResponseError{
 			WError:     err,
 			StatusCode: http.StatusForbidden,
 		}
 	}
 
-	return token, nil
+	return token, authClient, nil
 }
 
 func verifyUser(firebaseApp *firebase.App) func(http.Handler) http.Handler {
 	return func(next http.Handler) http.Handler {
 		return wrapHandler(func(rw http.ResponseWriter, r *http.Request) error {
-			token, err := getAuthToken(r, firebaseApp)
+			token, authClient, err := getAuthToken(r, firebaseApp)
 			if err != nil {
 				return err
 			}
 
 			ctx := context.WithValue(r.Context(), "authToken", token)
-			next.ServeHTTP(rw, r.WithContext(ctx))
+			ctxWithClient := context.WithValue(ctx, "authClient", authClient)
+			next.ServeHTTP(rw, r.WithContext(ctxWithClient))
 			return nil
 		})
 	}
@@ -184,21 +218,112 @@ func wrapRequestError(resp *http.Response) error {
 	return fmt.Errorf("%s: got status %d, headers: %s, body: %s", resp.Request.URL, resp.StatusCode, resp.Request.Header, string(bodyBytes))
 }
 
-func wrapSqlResult(res sql.Result, customErrorMessage ...string) error {
-	rowsAffected, err := res.RowsAffected()
-	if err != nil {
-		return err
-	} else if rowsAffected == 0 {
-		errMessage := "Unable to process your submission. Please try again."
-		if len(customErrorMessage) != 0 {
-			errMessage = customErrorMessage[0]
-		}
-		return &ResponseError{
-			StatusCode: http.StatusUnprocessableEntity,
-			Message:    errMessage,
+func isConnectedTo(conns []UserConnection, provider string) (int, bool) {
+	for i, c := range conns {
+		if c.Provider == provider {
+			return i, true
 		}
 	}
+	return -1, false
+}
+
+func replyViaTwitter(twitterUserConnection UserConnection, message RawMessage, reply MessageReply) error {
+	if twitterUserConnection.Provider != "twitter" {
+		return fmt.Errorf("invalid provider: expected twitter, got %s", twitterUserConnection.Provider)
+	}
+
+	// commence posting process
+	twClient := twitterOauth1Config.Client(oauth1.NoContext, twitterUserConnection.ToOauth1Token())
+
+	// upload image first
+	uploadImgBody := &bytes.Buffer{}
+	uploadImgData := multipart.NewWriter(uploadImgBody)
+	mw, _ := uploadImgData.CreateFormFile("media", "msg.png")
+
+	imageData := &bytes.Buffer{}
+	if err := generateImagePNG(imageData, imageTypeTwitter, message.Message); err != nil {
+		return err
+	}
+
+	_, err := io.Copy(mw, imageData)
+	if err != nil {
+		return err
+	}
+
+	uploadImgData.Close()
+	uploadImageResponse, err := twClient.Post("https://upload.twitter.com/1.1/media/upload.json?media_category=tweet_image", uploadImgData.FormDataContentType(), bytes.NewReader(uploadImgBody.Bytes()))
+	if err != nil {
+		return err
+	}
+
+	defer uploadImageResponse.Body.Close()
+	if uploadImageResponse.StatusCode != http.StatusOK {
+		return wrapRequestError(uploadImageResponse)
+	}
+
+	var uploadImageRespPayload struct {
+		MediaID          int    `json:"media_id"`
+		MediaIDString    string `json:"media_id_string"`
+		MediaKey         string `json:"media_key"`
+		Size             int    `json:"size"`
+		ExpiresAfterSecs int    `json:"expires_after_secs"`
+		Image            struct {
+			ImageType string `json:"image_type"`
+			Width     int    `json:"w"`
+			Height    int    `json:"h"`
+		} `json:"image"`
+	}
+
+	if err := json.NewDecoder(uploadImageResponse.Body).Decode(&uploadImageRespPayload); err != nil {
+		return err
+	}
+
+	// tweet
+	bodyBuf := &bytes.Buffer{}
+	if err := json.NewEncoder(bodyBuf).Encode(map[string]interface{}{
+		"text": reply.Content,
+		"media": map[string]interface{}{
+			"media_ids": []string{uploadImageRespPayload.MediaIDString},
+		},
+	}); err != nil {
+		return &ResponseError{
+			StatusCode: http.StatusUnprocessableEntity,
+			WError:     err,
+		}
+	}
+
+	createTweetResp, err := twClient.Post("https://api.twitter.com/2/tweets", "application/json", bytes.NewReader(bodyBuf.Bytes()))
+	if err != nil {
+		return err
+	}
+	defer createTweetResp.Body.Close()
+	if createTweetResp.StatusCode < 200 || createTweetResp.StatusCode > 299 {
+		return wrapRequestError(createTweetResp)
+	}
+
 	return nil
+}
+
+type ReplyFunc func(UserConnection, RawMessage, MessageReply) error
+
+func replyViaEmail(mg *mailgun.MailgunImpl, db *sqlx.DB, authClient *auth.Client) ReplyFunc {
+	return func(emailUserConnection UserConnection, message RawMessage, reply MessageReply) error {
+		if emailUserConnection.Provider != "email" {
+			return fmt.Errorf("invalid provider: expected email, got %s", emailUserConnection.Provider)
+		}
+
+		// get sender email
+		senderEmail, err := getUserEmailByUID(authClient, message.UID)
+		if err != nil {
+			return err
+		}
+
+		if _, _, err := sendEmail(mg, reply, senderEmail); err != nil {
+			return err
+		}
+
+		return nil
+	}
 }
 
 // func recoverer(next http.Handler) http.Handler {
@@ -221,12 +346,46 @@ func wrapSqlResult(res sql.Result, customErrorMessage ...string) error {
 // 	})
 // }
 
+func getUserConnections(db *sqlx.DB, uid string) []UserConnection {
+	connections := []UserConnection{}
+	if err := db.Select(&connections, "SELECT * FROM user_connections WHERE user_id = ?", uid); err != nil {
+		log.Println(err)
+		// return err
+	}
+	return connections
+}
+
+func getUserEmailByUID(authClient *auth.Client, uid string) (string, error) {
+	gotUser, err := authClient.GetUser(context.Background(), uid)
+	if err != nil {
+		return "", err
+	}
+
+	return gotUser.Email, nil
+}
+
+func getUserEmailBySID(db *sqlx.DB, authClient *auth.Client, sid string) (string, error) {
+	var associatedData struct {
+		UID string `db:"user_id"`
+	}
+
+	if err := db.Get(&associatedData, "SELECT user_id FROM associated_ids WHERE associated_id = ?", sid); err != nil {
+		return "", err
+	}
+
+	return getUserEmailByUID(authClient, associatedData.UID)
+}
+
 func main() {
 	// TODO:
 	store := sessions.NewCookieStore([]byte("TEST_123"))
 	store.Options.SameSite = http.SameSiteDefaultMode
 	store.Options.HttpOnly = true
 
+	// mailgun
+	mg := mailgun.NewMailgun(mailgunDomain, mailgunApiKey)
+
+	// firebase
 	opt := option.WithCredentialsFile(gAppCredPath)
 	firebaseApp, err := firebase.NewApp(context.Background(), nil, opt)
 	if err != nil {
@@ -260,6 +419,7 @@ func main() {
 	}))
 
 	jsonOnly := middleware.AllowContentType("application/json")
+	appVerifyUser := verifyUser(firebaseApp)
 
 	r.Get("/messages", wrapHandler(func(rw http.ResponseWriter, r *http.Request) error {
 		messages := []Message{}
@@ -271,9 +431,10 @@ func main() {
 		})
 	}))
 
-	r.With(jsonOnly, verifyUser(firebaseApp)).
+	r.With(jsonOnly, appVerifyUser).
 		Post("/messages", wrapHandler(func(rw http.ResponseWriter, r *http.Request) error {
 			token := r.Context().Value("authToken").(*auth.Token)
+			authClient := r.Context().Value("authClient").(*auth.Client)
 
 			var submittedMsg RawMessage
 			if err := json.NewDecoder(r.Body).Decode(&submittedMsg); err != nil {
@@ -341,6 +502,15 @@ func main() {
 				return err
 			}
 
+			// send email to recipient if available
+			recipientEmail, err := getUserEmailBySID(db, authClient, submittedMsg.RecipientID)
+			if err != nil {
+				log.Println(err)
+			} else if _, _, err := sendEmail(mg, submittedMsg.Message, recipientEmail); err != nil {
+				// ignore error, just pass through
+				log.Println(err)
+			}
+
 			return jsonEncode(rw, map[string]interface{}{
 				"message": "Message created successfully",
 				"path":    fmt.Sprintf("/messages/%s/%s", submittedMsg.RecipientID, submittedMsg.ID),
@@ -365,23 +535,6 @@ func main() {
 			"messages": messages,
 		})
 	}))
-
-	getMessage := func(next http.Handler) http.Handler {
-		return http.HandlerFunc(func(rw http.ResponseWriter, rr *http.Request) {
-			recipientId := chi.URLParam(rr, "recipientId")
-			messageId := chi.URLParam(rr, "messageId")
-			message := Message{}
-			if err := db.Get(&message, "SELECT id, recipient_id, content, has_replied, created_at, updated_at FROM messages WHERE id = ? AND recipient_id = ?", messageId, recipientId); err != nil {
-				log.Println(err)
-				r.NotFoundHandler().ServeHTTP(rw, rr)
-				return
-			}
-
-			newCtx := context.WithValue(rr.Context(), "gotMessage", message)
-			next.ServeHTTP(rw, rr.WithContext(newCtx))
-			return
-		})
-	}
 
 	getRawMessage := func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(rw http.ResponseWriter, rr *http.Request) {
@@ -409,7 +562,7 @@ func main() {
 		}
 
 		var reply *MessageReply
-		if token, _ := getAuthToken(rr, firebaseApp); token != nil && (token.UID == message.UID || token.UID == message.RecipientID) {
+		if token, _, _ := getAuthToken(rr, firebaseApp); token != nil && (token.UID == message.UID || token.UID == message.RecipientID) {
 			// ignore error
 			_ = db.Get(&reply, "SELECT * FROM message_replies WHERE message_id = ?", message.ID)
 		}
@@ -420,107 +573,57 @@ func main() {
 		})
 	}))
 
-	r.With(jsonOnly, verifyUser(firebaseApp), getMessage).
+	r.With(jsonOnly, appVerifyUser, getRawMessage).
 		Post("/messages/{recipientId}/{messageId}/reply", wrapHandler(func(rw http.ResponseWriter, rr *http.Request) error {
 			// retrieve message
-			message := rr.Context().Value("gotMessage").(Message)
+			message := rr.Context().Value("gotMessage").(RawMessage)
 
 			// retrieve token
 			token := rr.Context().Value("authToken").(*auth.Token)
+			authClient := rr.Context().Value("authClient").(*auth.Client)
 
-			// retrieve twitter connection
-			var twitterUserConnection UserConnection
-			if err := db.Get(&twitterUserConnection, "SELECT * FROM user_connections WHERE user_id = ? AND provider = ?", token.UID, "twitter"); err != nil {
-				return &ResponseError{
-					StatusCode: http.StatusBadRequest,
-					WError:     err,
-					Message:    "no twitter connection found for user",
-				}
+			// retrieve connections
+			connections := getUserConnections(db, token.UID)
+			noConnectionErr := &ResponseError{
+				StatusCode: http.StatusBadRequest,
+				Message:    "must be connected either to e-mail or twitter",
+			}
+
+			if len(connections) == 0 {
+				return noConnectionErr
 			}
 
 			// decode reply payload
-			var payload struct {
-				Content string `json:"content"`
-			}
-			if err := json.NewDecoder(rr.Body).Decode(&payload); err != nil {
+			var reply MessageReply
+			if err := json.NewDecoder(rr.Body).Decode(&reply); err != nil {
 				return err
 			}
 
-			// commence posting process
-			twClient := twitterOauth1Config.Client(oauth1.NoContext, twitterUserConnection.ToOauth1Token())
-
-			// upload image first
-			uploadImgBody := &bytes.Buffer{}
-			uploadImgData := multipart.NewWriter(uploadImgBody)
-			mw, _ := uploadImgData.CreateFormFile("media", "msg.png")
-
-			imageData := &bytes.Buffer{}
-			if err := generateImagePNG(imageData, imageTypeTwitter, message); err != nil {
-				return err
-			}
-
-			_, err := io.Copy(mw, imageData)
-			if err != nil {
-				return err
-			}
-
-			uploadImgData.Close()
-			uploadImageResponse, err := twClient.Post("https://upload.twitter.com/1.1/media/upload.json?media_category=tweet_image", uploadImgData.FormDataContentType(), bytes.NewReader(uploadImgBody.Bytes()))
-			if err != nil {
-				return err
-			}
-
-			defer uploadImageResponse.Body.Close()
-			if uploadImageResponse.StatusCode != http.StatusOK {
-				return wrapRequestError(uploadImageResponse)
-			}
-
-			var uploadImageRespPayload struct {
-				MediaID          int    `json:"media_id"`
-				MediaIDString    string `json:"media_id_string"`
-				MediaKey         string `json:"media_key"`
-				Size             int    `json:"size"`
-				ExpiresAfterSecs int    `json:"expires_after_secs"`
-				Image            struct {
-					ImageType string `json:"image_type"`
-					Width     int    `json:"w"`
-					Height    int    `json:"h"`
-				} `json:"image"`
-			}
-
-			if err := json.NewDecoder(uploadImageResponse.Body).Decode(&uploadImageRespPayload); err != nil {
-				return err
-			}
-
-			// tweet
-			bodyBuf := &bytes.Buffer{}
-			if err := json.NewEncoder(bodyBuf).Encode(map[string]interface{}{
-				"text": payload.Content,
-				"media": map[string]interface{}{
-					"media_ids": []string{uploadImageRespPayload.MediaIDString},
-				},
-			}); err != nil {
-				return &ResponseError{
-					StatusCode: http.StatusUnprocessableEntity,
-					WError:     err,
+			reply.MessageID = message.ID
+			if twitterIdx, hasTwitter := isConnectedTo(connections, "twitter"); hasTwitter {
+				if err := replyViaTwitter(connections[twitterIdx], message, reply); err != nil {
+					return err
 				}
+			} else if emailIdx, hasEmail := isConnectedTo(connections, "email"); hasEmail {
+				if err := replyViaEmail(mg, db, authClient)(connections[emailIdx], message, reply); err != nil {
+					return err
+				}
+			} else {
+				// just to be sure
+				return noConnectionErr
 			}
 
-			createTweetResp, err := twClient.Post("https://api.twitter.com/2/tweets", "application/json", bytes.NewReader(bodyBuf.Bytes()))
+			updateRes, err := db.NamedExec("INSERT INTO message_replies (message_id, content) VALUES (:message_id, :content)", &reply)
 			if err != nil {
 				return err
-			}
-			defer createTweetResp.Body.Close()
-			if createTweetResp.StatusCode < 200 || createTweetResp.StatusCode > 299 {
-				return wrapRequestError(createTweetResp)
+			} else if err := wrapSqlResult(updateRes); err != nil {
+				return err
 			}
 
 			res, err := db.Exec("UPDATE messages SET has_replied = true WHERE id = ?", message.ID)
 			if err != nil {
 				return err
-			}
-
-			if err := wrapSqlResult(res); err != nil {
+			} else if err := wrapSqlResult(res); err != nil {
 				return err
 			}
 
@@ -529,7 +632,7 @@ func main() {
 			})
 		}))
 
-	r.With(verifyUser(firebaseApp)).
+	r.With(appVerifyUser).
 		Post("/user/logout_callback", wrapHandler(func(rw http.ResponseWriter, r *http.Request) error {
 			session, err := store.Get(r, sessionName)
 			if err != nil {
@@ -549,7 +652,7 @@ func main() {
 			})
 		}))
 
-	r.With(verifyUser(firebaseApp)).
+	r.With(appVerifyUser).
 		Post("/user/login_callback", wrapHandler(func(rw http.ResponseWriter, r *http.Request) error {
 			token := r.Context().Value("authToken").(*auth.Token)
 			var associatedData struct {
@@ -561,12 +664,7 @@ func main() {
 				// return err
 			}
 
-			userConnections := []UserConnection{}
-			if err := db.Select(&userConnections, "SELECT * FROM user_connections WHERE user_id = ?", token.UID); err != nil {
-				log.Println(err)
-				// return err
-			}
-
+			userConnections := getUserConnections(db, token.UID)
 			session, _ := store.Get(r, sessionName)
 			session.Values["uid"] = token.UID
 			if err := session.Save(r, rw); err != nil {
@@ -582,7 +680,7 @@ func main() {
 			})
 		}))
 
-	r.With(jsonOnly, verifyUser(firebaseApp)).
+	r.With(jsonOnly, appVerifyUser).
 		Post("/user/connect_id", wrapHandler(func(rw http.ResponseWriter, r *http.Request) error {
 			token := r.Context().Value("authToken").(*auth.Token)
 			var submittedData struct {
@@ -624,6 +722,37 @@ func main() {
 
 		http.Redirect(rw, r, authUrl.String(), http.StatusFound)
 		return nil
+	}))
+
+	r.With(appVerifyUser).Get("/user/connect_email", wrapHandler(func(rw http.ResponseWriter, r *http.Request) error {
+		token := r.Context().Value("authToken").(*auth.Token)
+		authClient := r.Context().Value("authClient").(*auth.Client)
+		userEmail, err := getUserEmailByUID(authClient, token.UID)
+		if err != nil {
+			return err
+		}
+
+		newEmailConnection := UserConnection{
+			UserID:      token.UID,
+			Provider:    "email",
+			Token:       userEmail,
+			TokenSecret: "",
+		}
+
+		res, err := db.NamedExec("INSERT INTO user_connections (user_id, provider, token, token_secret) VALUES (:user_id, :provider, :token, :token_secret)", &newEmailConnection)
+		if err != nil {
+			return err
+		}
+
+		if err := wrapSqlResult(res, "Unable to connect e-mail."); err != nil {
+			return err
+		}
+
+		connections := getUserConnections(db, token.UID)
+		return jsonEncode(rw, map[string]interface{}{
+			"message":          "e-mail connected successfully",
+			"user_connections": connections,
+		})
 	}))
 
 	r.Get("/user/twitter_callback", wrapHandler(func(rw http.ResponseWriter, r *http.Request) error {

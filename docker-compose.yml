@@ -20,6 +20,8 @@ services:
       - TWITTER_CLIENT_ID
       - TWITTER_CLIENT_SECRET
       - TWITTER_CALLBACK_URL
+      - MAILGUN_DOMAIN
+      - MAILGUN_APIKEY
   frontend:
     container_name: frontend
     build:

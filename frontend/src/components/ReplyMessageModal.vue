@@ -11,7 +11,7 @@
       <h3 class="text-2xl font-bold">Already replied!</h3>
     </div>
 
-    <div v-else-if="$store.getters.isLoggedIn && !$store.getters.hasTwitter" class="flex flex-col justify-center text-center items-center py-8">
+    <div v-else-if="$store.getters.isLoggedIn && !$store.getters.hasConnections" class="flex flex-col justify-center text-center items-center py-8">
       <icon-annoyed class="text-gray-500 text-9xl mb-4" />
       <h3 class="text-2xl font-bold">One more step!</h3>
       <p class="text-gray-500 text-md">Connect your Twitter account in order to reply to this message.</p>
@@ -20,6 +20,8 @@
         <icon-twitter />
         <span>Login to Twitter</span>
       </button>
+
+      <button class="btn btn-ghost btn-sm mt-2 w-full font-normal text-gray-500" @click="skipLogin">Skip</button>
     </div>
 
     <div v-else>
@@ -146,6 +148,24 @@ export default {
       }
       window.addEventListener('message', handleFn);
     },
+    async skipLogin() {
+      try {
+        const resp = await fetch(import.meta.env.VITE_BACKEND_URL + '/user/connect_email', {
+          headers: this.$store.getters.headers
+        });
+
+        const json = await resp.json();
+        if (resp.status < 200 || resp.status > 299) {
+          throw new Error(json['error_message']);
+        }
+
+        logEvent(analytics, 'connect_email', { success: true });
+        this.$store.commit('SET_USER_CONNECTIONS', json['user_connections']);
+      } catch (e) {
+        logEvent(analytics, 'connect_email', { success: false });
+        catchAndNotifyError(this, e); 
+      }
+    },
     async submitReply() {
       try {
         this.isSending = true;
@@ -176,6 +196,7 @@ export default {
         this.$emit('update:hasReplied', true);
         logEvent(analytics, 'reply-message', { id: this.message.id });
       } catch (e) {
+        this.isSending = false;
         catchAndNotifyError(this, e);
       }
     }

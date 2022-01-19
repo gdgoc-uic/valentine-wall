@@ -65,8 +65,8 @@ export default createStore<State>({
     isLoggedIn(state) {
       return state.user.accessToken.length != 0 && state.user.id.length != 0;
     },
-    hasTwitter(state) {
-      return state.user.connections.length != 0 && state.user.connections.findIndex(c => c.provider == 'twitter') != -1;
+    hasConnections(state) {
+      return state.user.connections.length != 0;
     },
     headers(state, getters) {
       return getters.isLoggedIn ? {
