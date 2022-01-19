@@ -15,6 +15,7 @@ var databasePrefix = "valentine-wall"
 var databasePath string
 var baseUrl string
 var twitterOauth1Config *oauth1.Config
+var gAppCredPath string
 
 // init'ed variables
 var serverPort = 4000
@@ -46,8 +47,12 @@ func init() {
 		sessionName = gotSessionName
 	}
 
-	if _, exists := os.LookupEnv("FIREBASE_CONFIG"); !exists {
-		log.Fatalln("path to firebase admin file is required")
+	if gotGAppCredPath, exists := os.LookupEnv("GOOGLE_APPLICATION_CREDENTIALS"); exists {
+		gAppCredPath = gotGAppCredPath
+	}
+
+	if len(gAppCredPath) == 0 {
+		log.Fatalln("path to firebase/google service account file is required")
 	}
 
 	if gotFrontendUrl, exists := os.LookupEnv("FRONTEND_URL"); exists {

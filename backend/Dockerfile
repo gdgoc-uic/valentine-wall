@@ -14,14 +14,14 @@ RUN go build -o ./backend-server
 FROM debian:buster-slim
 
 WORKDIR /app
-ARG firebase_config
+ARG google_application_credentials
 
 RUN apt-get update \
  && apt-get install -y --no-install-recommends ca-certificates
 
 RUN update-ca-certificates
 
-COPY ${firebase_config} .
+COPY ${google_application_credentials} .
 COPY --from=builder /app .
 
 EXPOSE 4000

@@ -5,7 +5,7 @@ services:
       context: .
       dockerfile: ./backend/Dockerfile
       args:
-        firebase_config: ./${FIREBASE_CONFIG}
+        google_application_credentials: ./${GOOGLE_APPLICATION_CREDENTIALS_FILE}
     ports:
       - '4000:4000'
     volumes:
@@ -14,7 +14,7 @@ services:
       - ENV
       - BASE_URL=${BACKEND_URL}
       - FRONTEND_URL
-      - FIREBASE_CONFIG=./${FIREBASE_CONFIG}
+      - GOOGLE_APPLICATION_CREDENTIALS=./${GOOGLE_APPLICATION_CREDENTIALS_FILE}
       - DATABASE_PREFIX
       - SESSION_COOKIE_NAME
       - TWITTER_CLIENT_ID
