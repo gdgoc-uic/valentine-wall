@@ -22,16 +22,6 @@ var sessionName = "vw-session"
 var frontendUrl = "http://localhost:3000"
 var targetEnv = "development"
 
-func configureDatabasePath(env string) string {
-	switch env {
-	case "development", "production", "staging":
-		return fmt.Sprintf("./%s_%s.db", databasePrefix, env)
-	default:
-		log.Fatalf("invalid environment '%s'\n", env)
-		return ""
-	}
-}
-
 func init() {
 	// if err := godotenv.Load("./.server.env"); err != nil {
 	// 	log.Fatalln(err)

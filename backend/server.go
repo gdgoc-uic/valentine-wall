@@ -21,7 +21,6 @@ import (
 	"github.com/gorilla/sessions"
 	"google.golang.org/api/option"
 
-	"github.com/jmoiron/sqlx"
 	goNanoid "github.com/matoous/go-nanoid/v2"
 	_ "github.com/mattn/go-sqlite3"
 
@@ -235,11 +234,7 @@ func main() {
 		log.Fatalln(err)
 	}
 
-	db, err := sqlx.Open("sqlite3", databasePath)
-	if err != nil {
-		log.Fatalln(err)
-	}
-
+	db := initializeDb()
 	defer db.Close()
 
 	r := chi.NewRouter()
