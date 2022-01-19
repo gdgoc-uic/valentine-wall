@@ -57,6 +57,14 @@ func init() {
 		log.Fatalln("path to firebase/google service account file is required")
 	}
 
+	if gotMailgunDomain, exists := os.LookupEnv("MAILGUN_DOMAIN"); exists {
+		mailgunDomain = gotMailgunDomain
+	}
+
+	if gotMailgunApiKey, exists := os.LookupEnv("MAILGUN_API_KEY"); exists {
+		mailgunApiKey = gotMailgunApiKey
+	}
+
 	if gotFrontendUrl, exists := os.LookupEnv("FRONTEND_URL"); exists {
 		frontendUrl = gotFrontendUrl
 	}
