@@ -364,16 +364,14 @@ func getUserEmailByUID(authClient *auth.Client, uid string) (string, error) {
 	return gotUser.Email, nil
 }
 
-func getUserEmailBySID(db *sqlx.DB, authClient *auth.Client, sid string) (string, error) {
+func getUserBySID(db *sqlx.DB, authClient *auth.Client, sid string) (*auth.UserRecord, error) {
 	var associatedData struct {
 		UID string `db:"user_id"`
 	}
-
 	if err := db.Get(&associatedData, "SELECT user_id FROM associated_ids WHERE associated_id = ?", sid); err != nil {
-		return "", err
+		return nil, err
 	}
-
-	return getUserEmailByUID(authClient, associatedData.UID)
+	return authClient.GetUser(context.Background(), associatedData.UID)
 }
 
 func main() {
@@ -503,11 +501,11 @@ func main() {
 			}
 
 			// send email to recipient if available
-			recipientEmail, err := getUserEmailBySID(db, authClient, submittedMsg.RecipientID)
+			recipientUser, err := getUserBySID(db, authClient, submittedMsg.RecipientID)
+			// ignore the errors, just pass through
 			if err != nil {
 				log.Println(err)
-			} else if _, _, err := sendEmail(mg, submittedMsg.Message, recipientEmail); err != nil {
-				// ignore error, just pass through
+			} else if _, _, err := sendEmail(mg, submittedMsg.Message, recipientUser.Email); err != nil {
 				log.Println(err)
 			}
 
