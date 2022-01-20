@@ -1,5 +1,5 @@
 <template>
-  <modal title="Submit a Message" :open="open" @update:open="$emit('update:open', $event)">
+  <modal title="Submit a Message" :open="open" @update:open="$emit('update:open', $event)" with-closing-button>
     <!-- TODO: fix inconsistencies in forms -->
     <form @submit.prevent="submitForm" class="flex flex-col">
       <div class="form-control">
