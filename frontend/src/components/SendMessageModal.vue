@@ -24,7 +24,7 @@
             <div class="gift-item-btn-wrapper">
               <input v-model="giftId" class="absolute appearance-none top-0 left-0" type="radio" name="gift_id" :value="gift.id" :id="gift.uid">
               <label class="btn btn-checkbox p-1 flex flex-col text-center h-full w-full" :for="gift.uid">
-                <component :is="emojis[gift.uid]" class="text-4xl" />
+                <gift-icon :uid="gift.uid" class="text-4xl" />
                 <span class="mt-2">{{ gift.label }}</span>
               </label>
             </div>
@@ -50,37 +50,20 @@
 </template>
 
 <script lang="ts">
-import { logEvent } from '@firebase/analytics';
 import ContentCounter from './ContentCounter.vue';
 import Modal from './Modal.vue';
+import GiftIcon from './GiftIcon.vue';
+
+import { logEvent } from '@firebase/analytics';
 import { analytics } from '../firebase';
 import { catchAndNotifyError, notify } from '../notify';
-
-// Emojis
-import IconSunflower from '~icons/twemoji/sunflower';
-import IconRose from '~icons/twemoji/rose';
-import IconBalloon from '~icons/twemoji/balloon';
-import IconTeddyBear from '~icons/twemoji/teddy-bear';
-import IconRing from '~icons/twemoji/ring';
-import IconMoney from '~icons/twemoji/money-with-wings';
-import IconHeart from '~icons/twemoji/heart-with-ribbon';
-import IconChocolate from '~icons/twemoji/chocolate-bar';
-import IconPizza from '~icons/twemoji/pizza';
 import client from '../client';
 
 export default {
   components: { 
     Modal, 
     ContentCounter,
-    IconSunflower,
-    IconRose,
-    IconBalloon,
-    IconTeddyBear,
-    IconRing,
-    IconMoney,
-    IconHeart,
-    IconChocolate,
-    IconPizza,
+    GiftIcon
   },
   emits: ['update:open'],
   props: {
@@ -95,21 +78,6 @@ export default {
       giftId: null as unknown as number,
       shouldSend: false
     };
-  },
-  computed: {
-    emojis() {
-      return {
-        'sunflower': IconSunflower,
-        'rose': IconRose,
-        'balloons': IconBalloon,
-        'teddy-bear': IconTeddyBear,
-        'ring': IconRing,
-        'money': IconMoney,
-        'heart': IconHeart,
-        'chocolate': IconChocolate,
-        'pizza': IconPizza,
-      }
-    }
   },
   watch: {
     content(newV: string, oldV: string) {
