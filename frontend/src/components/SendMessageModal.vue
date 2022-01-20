@@ -66,6 +66,7 @@ import IconMoney from '~icons/twemoji/money-with-wings';
 import IconHeart from '~icons/twemoji/heart-with-ribbon';
 import IconChocolate from '~icons/twemoji/chocolate-bar';
 import IconPizza from '~icons/twemoji/pizza';
+import client from '../client';
 
 export default {
   components: { 
@@ -126,19 +127,11 @@ export default {
       let target = e.target;
       if (target && target instanceof HTMLFormElement) {
         try {
-          const resp = await fetch(import.meta.env.VITE_BACKEND_URL + '/messages', {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-              ...this.$store.getters.headers,
-            },
-            body: JSON.stringify({
-              recipient_id: this.recipientId,
-              content: this.content,
-              // TODO: log gift in analytics
-              gift_id: this.giftId,
-              uid: this.$store.state.user.id
-            })
+          const resp = await client.postJson('/messages', {
+            recipient_id: this.recipientId,
+            content: this.content,
+            gift_id: this.giftId,
+            uid: this.$store.state.user.id
           });
   
           const json = await resp.json();

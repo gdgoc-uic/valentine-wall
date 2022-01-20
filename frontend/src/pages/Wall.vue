@@ -41,6 +41,7 @@ import relativeTime from 'dayjs/plugin/relativeTime';
 import IconReply from '~icons/uil/comment-heart';
 import { analytics } from '../firebase';
 import { logEvent } from '@firebase/analytics';
+import client from '../client';
 
 dayjs.extend(relativeTime);
 
@@ -63,7 +64,7 @@ export default {
   methods: {
     async loadMessages(): Promise<void> {
       const recipientId = this.$route.params.recipientId ?? '';
-      const resp = await fetch(import.meta.env.VITE_BACKEND_URL + `/messages/${recipientId}`);
+      const resp = await client.get(`/messages/${recipientId}`);
       const json = await resp.json();
 
       if (resp.status == 200) {

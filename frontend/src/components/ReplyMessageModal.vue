@@ -58,6 +58,7 @@ import ContentCounter from '../components/ContentCounter.vue';
 import { logEvent } from '@firebase/analytics';
 import { analytics } from '../firebase';
 import { catchAndNotifyError, notify } from '../notify';
+import client from '../client';
 
 export default {
   components: { 
@@ -150,10 +151,7 @@ export default {
     },
     async skipLogin() {
       try {
-        const resp = await fetch(import.meta.env.VITE_BACKEND_URL + '/user/connect_email', {
-          headers: this.$store.getters.headers
-        });
-
+        const resp = await client.get('/user/connect_email');
         const json = await resp.json();
         if (resp.status < 200 || resp.status > 299) {
           throw new Error(json['error_message']);
@@ -169,15 +167,8 @@ export default {
     async submitReply() {
       try {
         this.isSending = true;
-        const resp = await fetch(import.meta.env.VITE_BACKEND_URL + `/messages/${this.message.recipient_id}/${this.message.id}/reply`, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            ...(this.$store.getters.headers)
-          },
-          body: JSON.stringify({
-            'content': this.content
-          })
+        const resp = await client.postJson(`/messages/${this.message.recipient_id}/${this.message.id}/reply`, {
+          'content': this.content
         });
 
         const json = await resp.json();

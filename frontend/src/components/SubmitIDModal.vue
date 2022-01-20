@@ -40,6 +40,7 @@
 </template>
 
 <script lang="ts">
+import client from '../client';
 import { catchAndNotifyError, notify } from '../notify';
 import Modal from './Modal.vue';
 
@@ -73,16 +74,9 @@ export default {
         const assocIdForm = this.$refs.assocIdForm as HTMLFormElement;
         if (!assocIdForm || !(assocIdForm instanceof HTMLFormElement)) return;
         const formData = new FormData(assocIdForm);
-        const resp = await fetch(import.meta.env.VITE_BACKEND_URL + '/user/setup', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            ...this.$store.getters.headers
-          },
-          body: JSON.stringify({
-            associated_id: formData.get('associated_id')?.toString(),
-            terms_agreed: this.termsAgreed
-          })
+        const resp = await client.postJson('/user/setup', {
+          associated_id: formData.get('associated_id')?.toString(),
+          terms_agreed: this.termsAgreed
         });
 
         const json = await resp.json();

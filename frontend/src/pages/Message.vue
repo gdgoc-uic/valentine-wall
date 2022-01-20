@@ -71,6 +71,7 @@ import dayjs from 'dayjs';
 import relativeTime from 'dayjs/plugin/relativeTime';
 import { logEvent } from '@firebase/analytics';
 import { analytics } from '../firebase';
+import client from '../client';
 
 dayjs.extend(relativeTime);
 
@@ -99,10 +100,7 @@ export default {
   },
   methods: {
     async loadMessage() {
-      const resp = await fetch(import.meta.env.VITE_BACKEND_URL + `/messages/${this.$route.params.recipientId}/${this.$route.params.messageId}`, {
-        headers: this.$store.getters.headers
-      });
-
+      const resp = await client.get(`/messages/${this.$route.params.recipientId}/${this.$route.params.messageId}`);
       if (resp.status == 200) {
         const json = await resp.json();
         this.message = json['message'];

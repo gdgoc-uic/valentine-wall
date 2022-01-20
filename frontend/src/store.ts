@@ -1,6 +1,7 @@
 import { setUserId, setUserProperties } from 'firebase/analytics';
 import { GoogleAuthProvider, signInWithPopup, User } from 'firebase/auth';
 import { createStore } from 'vuex';
+import client from './client';
 import { analytics, auth } from './firebase';
 
 // NOTE: snake_case because JSON response is in snake_case
@@ -85,7 +86,7 @@ export default createStore<State>({
   },
 
   actions: {
-    async login({ commit, dispatch }) {
+    async login({ commit }) {
       const provider = new GoogleAuthProvider();
       provider.addScope('email');
       provider.addScope('profile');
@@ -102,7 +103,7 @@ export default createStore<State>({
         throw e;
       }
     },
-    async onReceiveUser({ commit, getters, dispatch }, user: User | null): Promise<void> {
+    async onReceiveUser({ commit, dispatch }, user: User | null): Promise<void> {
       if (!user) {
         commit('SET_AUTH_LOADING', false);
         return;
@@ -112,12 +113,7 @@ export default createStore<State>({
         commit('SET_USER_ID', user.uid);
         commit('SET_USER_EMAIL', user.email ?? '<unknown e-mail>');
         commit('SET_USER_ACCESS_TOKEN', await user.getIdToken(false));
-        const idResp = await fetch(import.meta.env.VITE_BACKEND_URL + '/user/login_callback', {
-          method: 'POST',
-          headers: getters.headers,
-          credentials: 'include'
-        });
-
+        const idResp = await client.post('/user/login_callback', { credentials: 'include' });
         const { associated_id, user_connections }: { associated_id: string, user_connections: UserConnection[] } = await idResp.json();
         commit('SET_USER_CONNECTIONS', user_connections);
 
@@ -136,12 +132,8 @@ export default createStore<State>({
         commit('SET_AUTH_LOADING', false);
       }
     },
-    async logout({ getters, commit }) {
-      const logoutResp = await fetch(import.meta.env.VITE_BACKEND_URL + '/user/logout_callback', {
-        method: 'POST',
-        headers: getters.headers
-      });
-
+    async logout({ commit }) {
+      const logoutResp = await client.post('/user/logout_callback');
       if (logoutResp.status != 200) {
         throw Error('Unable to logout user.');
       }
@@ -153,7 +145,7 @@ export default createStore<State>({
       commit('SET_USER_ASSOCIATED_ID', '');
     },
     async getGiftList({ commit }) {
-      const resp = await fetch(import.meta.env.VITE_BACKEND_URL + '/gifts');
+      const resp = await client.get('/gifts');
       const json = await resp.json();
       if (resp.status < 200 || resp.status > 299) {
         throw new Error(json['error_message']);
