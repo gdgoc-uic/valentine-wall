@@ -9,7 +9,7 @@ interface UserConnection {
   provider: string
 }
 
-interface Gift {
+export interface Gift {
   id: number
   uid: string
   label: string
