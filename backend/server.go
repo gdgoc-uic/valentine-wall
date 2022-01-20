@@ -10,7 +10,6 @@ import (
 	"mime/multipart"
 	"net/http"
 	"strings"
-	"sync"
 	"time"
 
 	"github.com/go-chi/chi/v5"
@@ -37,35 +36,10 @@ var messagesPaginator = Paginator{
 	OrderKey: "id",
 }
 
-var messageSendWindowDuration = 10 * time.Minute
-var pendingEmailMessages = &sync.Map{}
-
-func addEmailSendEntry(typ string, mg *mailgun.MailgunImpl, es EmailSender, recipientEmail string) {
-	id := fmt.Sprintf("send_%s", es.PendingMessageID())
-	pendingEmailMessages.Store(id, time.AfterFunc(messageSendWindowDuration, func() {
-		defer pendingEmailMessages.Delete(id)
-		if _, _, err := sendEmail(mg, es, recipientEmail); err != nil {
-			log.Println(err)
-		}
-	}))
-}
-
 type Gift struct {
 	ID    int    `json:"id"`
 	UID   string `json:"uid"`
 	Label string `json:"label"`
-}
-
-type EmailSender interface {
-	Message(mg *mailgun.MailgunImpl, toRecipientEmail string) *mailgun.Message
-	PendingMessageID() string
-}
-
-func sendEmail(mg *mailgun.MailgunImpl, ms EmailSender, toRecipient string) (string, string, error) {
-	msg := ms.Message(mg, toRecipient)
-	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
-	defer cancel()
-	return mg.Send(ctx, msg)
 }
 
 type UserConnection struct {
