@@ -448,7 +448,7 @@ func main() {
 	appVerifyUser := verifyUser(firebaseApp)
 
 	r.Get("/gifts", wrapHandler(func(rw http.ResponseWriter, r *http.Request) error {
-		return json.NewEncoder(rw).Encode(giftList)
+		return jsonEncode(rw, giftList)
 	}))
 
 	getMessagesHandler := wrapHandler(func(rw http.ResponseWriter, rr *http.Request) error {
@@ -471,7 +471,7 @@ func main() {
 			r.NotFoundHandler().ServeHTTP(rw, rr)
 			return nil
 		}
-		return json.NewEncoder(rw).Encode(resp)
+		return jsonEncode(rw, resp)
 	})
 
 	r.With(pagination(messagesPaginator)).Get("/messages", getMessagesHandler)
@@ -730,17 +730,43 @@ func main() {
 		}))
 
 	r.With(jsonOnly, appVerifyUser).
-		Post("/user/connect_id", wrapHandler(func(rw http.ResponseWriter, r *http.Request) error {
+		Post("/user/setup", wrapHandler(func(rw http.ResponseWriter, r *http.Request) error {
 			token := r.Context().Value("authToken").(*auth.Token)
-			var submittedData struct {
-				AssociatedID string `db:"associated_id" json:"associated_id"`
-			}
+			authClient := r.Context().Value("authClient").(*auth.Client)
 
+			var submittedData struct {
+				UID          string `db:"user_id" json:"-"`
+				AssociatedID string `db:"associated_id" json:"associated_id"`
+				TermsAgreed  bool   `db:"terms_agreed" json:"terms_agreed"`
+			}
 			if err := json.NewDecoder(r.Body).Decode(&submittedData); err != nil {
 				return err
 			}
 
-			res, err := db.Exec("INSERT INTO associated_ids (user_id, associated_id) VALUES (?, ?)", token.UID, submittedData.AssociatedID)
+			existingAssoc := struct {
+				AssociatedID string `db:"associated_id"`
+			}{}
+			if err := db.Get(&existingAssoc, "SELECT associated_id FROM associated_ids WHERE user_id = ? OR associated_id = ?", token.UID, submittedData.AssociatedID); err == nil {
+				return &ResponseError{
+					StatusCode: http.StatusBadRequest,
+					Message:    "You have already registered.",
+				}
+			}
+
+			if !submittedData.TermsAgreed {
+				// delete user
+				if err := authClient.DeleteUser(context.Background(), token.UID); err != nil {
+					log.Println(err)
+				}
+
+				return &ResponseError{
+					StatusCode: http.StatusForbidden,
+					Message:    "Access to the service is denied.",
+				}
+			}
+
+			submittedData.UID = token.UID
+			res, err := db.NamedExec("INSERT INTO associated_ids (user_id, associated_id) VALUES (:user_id, :associated_id, :terms_agreed)", &submittedData)
 			if err != nil {
 				return &ResponseError{
 					WError:     err,
@@ -754,7 +780,8 @@ func main() {
 			}
 
 			return jsonEncode(rw, map[string]string{
-				"message": "ID was connected to user successfully.",
+				"message":       "ID was connected to user successfully.",
+				"associated_id": submittedData.AssociatedID,
 			})
 		}))
 

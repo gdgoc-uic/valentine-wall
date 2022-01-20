@@ -72,7 +72,7 @@ export default {
     async login() {
       try {
         await this.$store.dispatch('login');
-        if (this.$store.state.isIDModalOpen) {
+        if (this.$store.state.isSetupModalOpen) {
           logEvent(analytics, 'sign_up');
         } else {
           logEvent(analytics, 'login');

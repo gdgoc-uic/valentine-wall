@@ -1,13 +1,40 @@
 <template>
-  <modal title="Set an ID" :open="$store.state.isIDModalOpen" @update:open="commit('SET_ID_MODAL_OPEN', $event)">
-    <form @submit.prevent="submitIDForm" class="flex flex-col">
-      <div class="form-control" name="associated_id_field">
+  <modal title="Setup Account" :open="$store.state.isSetupModalOpen" @update:open="commit('SET_SETUP_MODAL_OPEN', $event)">
+    <form ref="assocIdForm" @submit.prevent="shouldProceed" :class="[proceedToTerms ? 'hidden' : 'flex']" class="flex flex-col">
+      <div class="form-control">
         <label class="label">
-          <span class="label-text">Recipient student ID</span>
+          <span class="label-text">Enter your student ID</span>
         </label>
         <input class="input input-bordered" type="text" name="associated_id" pattern="[0-9]{12}" placeholder="12-digit student ID">
       </div>
-      <button class="self-end px-12 btn bg-rose-500 hover:bg-rose-600 border-none mt-4" type="submit">Send</button>
+      <button class="self-end px-12 btn bg-rose-500 hover:bg-rose-600 border-none mt-4" type="submit">Next</button>
+    </form>
+    <form @submit.prevent="submitSetupForm" :class="[proceedToTerms ? 'flex' : 'hidden']" class="flex-col">
+      <div class="p-4">
+        <h2 class="text-center text-2xl mb-5">Terms and Conditions</h2>
+        <ul class="list-disc pl-2">
+          <li>
+            <p>Lorem ipsum dolor sit amet consectetur adipisicing elit. A, nisi!</p>
+          </li>
+          <li>
+            <p>Eius error sed tempora hic ratione, culpa vitae dicta nostrum?</p>
+          </li>
+          <li>
+            <p>Sed laboriosam unde iste in eum nam doloribus aspernatur delectus.</p>
+          </li>
+          <li>
+            <p>Saepe quo beatae nobis doloremque, odio unde asperiores quaerat ipsa!</p>
+          </li>
+          <li>
+            <p>Odit mollitia beatae dolorum. Neque aliquam dicta nihil iusto eos?</p>
+          </li>
+        </ul>
+        <p class="mt-4">By clicking "Accept", you have agreed to the terms and conditions of this site. Should you violate any of the text above will result to account termination.</p>
+      </div>
+      <div class="self-end space-x-2 mt-4">
+        <button @click="termsAgreed = true" class="px-6 btn bg-rose-500 hover:bg-rose-600 border-none" type="submit">Agree</button>
+        <button @click="termsAgreed = false" class="btn px-6">Disagree</button>
+      </div>
     </form>
   </modal>
 </template>
@@ -18,32 +45,55 @@ import Modal from './Modal.vue';
 
 export default {
   components: { Modal },
+  data() {
+    return {
+      termsAgreed: false,
+      proceedToTerms: false,
+    };
+  },
   methods: {
-    async submitIDForm(e: SubmitEvent) {
+    shouldProceed(e: SubmitEvent) {
       if (!e.target || !(e.target instanceof HTMLFormElement)) return;
-      const associatedIdField = e.target.children.namedItem('associated_id_field');
-      if (!associatedIdField) return;
-      const associatedIdTextField = associatedIdField.children.namedItem('associated_id');
-      if (!associatedIdTextField || !(associatedIdTextField instanceof HTMLInputElement)) return;
+      const formData = new FormData(e.target);
+      if (!formData.get("associated_id")) {
+        this.$notify({
+          type: 'error',
+          text: 'Input your ID first.'
+        });
+        return;
+      }
+
+      this.proceedToTerms = true;
+    },
+
+    async submitSetupForm(e: SubmitEvent) {
+      if (!e.target || !(e.target instanceof HTMLFormElement)) return;
 
       try {
-        const resp = await fetch(import.meta.env.VITE_BACKEND_URL + '/user/connect_id', {
+        const assocIdForm = this.$refs.assocIdForm as HTMLFormElement;
+        if (!assocIdForm || !(assocIdForm instanceof HTMLFormElement)) return;
+        const formData = new FormData(assocIdForm);
+        const resp = await fetch(import.meta.env.VITE_BACKEND_URL + '/user/setup', {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
             ...this.$store.getters.headers
           },
           body: JSON.stringify({
-            associated_id: associatedIdTextField.value,
+            associated_id: formData.get('associated_id')?.toString(),
+            terms_agreed: this.termsAgreed
           })
         });
 
         const json = await resp.json();
         if (resp.status >= 200 && resp.status <= 299) {
           notify(this, { type: 'success', text: json['message'] });
-          this.$store.commit('SET_USER_ASSOCIATED_ID', associatedIdTextField.value);
-          this.$store.commit('SET_ID_MODAL_OPEN', false);
+          this.$store.commit('SET_USER_ASSOCIATED_ID', json['associated_id']);
+          this.$store.commit('SET_SETUP_MODAL_OPEN', false);
         } else if ('error_message' in json) {
+          if (resp.status == 403 && json['error_message'] == 'Access to the service is denied.') {
+            await this.$store.dispatch('logout');
+          }
           throw new Error(json['error_message']);
         } else {
           throw new Error('There are errors in your submission');

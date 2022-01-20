@@ -23,7 +23,7 @@ export interface State {
     connections: UserConnection[]
   },
   isAuthLoading: boolean,
-  isIDModalOpen: boolean,
+  isSetupModalOpen: boolean,
   giftList: Gift[]
 }
 
@@ -38,7 +38,7 @@ export default createStore<State>({
         connections: []
       },
       isAuthLoading: true,
-      isIDModalOpen: false,
+      isSetupModalOpen: false,
       giftList: []
     }
   },
@@ -56,8 +56,8 @@ export default createStore<State>({
     SET_USER_ACCESS_TOKEN(state, payload: string) {
       state.user.accessToken = payload;
     },
-    SET_ID_MODAL_OPEN(state, payload: boolean) {
-      state.isIDModalOpen = payload;
+    SET_SETUP_MODAL_OPEN(state, payload: boolean) {
+      state.isSetupModalOpen = payload;
     },
     SET_AUTH_LOADING(state, payload: boolean) {
       state.isAuthLoading = payload;
@@ -122,7 +122,7 @@ export default createStore<State>({
         commit('SET_USER_CONNECTIONS', user_connections);
 
         if (associated_id.length == 0) {
-          commit('SET_ID_MODAL_OPEN', true);
+          commit('SET_SETUP_MODAL_OPEN', true);
         } else {
           commit('SET_USER_ASSOCIATED_ID', associated_id);
         }
