@@ -138,5 +138,7 @@ func init() {
 		}
 
 		profanityDetector = loadCustomProfanityDetector(customDictionary)
+	} else {
+		profanityDetector = goaway.NewProfanityDetector()
 	}
 }
