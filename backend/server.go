@@ -616,6 +616,7 @@ func main() {
 				log.Println(err)
 			}
 
+			// send the mail within 10 minutes.
 			defer addEmailSendEntry("send", mg, submittedMsg.Message, recipientUser.Email)
 			return jsonEncode(rw, map[string]interface{}{
 				"message": "Message created successfully",
@@ -677,6 +678,36 @@ func main() {
 		return jsonEncode(rw, map[string]interface{}{
 			"message": message,
 			"reply":   reply,
+		})
+	}))
+
+	r.With(appVerifyUser, getRawMessage).Delete("/messages/{recipientId}/{messageId}", wrapHandler(func(rw http.ResponseWriter, r *http.Request) error {
+		token := r.Context().Value("authToken").(*auth.Token)
+		message := r.Context().Value("gotMessage").(RawMessage)
+		if message.UID != token.UID {
+			return &ResponseError{
+				StatusCode: http.StatusForbidden,
+			}
+		}
+
+		res, err := db.Exec("DELETE FROM messages WHERE id = ?", message.ID)
+		if err != nil {
+			return err
+		} else if err := wrapSqlResult(res); err != nil {
+			return err
+		}
+
+		// cancel pending email job
+		jobId := fmt.Sprintf("send_%s", message.PendingMessageID())
+		if pendingMailAfterFunc, hasPending := pendingEmailMessages.Load(jobId); hasPending {
+			if pendingTimer, ok := pendingMailAfterFunc.(*time.Timer); ok {
+				pendingTimer.Stop()
+				pendingEmailMessages.Delete(jobId)
+			}
+		}
+
+		return jsonEncode(rw, map[string]string{
+			"message": "message deleted successfully",
 		})
 	}))
 

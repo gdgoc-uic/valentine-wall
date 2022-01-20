@@ -44,6 +44,8 @@
               <icon-share class="text-gray-500" />
               <span>Share</span>
             </button>
+
+            <!-- TODO: add delete button -->
           </div>
         </div>
 
