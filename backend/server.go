@@ -631,18 +631,30 @@ func main() {
 			return generateImagePNG(rw, imageTypeTwitter, message.Message)
 		}
 
-		// get reply if possible
+		isUserSenderOrReceiver := false
 		reply := &MessageReply{}
-		if token, authClient, tErr := getAuthToken(rr, firebaseApp); message.HasReplied && token != nil {
+		if token, authClient, tErr := getAuthToken(rr, firebaseApp); token != nil {
 			gotRecipientUser, _ := getUserBySID(db, authClient, message.RecipientID)
 			if token.UID == message.UID || (gotRecipientUser != nil && token.UID == gotRecipientUser.UID) {
+				isUserSenderOrReceiver = true
+			}
+		} else if tErr != nil {
+			log.Println(tErr.Error())
+		}
+
+		// get reply if possible
+		if isUserSenderOrReceiver {
+			if message.HasReplied {
 				// ignore error
 				if err := db.Get(reply, "SELECT * FROM message_replies WHERE message_id = ?", message.ID); err != nil {
 					log.Println(err)
 				}
 			}
-		} else if tErr != nil {
-			log.Println(tErr.Error())
+		} else if message.GiftID != nil {
+			// make notes with gifts limited to sender and receivers only
+			return &ResponseError{
+				StatusCode: http.StatusForbidden,
+			}
 		}
 
 		return jsonEncode(rw, map[string]interface{}{
