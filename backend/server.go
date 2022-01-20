@@ -334,6 +334,17 @@ func replyViaEmail(mg *mailgun.MailgunImpl, db *sqlx.DB, authClient *auth.Client
 	}
 }
 
+func checkProfanity(content string) error {
+	if profanityDetector.IsProfane(content) {
+		return &ResponseError{
+			StatusCode: http.StatusBadRequest,
+			Message:    "Your submission contains inappropriate content.",
+		}
+	}
+
+	return nil
+}
+
 // func recoverer(next http.Handler) http.Handler {
 // 	return wrapHandler(func(w http.ResponseWriter, r *http.Request) error {
 // 		if rvr := recover(); rvr != nil && rvr != http.ErrAbortHandler {
@@ -452,6 +463,10 @@ func main() {
 
 			var submittedMsg RawMessage
 			if err := json.NewDecoder(r.Body).Decode(&submittedMsg); err != nil {
+				return err
+			}
+
+			if err := checkProfanity(submittedMsg.Content); err != nil {
 				return err
 			}
 
@@ -624,6 +639,10 @@ func main() {
 			// decode reply payload
 			var reply MessageReply
 			if err := json.NewDecoder(rr.Body).Decode(&reply); err != nil {
+				return err
+			}
+
+			if err := checkProfanity(reply.Content); err != nil {
 				return err
 			}
 

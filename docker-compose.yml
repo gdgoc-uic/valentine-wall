@@ -6,6 +6,7 @@ services:
       dockerfile: ./backend/Dockerfile
       args:
         google_application_credentials: ./${GOOGLE_APPLICATION_CREDENTIALS_FILE}
+        profanity_json_file_path: ./${PROFANITY_JSON_FILE_PATH}
     ports:
       - '4000:4000'
     volumes:
@@ -22,6 +23,7 @@ services:
       - TWITTER_CALLBACK_URL
       - MAILGUN_DOMAIN
       - MAILGUN_APIKEY
+      - PROFANITY_JSON_FILE_PATH
   frontend:
     container_name: frontend
     build:

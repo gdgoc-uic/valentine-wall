@@ -1,15 +1,24 @@
 package main
 
 import (
+	"encoding/json"
 	"fmt"
+	"io/ioutil"
 	"log"
 	"os"
 	"strconv"
 
+	goaway "github.com/TwiN/go-away"
 	"github.com/dghubble/oauth1"
 	twitterOauth1 "github.com/dghubble/oauth1/twitter"
 	goValidator "github.com/go-playground/validator/v10"
 )
+
+type CustomProfanityDictionary struct {
+	Profanities    []string
+	FalsePositives []string
+	FalseNegatives []string
+}
 
 // uninit'ed variables
 var databasePrefix = "valentine-wall"
@@ -19,6 +28,9 @@ var twitterOauth1Config *oauth1.Config
 var gAppCredPath string
 var mailgunApiKey string
 var mailgunDomain string
+
+// TODO: add custom dictionary for bisaya and tagalog
+var profanityDetector *goaway.ProfanityDetector
 
 // init'ed variables
 var serverPort = 4000
@@ -37,6 +49,14 @@ var giftList = []Gift{
 	{7, "heart", "Heart"},
 	{8, "chocolate", "Chocolate"},
 	{9, "pizza", "Pizza"},
+}
+
+func loadCustomProfanityDetector(customDictionary *CustomProfanityDictionary) *goaway.ProfanityDetector {
+	return goaway.NewProfanityDetector().WithCustomDictionary(
+		append(goaway.DefaultProfanities, customDictionary.Profanities...),
+		append(goaway.DefaultFalsePositives, customDictionary.FalsePositives...),
+		append(goaway.DefaultFalseNegatives, customDictionary.FalseNegatives...),
+	)
 }
 
 func init() {
@@ -103,4 +123,20 @@ func init() {
 	}
 
 	databasePath = configureDatabasePath(targetEnv)
+
+	if gotProfanityListFilePath, exists := os.LookupEnv("PROFANITY_JSON_FILE_PATH"); exists {
+		var data []byte
+		var err error
+
+		if data, err = ioutil.ReadFile(gotProfanityListFilePath); err != nil {
+			log.Fatalln(err)
+		}
+
+		customDictionary := &CustomProfanityDictionary{}
+		if err := json.Unmarshal(data, customDictionary); err != nil {
+			log.Fatalln(err)
+		}
+
+		profanityDetector = loadCustomProfanityDetector(customDictionary)
+	}
 }
