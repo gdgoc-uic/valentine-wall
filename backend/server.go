@@ -538,7 +538,7 @@ func main() {
 
 			submittedMsg.CreatedAt = time.Now()
 			// set to null if none
-			if *submittedMsg.GiftID == -1 {
+			if submittedMsg.GiftID != nil && *submittedMsg.GiftID == -1 {
 				submittedMsg.GiftID = nil
 			}
 
