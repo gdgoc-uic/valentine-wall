@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"database/sql"
 	"errors"
 	"fmt"
@@ -8,6 +9,7 @@ import (
 	"net/http"
 	"os"
 
+	sq "github.com/Masterminds/squirrel"
 	"github.com/jmoiron/sqlx"
 	migrate "github.com/rubenv/sql-migrate"
 )
@@ -67,4 +69,24 @@ func wrapSqlResult(res sql.Result, customErrorMessage ...string) error {
 		}
 	}
 	return nil
+}
+
+type FilterFunc func(*http.Request, string, *sq.SelectBuilder) error
+
+func customSelectFilters(filters map[string]FilterFunc) func(http.Handler) http.Handler {
+	return func(next http.Handler) http.Handler {
+		return wrapHandler(func(rw http.ResponseWriter, r *http.Request) error {
+			selectQuery := sq.Select()
+			query := r.URL.Query()
+			for targetQueryName, queryFunc := range filters {
+				queryVal := query.Get(targetQueryName)
+				if err := queryFunc(r, queryVal, &selectQuery); err != nil {
+					return err
+				}
+			}
+			ctx := context.WithValue(r.Context(), "selectQuery", selectQuery)
+			next.ServeHTTP(rw, r.WithContext(ctx))
+			return nil
+		})
+	}
 }

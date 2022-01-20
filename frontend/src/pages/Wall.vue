@@ -1,10 +1,16 @@
 <template>
   <main class="bg-pink-200 min-h-screen flex">
     <div class="bg-white max-w-4xl w-full mx-auto self-start mt-4 p-12 rounded-lg">
-      <div class="text-center pb-12">
+      <div class="text-center pb-12 flex flex-col items-center justify-center">
         <template v-if="$route.params.recipientId">
           <p class="text-2xl mb-2 text-gray-500">Messages for </p>
           <h2 class="text-5xl font-bold">{{ $route.params.recipientId }}</h2>
+
+          <div v-if="$store.getters.isLoggedIn && $store.state.user.associatedId === $route.params.recipientId" class="btn-group mt-8">
+            <button @click="hasGift = false" :class="toggleBtnStyling(hasGift == false)" class="btn btn-md px-8">Notes</button> 
+            <button @click="hasGift = true" :class="toggleBtnStyling(hasGift == true)" class="btn btn-md px-8">Gifts</button>
+            <button @click="hasGift = null" :class="toggleBtnStyling(hasGift == null)" class="btn btn-md px-8">All</button>
+          </div>
         </template>
         <template v-else>
           <h2 class="text-5xl font-bold">Recent Wall</h2>
@@ -58,13 +64,27 @@ export default {
       page: 1,
       perPage: 10,
       pageCount: 1,
-      messages: []
+      messages: [],
+      hasGift: false
+    }
+  },
+  watch: {
+    hasGift(newVal: boolean, oldVal: boolean) {
+      if (newVal === oldVal) return;
+      this.loadMessages(newVal);
     }
   },
   methods: {
-    async loadMessages(): Promise<void> {
+    toggleBtnStyling(hasGift: boolean): string[] {
+      return [
+        hasGift
+          ? 'text-white border-rose-700 bg-rose-500 hover:bg-rose-600 hover:border-rose-800'
+          : 'text-gray-900 border-gray-300 bg-white hover:bg-rose-50 hover:border-rose-400'
+      ]
+    },
+    async loadMessages(hasGift: boolean = false): Promise<void> {
       const recipientId = this.$route.params.recipientId ?? '';
-      const resp = await client.get(`/messages/${recipientId}`);
+      const resp = await client.get(`/messages/${recipientId}?${hasGift == null ? '' : hasGift ? 'has_gift=1' : 'has_gift=0'}`);
       const json = await resp.json();
 
       if (resp.status == 200) {

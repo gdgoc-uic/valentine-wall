@@ -472,10 +472,16 @@ func main() {
 	getMessagesHandler := wrapHandler(func(rw http.ResponseWriter, rr *http.Request) error {
 		recipientId := chi.URLParam(rr, "recipientId")
 		pg := rr.Context().Value("paginator").(Paginator)
-		mainQuery := sq.Select("id", "recipient_id", "content", "has_replied", "gift_id", "created_at", "updated_at")
+
+		mainQuery, hasQuery := rr.Context().Value("selectQuery").(sq.SelectBuilder)
+		if !hasQuery {
+			mainQuery = sq.Select()
+		}
+		mainQuery = mainQuery.Columns("id", "recipient_id", "content", "has_replied", "gift_id", "created_at", "updated_at")
 		if len(recipientId) != 0 {
 			mainQuery = mainQuery.Where(sq.Eq{"recipient_id": recipientId})
 		}
+
 		resp, err := pg.Load(db, "messages", mainQuery, func(r *sqlx.Rows) (interface{}, error) {
 			msg := Message{}
 			if err := r.StructScan(&msg); err != nil {
@@ -483,18 +489,33 @@ func main() {
 			}
 			return msg, nil
 		})
+
 		if err != nil {
 			return err
 		} else if len(recipientId) != 0 && len(resp.Data) == 0 {
 			r.NotFoundHandler().ServeHTTP(rw, rr)
 			return nil
 		}
+
 		return jsonEncode(rw, resp)
 	})
 
 	r.With(pagination(messagesPaginator)).Get("/messages", getMessagesHandler)
-	r.With(pagination(messagesPaginator)).Get("/messages/{recipientId}", getMessagesHandler)
 
+	customMsgQueryFilters := customSelectFilters(map[string]FilterFunc{
+		"has_gift": func(r *http.Request, queryVal string, sb *sq.SelectBuilder) error {
+			token, _, _ := getAuthToken(r, firebaseApp)
+			if token != nil && (queryVal == "true" || queryVal == "1") {
+				*sb = (*sb).Where("gift_id IS NOT NULL")
+				return nil
+			}
+
+			*sb = (*sb).Where("gift_id IS NULL")
+			return nil
+		},
+	})
+
+	r.With(customMsgQueryFilters, pagination(messagesPaginator)).Get("/messages/{recipientId}", getMessagesHandler)
 	r.With(jsonOnly, appVerifyUser).
 		Post("/messages", wrapHandler(func(rw http.ResponseWriter, r *http.Request) error {
 			token := r.Context().Value("authToken").(*auth.Token)
