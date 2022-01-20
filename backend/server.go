@@ -590,9 +590,15 @@ func main() {
 			// ignore the errors, just pass through
 			if err != nil {
 				log.Println(err)
-			} else if _, _, err := sendEmail(mg, submittedMsg.Message, recipientUser.Email); err != nil {
-				log.Println(err)
 			}
+
+			defer func() {
+				go func() {
+					if _, _, err := sendEmail(mg, submittedMsg.Message, recipientUser.Email); err != nil {
+						log.Println(err)
+					}
+				}()
+			}()
 
 			return jsonEncode(rw, map[string]interface{}{
 				"message": "Message created successfully",
