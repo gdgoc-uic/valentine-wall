@@ -19,31 +19,22 @@
           <div class="flex space-x-2 px-8 py-4">
             <template v-if="!$store.state.isAuthLoading && $store.getters.isLoggedIn">
               <button 
-                v-if="message.has_replied" 
-                disabled
-                class="flex-1 normal-case btn btn-md border-none space-x-2 bg-white text-gray-900 hover:bg-gray-100">
-                <icon-reply class="text-pink-500" />
-                <span>Has replied</span>
-              </button>
-
-              <button 
-                v-else-if="$store.state.user.associatedId == message.recipient_id" 
+                v-if="message.has_replied || $store.state.user.associatedId == message.recipient_id" 
                 @click="openReplyModal = true" 
+                :disabled="message.has_replied"
                 class="flex-1 normal-case btn btn-md border-none space-x-2 bg-white text-gray-900 hover:bg-gray-100">
-                <icon-reply class="text-gray-500" />
-                <span>Reply</span>
+                <icon-reply :class="[message.has_replied ? 'text-pink-500' : 'text-gray-500']" />
+                <span>{{ message.has_replied ? 'Has replied' : 'Reply' }}</span>
               </button>
             </template>
 
-            <!-- TODO: rework share button -->
-            <button @click="copyURL" :class="[hasLinkCopied ? 'hover:bg-green-100' : 'hover:bg-gray-100']" class="flex-1 normal-case btn btn-md border-none space-x-2 bg-white text-gray-900">
-              <icon-link :class="[hasLinkCopied ? 'text-green-600' : 'text-gray-500']" />
-              <span>{{ hasLinkCopied ? 'Copied!' : 'Copy URL' }}</span>
+            <button @click="openShareModal = true" class="hover:bg-gray-100 flex-1 normal-case btn btn-md border-none space-x-2 bg-white text-gray-900">
+              <icon-share class="text-gray-500" />
+              <span>Share</span>
             </button>
           </div>
         </div>
 
-        <!-- TODO: Add reply box -->
         <div v-if="message.has_replied && reply" class="w-full bg-white rounded-lg p-12">
           <p class="text-gray-500 mb-2">{{ message.recipient_id }} replied</p>
           <p class="text-2xl">{{ reply.content }}</p>
@@ -60,6 +51,7 @@
   </div>
 
   <teleport to="body">
+    <share-modal v-model:open="openShareModal" :recipient-id="$route.params.recipientId" :message-id="$route.params.messageId" permalink="test" />
     <reply-message-modal @update:hasReplied="message.has_replied ?? false" v-model:open="openReplyModal" :message="message" />
   </teleport>
 </template>
@@ -70,7 +62,10 @@ import IconTwitter from '~icons/uil/twitter';
 import IconLink from '~icons/uil/link';
 import IconReply from '~icons/uil/comment-heart';
 import IconConfused from '~icons/uil/confused';
+import IconShare from '~icons/uil/share-alt';
+
 import ReplyMessageModal from '../components/ReplyMessageModal.vue';
+import ShareModal from '../components/ShareModal.vue';
 
 import dayjs from 'dayjs';
 import relativeTime from 'dayjs/plugin/relativeTime';
@@ -86,7 +81,9 @@ export default {
     IconLink, 
     IconReply,
     IconConfused,
+    IconShare,
     ReplyMessageModal,
+    ShareModal,
   },
   mounted() {
     this.loadMessage();
@@ -97,7 +94,7 @@ export default {
       reply: null as never as Record<string, any>,
       notFound: false,
       openReplyModal: false,
-      hasLinkCopied: false
+      openShareModal: false,
     }
   },
   methods: {
@@ -121,14 +118,6 @@ export default {
     formatDate(date: Date, format: string) {
       return dayjs(date).format(format);
     },
-    copyURL() {
-      this.hasLinkCopied = true;
-      navigator.clipboard.writeText(window.location.toString());
-      logEvent(analytics, 'share', { method: 'copy-url', item_id: this.message.id });
-      setTimeout(() => {
-        this.hasLinkCopied = false;
-      }, 1500);
-    }
   }
 }
 </script>
