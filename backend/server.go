@@ -28,8 +28,13 @@ import (
 
 	"github.com/dghubble/oauth1"
 
+	sq "github.com/Masterminds/squirrel"
 	"github.com/mailgun/mailgun-go/v4"
 )
+
+var messagesPaginator = Paginator{
+	OrderKey: "id",
+}
 
 type Gift struct {
 	ID    int    `json:"id"`
@@ -446,14 +451,22 @@ func main() {
 		return json.NewEncoder(rw).Encode(giftList)
 	}))
 
-	r.Get("/messages", wrapHandler(func(rw http.ResponseWriter, r *http.Request) error {
-		messages := []Message{}
-		if err := db.Select(&messages, "SELECT id, recipient_id, content, has_replied, gift_id, created_at, updated_at FROM messages"); err != nil {
+	rowToMessage := func(r *sqlx.Rows) (interface{}, error) {
+		msg := Message{}
+		if err := r.StructScan(&msg); err != nil {
+			return nil, err
+		}
+		return msg, nil
+	}
+
+	r.With(pagination(messagesPaginator)).Get("/messages", wrapHandler(func(rw http.ResponseWriter, r *http.Request) error {
+		pg := r.Context().Value("paginator").(Paginator)
+		mainQuery := sq.Select("id", "recipient_id", "content", "has_replied", "gift_id", "created_at", "updated_at")
+		resp, err := pg.Load(db, "messages", mainQuery, rowToMessage)
+		if err != nil {
 			return err
 		}
-		return json.NewEncoder(rw).Encode(map[string]interface{}{
-			"messages": messages,
-		})
+		return json.NewEncoder(rw).Encode(resp)
 	}))
 
 	r.With(jsonOnly, appVerifyUser).
@@ -552,23 +565,19 @@ func main() {
 			})
 		}))
 
-	r.Get("/messages/{recipientId}", wrapHandler(func(rw http.ResponseWriter, rr *http.Request) error {
+	r.With(pagination(messagesPaginator)).Get("/messages/{recipientId}", wrapHandler(func(rw http.ResponseWriter, rr *http.Request) error {
 		recipientId := chi.URLParam(rr, "recipientId")
+		pg := rr.Context().Value("paginator").(Paginator)
 		messages := []Message{}
-		if err := db.Select(&messages, "SELECT id, recipient_id, content, has_replied, gift_id, created_at, updated_at FROM messages WHERE recipient_id = ?", recipientId); err != nil {
+		mainQuery := sq.Select("id", "recipient_id", "content", "has_replied", "gift_id", "created_at", "updated_at").Where(sq.Eq{"recipient_id": recipientId})
+		resp, err := pg.Load(db, "messages", mainQuery, rowToMessage)
+		if err != nil {
 			return err
-		}
-
-		if len(messages) == 0 {
+		} else if len(messages) == 0 {
 			r.NotFoundHandler().ServeHTTP(rw, rr)
 			return nil
 		}
-
-		rw.WriteHeader(http.StatusOK)
-		return jsonEncode(rw, map[string]interface{}{
-			"count":    len(messages),
-			"messages": messages,
-		})
+		return json.NewEncoder(rw).Encode(resp)
 	}))
 
 	getRawMessage := func(next http.Handler) http.Handler {

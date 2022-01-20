@@ -25,6 +25,7 @@
                 <icon-reply v-if="msg.has_replied" class="text-pink-500" />
               </div>
           </router-link>
+          <!-- TODO: add infinite scrolling -->
         </div>
       </div>
       <div>
@@ -52,6 +53,10 @@ export default {
   },
   data() {
     return {
+      links: { first: null, last: null, next: null, previous: null },
+      page: 1,
+      perPage: 10,
+      pageCount: 1,
       messages: []
     }
   },
@@ -62,7 +67,11 @@ export default {
       const json = await resp.json();
 
       if (resp.status == 200) {
-        this.messages = json['messages'];
+        this.links = json['links'];
+        this.page = json['page'];
+        this.perPage = json['per_page'];
+        this.pageCount = json['page_count'];
+        this.messages = json['data'];
       }
 
       logEvent(analytics, 'search_messages', { recipient_id: recipientId, status_code: resp.status });
