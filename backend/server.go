@@ -231,6 +231,24 @@ func wrapRequestError(resp *http.Response) error {
 	return fmt.Errorf("%s: got status %d, headers: %s, body: %s", resp.Request.URL, resp.StatusCode, resp.Request.Header, string(bodyBytes))
 }
 
+func wrapValidationError(rw http.ResponseWriter, err error) error {
+	if validatorErrors, vOk := err.(goValidator.ValidationErrors); vOk {
+		errs := []map[string]interface{}{}
+		for _, er := range validatorErrors {
+			errs = append(errs, map[string]interface{}{
+				"field":   er.Field(),
+				"message": er.Error(),
+			})
+		}
+		rw.WriteHeader(http.StatusUnprocessableEntity)
+		return jsonEncode(rw, map[string]interface{}{
+			"error_message": "there were errors when submitting your data.",
+			"errors":        errs,
+		})
+	}
+	return err
+}
+
 func isConnectedTo(conns []UserConnection, provider string) (int, bool) {
 	for i, c := range conns {
 		if c.Provider == provider {
@@ -525,21 +543,9 @@ func main() {
 				}
 			}
 
-			// TODO: improve validation
+			// validate
 			if err := validator.Struct(&submittedMsg); err != nil {
-				if validatorErrors, vOk := err.(goValidator.ValidationErrors); vOk {
-					errs := []string{}
-					for _, er := range validatorErrors {
-						errs = append(errs, er.Error())
-					}
-
-					rw.WriteHeader(http.StatusUnprocessableEntity)
-					return jsonEncode(rw, map[string]interface{}{
-						"errors": errs,
-					})
-				}
-
-				return err
+				return wrapValidationError(rw, err)
 			}
 
 			// generate ID
@@ -642,10 +648,10 @@ func main() {
 			var reply MessageReply
 			if err := json.NewDecoder(rr.Body).Decode(&reply); err != nil {
 				return err
-			}
-
-			if err := checkProfanity(reply.Content); err != nil {
+			} else if err := checkProfanity(reply.Content); err != nil {
 				return err
+			} else if err := validator.Struct(&reply); err != nil {
+				return wrapValidationError(rw, err)
 			}
 
 			reply.MessageID = message.ID
