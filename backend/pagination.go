@@ -25,7 +25,7 @@ type PaginatedResponse struct {
 	PerPage    int64          `json:"per_page"`
 	PageCount  int64          `json:"page_count"`
 	TotalCount int64          `json:"total_count"`
-	Data       interface{}    `json:"data"`
+	Data       []interface{}  `json:"data"`
 }
 
 type Paginator struct {
