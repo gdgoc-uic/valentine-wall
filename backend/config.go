@@ -8,6 +8,7 @@ import (
 
 	"github.com/dghubble/oauth1"
 	twitterOauth1 "github.com/dghubble/oauth1/twitter"
+	goValidator "github.com/go-playground/validator/v10"
 )
 
 // uninit'ed variables
@@ -24,6 +25,19 @@ var serverPort = 4000
 var sessionName = "vw-session"
 var frontendUrl = "http://localhost:3000"
 var targetEnv = "development"
+
+var validator = goValidator.New()
+var giftList = []Gift{
+	{1, "sunflower", "Sunflower"},
+	{2, "rose", "Rose"},
+	{3, "balloons", "Balloons"},
+	{4, "teddy-bear", "Teddy Bear"},
+	{5, "ring", "Ring"},
+	{6, "money", "Money"},
+	{7, "heart", "Heart"},
+	{8, "chocolate", "Chocolate"},
+	{9, "pizza", "Pizza"},
+}
 
 func init() {
 	// if err := godotenv.Load("./.server.env"); err != nil {

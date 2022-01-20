@@ -31,24 +31,10 @@ import (
 	"github.com/mailgun/mailgun-go/v4"
 )
 
-var validator = goValidator.New()
-
 type Gift struct {
 	ID    int    `json:"id"`
 	UID   string `json:"uid"`
 	Label string `json:"label"`
-}
-
-var giftList = []Gift{
-	{1, "sunflower", "Sunflower"},
-	{2, "rose", "Rose"},
-	{3, "balloons", "Balloons"},
-	{4, "teddy-bear", "Teddy Bear"},
-	{5, "ring", "Ring"},
-	{6, "money", "Money"},
-	{7, "heart", "Heart"},
-	{8, "chocolate", "Chocolate"},
-	{9, "pizza", "Pizza"},
 }
 
 type EmailSender interface {
