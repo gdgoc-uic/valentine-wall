@@ -10,6 +10,7 @@ import (
 	"mime/multipart"
 	"net/http"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/go-chi/chi/v5"
@@ -36,6 +37,19 @@ var messagesPaginator = Paginator{
 	OrderKey: "id",
 }
 
+var messageSendWindowDuration = 10 * time.Minute
+var pendingEmailMessages = &sync.Map{}
+
+func addEmailSendEntry(typ string, mg *mailgun.MailgunImpl, es EmailSender, recipientEmail string) {
+	id := fmt.Sprintf("send_%s", es.PendingMessageID())
+	pendingEmailMessages.Store(id, time.AfterFunc(messageSendWindowDuration, func() {
+		defer pendingEmailMessages.Delete(id)
+		if _, _, err := sendEmail(mg, es, recipientEmail); err != nil {
+			log.Println(err)
+		}
+	}))
+}
+
 type Gift struct {
 	ID    int    `json:"id"`
 	UID   string `json:"uid"`
@@ -44,6 +58,7 @@ type Gift struct {
 
 type EmailSender interface {
 	Message(mg *mailgun.MailgunImpl, toRecipientEmail string) *mailgun.Message
+	PendingMessageID() string
 }
 
 func sendEmail(mg *mailgun.MailgunImpl, ms EmailSender, toRecipient string) (string, string, error) {
@@ -72,7 +87,7 @@ type Message struct {
 	RecipientID string    `db:"recipient_id" json:"recipient_id" validate:"required,len=12"`
 	Content     string    `db:"content" json:"content" validate:"required,max=240"`
 	HasReplied  bool      `db:"has_replied" json:"has_replied"`
-	GiftID      *int      `db:"gift_id" json:"gift_id" validate:"numeric"`
+	GiftID      *int      `db:"gift_id" json:"gift_id" validate:"omitempty,numeric"`
 	CreatedAt   time.Time `db:"created_at" json:"created_at"`
 	UpdatedAt   time.Time `db:"updated_at" json:"updated_at"`
 }
@@ -85,6 +100,10 @@ func (msg Message) Message(mg *mailgun.MailgunImpl, toRecipientEmail string) *ma
 		msg.Content,
 		toRecipientEmail,
 	)
+}
+
+func (msg Message) PendingMessageID() string {
+	return msg.ID
 }
 
 type RawMessage struct {
@@ -108,6 +127,10 @@ func (mr MessageReply) Message(mg *mailgun.MailgunImpl, toRecipientEmail string)
 		mr.Content,
 		toRecipientEmail,
 	)
+}
+
+func (mr MessageReply) PendingMessageID() string {
+	return mr.MessageID
 }
 
 type ResponseError struct {
@@ -349,6 +372,7 @@ func replyViaEmail(mg *mailgun.MailgunImpl, db *sqlx.DB, authClient *auth.Client
 			return err
 		}
 
+		// TODO: send reply later (?)
 		if _, _, err := sendEmail(mg, reply, senderEmail); err != nil {
 			return err
 		}
@@ -592,14 +616,7 @@ func main() {
 				log.Println(err)
 			}
 
-			defer func() {
-				go func() {
-					if _, _, err := sendEmail(mg, submittedMsg.Message, recipientUser.Email); err != nil {
-						log.Println(err)
-					}
-				}()
-			}()
-
+			defer addEmailSendEntry("send", mg, submittedMsg.Message, recipientUser.Email)
 			return jsonEncode(rw, map[string]interface{}{
 				"message": "Message created successfully",
 				"path":    fmt.Sprintf("/messages/%s/%s", submittedMsg.RecipientID, submittedMsg.ID),
