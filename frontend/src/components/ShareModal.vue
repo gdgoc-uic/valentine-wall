@@ -7,20 +7,19 @@
         <label class="label">
           <span class="label-text">URL / Permalink</span>
         </label>
-        <input type="text" placeholder="URL" :value="permalink" class="w-full input input-bordered" readonly>
+        <input @click="copyURL" ref="permalinkTextBox" type="text" placeholder="URL" :value="permalink" class="w-full input input-bordered" readonly>
       </div>
 
       <div class="flex flex-row space-x-2">
-        <button class="btn btn-primary flex-1">
+        <button @click="copyURL" class="btn btn-primary flex-1">
           <icon-copy class="text-lg" />
-          <span class="ml-2">Copy Link</span>
+          <span class="ml-2">{{ hasLinkCopied ? 'Copied!' : 'Copy Link' }}</span>
         </button>
-        <button class="btn btn-success flex-1 space-x-2">
+        <a :href="imageUrl" target="_blank" download="image.png" class="btn btn-success flex-1 space-x-2">
           <icon-image-download class="text-lg" />
           <span>Download Image</span>
-        </button>
+        </a>
       </div>
-
 
       <div class="flex flex-col mt-4">
         <p class="text-sm">Share via </p>
@@ -36,7 +35,7 @@
   </modal>
 </template>
 
-<script>
+<script lang="ts">
 import IconLink from '~icons/uil/link';
 import IconFacebook from '~icons/uil/facebook-f';
 import IconTwitter from '~icons/uil/twitter';
@@ -46,6 +45,8 @@ import IconImageDownload from '~icons/uil/image-download';
 import IconCopy from '~icons/uil/copy';
 
 import Modal from './Modal.vue';
+import { logEvent } from '@firebase/analytics';
+import { analytics } from '../firebase';
 
 export default {
   emits: ['update:open'],
@@ -87,9 +88,10 @@ export default {
   },
   methods: {
     copyURL() {
+      const permalinkTextbox = this.$refs.permalinkTextBox as HTMLInputElement;
       this.hasLinkCopied = true;
-      navigator.clipboard.writeText(window.location.toString());
-      logEvent(analytics, 'share', { method: 'copy-url', item_id: this.message.id });
+      navigator.clipboard.writeText(permalinkTextbox.value);
+      logEvent(analytics, 'share', { method: 'copy-url', item_id: this.messageId });
       setTimeout(() => {
         this.hasLinkCopied = false;
       }, 1500);
