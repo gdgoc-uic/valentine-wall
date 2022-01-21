@@ -594,7 +594,7 @@ func main() {
 						StatusCode: http.StatusBadRequest,
 						Message:    "You have posted a similar message to a similar recipient.",
 					}
-				} else if submittedMsg.CreatedAt.Sub(lastPostInfo.CreatedAt) < 10*time.Minute {
+				} else if diff := submittedMsg.CreatedAt.Sub(lastPostInfo.CreatedAt); diff < 10*time.Minute {
 					return &ResponseError{
 						StatusCode: http.StatusTooManyRequests,
 						Message:    "You are being limited to post every 10 minutes.",
