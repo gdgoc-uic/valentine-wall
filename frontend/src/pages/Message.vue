@@ -126,6 +126,10 @@ export default {
         if (resp.status == 200) {
           this.message = json['message'];
           this.reply = json['reply'];
+
+          if (!this.hasGift) {
+            this.revealContent = true;
+          }
         } else if (resp.status == 404) {
           this.notFound = true;
         } else {
