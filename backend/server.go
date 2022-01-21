@@ -42,6 +42,12 @@ type Gift struct {
 	Label string `json:"label"`
 }
 
+type AssociatedUser struct {
+	UserID       string `db:"user_id" json:"user_id"`
+	AssociatedID string `db:"associated_id" json:"associated_id"`
+	TermsAgreed  bool   `db:"terms_agreed" json:"terms_agreed"`
+}
+
 type UserConnection struct {
 	UserID      string `db:"user_id" json:"-"`
 	Provider    string `db:"provider" json:"provider"`
@@ -405,13 +411,19 @@ func getUserEmailByUID(authClient *auth.Client, uid string) (string, error) {
 }
 
 func getUserBySID(db *sqlx.DB, authClient *auth.Client, sid string) (*auth.UserRecord, error) {
-	var associatedData struct {
-		UID string `db:"user_id"`
-	}
-	if err := db.Get(&associatedData, "SELECT user_id FROM associated_ids WHERE associated_id = ?", sid); err != nil {
+	associatedData := AssociatedUser{}
+	if err := db.Get(&associatedData, "SELECT * FROM associated_ids WHERE associated_id = ?", sid); err != nil {
 		return nil, err
 	}
-	return authClient.GetUser(context.Background(), associatedData.UID)
+	return authClient.GetUser(context.Background(), associatedData.UserID)
+}
+
+func getAssociatedUserByUID(db *sqlx.DB, uid string) (*AssociatedUser, error) {
+	associatedData := &AssociatedUser{}
+	if err := db.Get(associatedData, "SELECT * FROM associated_ids WHERE user_id = ?", uid); err != nil {
+		return nil, err
+	}
+	return associatedData, nil
 }
 
 func main() {
@@ -510,16 +522,31 @@ func main() {
 	customMsgQueryFilters := customSelectFilters(map[string]FilterFunc{
 		"has_gift": func(r *http.Request, queryVal string, sb *sq.SelectBuilder) error {
 			token, _, err := getAuthToken(r, firebaseApp)
-			if token != nil {
-				if queryVal == "1" {
-					*sb = (*sb).Where("gift_id IS NOT NULL")
-				} else if queryVal == "2" {
-					// leave as is
+			switch queryVal {
+			case "1", "2":
+				if token == nil {
+					return &ResponseError{
+						WError:     err,
+						StatusCode: http.StatusForbidden,
+					}
 				}
-			} else if queryVal == "0" {
+				recipientId := chi.URLParam(r, "recipientId")
+				if associatedUser, err := getAssociatedUserByUID(db, token.UID); err == nil && associatedUser.AssociatedID == recipientId {
+					if queryVal == "1" {
+						*sb = (*sb).Where("gift_id IS NOT NULL")
+					} else if queryVal == "2" {
+						// leave as is
+					}
+					return nil
+				}
+				if err != nil {
+					log.Println(err)
+				}
+				return &ResponseError{
+					StatusCode: http.StatusForbidden,
+				}
+			default:
 				*sb = (*sb).Where("gift_id IS NULL")
-			} else if queryVal == "2" {
-				return err
 			}
 			return nil
 		},
@@ -790,11 +817,8 @@ func main() {
 	r.With(appVerifyUser).
 		Post("/user/login_callback", wrapHandler(func(rw http.ResponseWriter, r *http.Request) error {
 			token := r.Context().Value("authToken").(*auth.Token)
-			var associatedData struct {
-				AssociatedID string `db:"associated_id" json:"associated_id"`
-			}
-
-			if err := db.Get(&associatedData, "SELECT associated_id FROM associated_ids WHERE user_id = ?", token.UID); err != nil {
+			associatedData, err := getAssociatedUserByUID(db, token.UID)
+			if err != nil {
 				log.Println(err)
 				// return err
 			}
@@ -819,19 +843,12 @@ func main() {
 		Post("/user/setup", wrapHandler(func(rw http.ResponseWriter, r *http.Request) error {
 			token := r.Context().Value("authToken").(*auth.Token)
 			authClient := r.Context().Value("authClient").(*auth.Client)
-
-			var submittedData struct {
-				UID          string `db:"user_id" json:"-"`
-				AssociatedID string `db:"associated_id" json:"associated_id"`
-				TermsAgreed  bool   `db:"terms_agreed" json:"terms_agreed"`
-			}
+			submittedData := AssociatedUser{}
 			if err := json.NewDecoder(r.Body).Decode(&submittedData); err != nil {
 				return err
 			}
 
-			existingAssoc := struct {
-				AssociatedID string `db:"associated_id"`
-			}{}
+			existingAssoc := AssociatedUser{}
 			if err := db.Get(&existingAssoc, "SELECT associated_id FROM associated_ids WHERE user_id = ? OR associated_id = ?", token.UID, submittedData.AssociatedID); err == nil {
 				return &ResponseError{
 					StatusCode: http.StatusBadRequest,
@@ -851,7 +868,7 @@ func main() {
 				}
 			}
 
-			submittedData.UID = token.UID
+			submittedData.UserID = token.UID
 			res, err := db.NamedExec("INSERT INTO associated_ids (user_id, associated_id, terms_agreed) VALUES (:user_id, :associated_id, :terms_agreed)", &submittedData)
 			if err != nil {
 				return &ResponseError{
