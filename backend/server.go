@@ -506,9 +506,9 @@ func main() {
 			if token != nil && (queryVal == "true" || queryVal == "1") {
 				*sb = (*sb).Where("gift_id IS NOT NULL")
 				return nil
+			} else if queryVal != "2" {
+				*sb = (*sb).Where("gift_id IS NULL")
 			}
-
-			*sb = (*sb).Where("gift_id IS NULL")
 			return nil
 		},
 	})

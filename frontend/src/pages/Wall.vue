@@ -84,7 +84,7 @@ export default {
     },
     async loadMessages(hasGift: boolean = false): Promise<void> {
       const recipientId = this.$route.params.recipientId ?? '';
-      const resp = await client.get(`/messages/${recipientId}?${hasGift == null ? '' : hasGift ? 'has_gift=1' : 'has_gift=0'}`);
+      const resp = await client.get(`/messages/${recipientId}?${hasGift == null ? 'has_gift=2' : hasGift ? 'has_gift=1' : 'has_gift=0'}`);
       const json = await resp.json();
 
       if (resp.status == 200) {
