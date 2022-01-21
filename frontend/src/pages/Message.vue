@@ -89,6 +89,7 @@ import client from '../client';
 import { catchAndNotifyError } from '../notify';
 import { Gift } from '../store';
 import GiftIcon from '../components/GiftIcon.vue';
+import { WatchStopHandle } from '@vue/runtime-core';
 
 dayjs.extend(relativeTime);
 
@@ -105,7 +106,13 @@ export default {
     GiftIcon,
   },
   mounted() {
-    this.loadMessage();
+    // workaround in order to load gift messages
+    this.authLoadingWatcher = this.$watch('$store.state.isAuthLoading', (newVal: boolean) => {
+      if (!newVal) {
+        this.loadMessage()
+          .finally(this.authLoadingWatcher);
+      }
+    }, { immediate: true });
   },
   data() {
     return {
@@ -115,7 +122,8 @@ export default {
       notFound: false,
       openReplyModal: false,
       openShareModal: false,
-      revealContent: false
+      revealContent: false,
+      authLoadingWatcher: null as unknown as WatchStopHandle
     }
   },
   methods: {
