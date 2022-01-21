@@ -823,6 +823,10 @@ func main() {
 				// return err
 			}
 
+			if associatedData == nil {
+				associatedData = &AssociatedUser{}
+			}
+
 			userConnections := getUserConnections(db, token.UID)
 			session, _ := store.Get(r, sessionName)
 			session.Values["uid"] = token.UID
