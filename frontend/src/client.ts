@@ -24,7 +24,10 @@ const client = {
         'Content-Type': 'application/json'
       },
       body: JSON.stringify(payload)
-    })
+    });
+  },
+  delete(endpoint: string, opts?: RequestInit) {
+    return baseClient(endpoint, { method: 'DELETE', ...opts });
   }
 }
 

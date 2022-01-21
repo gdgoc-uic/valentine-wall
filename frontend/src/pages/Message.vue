@@ -45,7 +45,10 @@
               <span>Share</span>
             </button>
 
-            <!-- TODO: add delete button -->
+            <button v-if="isDeletable" @click="openDeleteModal = true" class="hover:bg-gray-100 flex-1 normal-case btn btn-md border-none space-x-2 bg-white text-red-500">
+              <icon-trash class="text-red-500" />
+              <span>Delete</span>
+            </button>
           </div>
         </div>
 
@@ -67,6 +70,14 @@
   <teleport to="body">
     <share-modal v-model:open="openShareModal" :recipient-id="$route.params.recipientId" :message-id="$route.params.messageId" :permalink="permalink" />
     <reply-message-modal @update:hasReplied="message.has_replied ?? false" v-model:open="openReplyModal" :message="message" />
+    <modal v-model:open="openDeleteModal">
+      <p>Are you sure you want to delete this?</p>
+      
+      <template #actions>
+        <button class="btn" @click="openDeleteModal = false">Cancel</button>
+        <button class="btn btn-error" @click="deleteMessage">Delete</button>
+      </template>
+    </modal>
   </teleport>
 </template>
 
@@ -76,10 +87,13 @@ import IconTwitter from '~icons/uil/twitter';
 import IconLink from '~icons/uil/link';
 import IconReply from '~icons/uil/comment-heart';
 import IconConfused from '~icons/uil/confused';
+import IconTrash from '~icons/uil/trash-alt';
 import IconShare from '~icons/uil/share-alt';
+import GiftIcon from '../components/GiftIcon.vue';
 
 import ReplyMessageModal from '../components/ReplyMessageModal.vue';
 import ShareModal from '../components/ShareModal.vue';
+import Modal from '../components/Modal.vue';
 
 import dayjs from 'dayjs';
 import relativeTime from 'dayjs/plugin/relativeTime';
@@ -88,7 +102,6 @@ import { analytics } from '../firebase';
 import client from '../client';
 import { catchAndNotifyError } from '../notify';
 import { Gift } from '../store';
-import GiftIcon from '../components/GiftIcon.vue';
 import { WatchStopHandle } from '@vue/runtime-core';
 
 dayjs.extend(relativeTime);
@@ -101,9 +114,11 @@ export default {
     IconReply,
     IconConfused,
     IconShare,
+    IconTrash,
     ReplyMessageModal,
     ShareModal,
     GiftIcon,
+    Modal,
   },
   mounted() {
     // workaround in order to load gift messages
@@ -117,21 +132,41 @@ export default {
   data() {
     return {
       isLoading: true,
+      isDeletable: false,
       message: null as unknown as Record<string, any>,
       reply: null as unknown as Record<string, any>,
       notFound: false,
       openReplyModal: false,
+      openDeleteModal: false,
       openShareModal: false,
       revealContent: false,
       authLoadingWatcher: null as unknown as WatchStopHandle
     }
   },
   methods: {
+    async deleteMessage() {
+      try {
+        const resp = await client.delete(`/messages/${this.$route.params.recipientId}/${this.$route.params.messageId}`);
+        const json = await resp.json();
+
+        if (resp.status >= 200 && resp.status <= 299) {
+          this.$notify({ type: 'success', text: json['message'] });
+          this.$router.replace({ name: 'home-page' });
+        } else if ('json_message' in json) {
+          throw new Error(json['json_message']);
+        } else {
+          throw new Error('Something went wrong.');
+        }
+      } catch(e) {
+        catchAndNotifyError(this, e);
+      }
+    },
     async loadMessage() {
       try {
         const resp = await client.get(`/messages/${this.$route.params.recipientId}/${this.$route.params.messageId}`);
         const json = await resp.json();
         if (resp.status == 200) {
+          this.isDeletable = json['is_deletable'] ?? false;
           this.message = json['message'];
           this.reply = json['reply'];
 
