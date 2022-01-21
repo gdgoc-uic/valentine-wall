@@ -11,7 +11,6 @@ ARG firebase_app_id
 ARG firebase_measurement_id
 ARG firebase_project_id
 
-ENV NODE_ENV=${env}
 ENV VITE_BACKEND_URL=${backend_url}
 ENV VITE_FIREBASE_API_KEY=${firebase_api_key}
 ENV VITE_FIREBASE_AUTH_DOMAIN=${firebase_auth_domain}
@@ -23,6 +22,8 @@ ENV VITE_FIREBASE_PROJECT_ID=${firebase_project_id}
 
 COPY . .
 RUN npm install
+
+ENV NODE_ENV=${env}
 RUN npm run build
 
 FROM caddy:2.4.6
