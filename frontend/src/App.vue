@@ -49,3 +49,9 @@ export default defineComponent({
   },
 })
 </script>
+
+<style lang="postcss">
+body {
+  @apply bg-pink-200;
+}
+</style>

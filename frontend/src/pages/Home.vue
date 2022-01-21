@@ -1,5 +1,5 @@
 <template>
-  <main class="bg-pink-200 h-screen w-screen flex">
+  <main class="h-screen w-screen flex">
     <div style="min-height: 70vh" class="relative bg-white shadow-2xl shadow-pink-400 max-w-5xl w-full mx-auto lg:mt-20 self-start p-12 lg:p-14 rounded-lg flex flex-col">
       <div v-if="$store.state.isAuthLoading" class="rounded-lg z-30 absolute inset-0 bg-white bg-opacity-75 flex flex-col justify-center items-center h-full">
         <p>Loading...</p>

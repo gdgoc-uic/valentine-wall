@@ -1,5 +1,5 @@
 <template>
-  <main class="bg-pink-200 min-h-screen flex">
+  <main class="min-h-screen flex">
     <div class="bg-white max-w-4xl w-full mx-auto self-start mt-4 p-12 rounded-lg">
       <div class="text-center pb-12 flex flex-col items-center justify-center">
         <template v-if="$route.params.recipientId">
