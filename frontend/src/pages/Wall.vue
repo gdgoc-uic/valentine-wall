@@ -7,7 +7,7 @@
           <h2 class="text-5xl font-bold">{{ $route.params.recipientId }}</h2>
 
           <div v-if="$store.getters.isLoggedIn && $store.state.user.associatedId === $route.params.recipientId" class="btn-group mt-8">
-            <button @click="hasGift = false" :class="toggleBtnStyling(hasGift == false)" class="btn btn-md px-8">Notes</button> 
+            <button @click="hasGift = false" :class="toggleBtnStyling(hasGift == false)" class="btn btn-md px-8">Messages</button> 
             <button @click="hasGift = true" :class="toggleBtnStyling(hasGift == true)" class="btn btn-md px-8">Gifts</button>
             <button @click="hasGift = null" :class="toggleBtnStyling(hasGift == null)" class="btn btn-md px-8">All</button>
           </div>
