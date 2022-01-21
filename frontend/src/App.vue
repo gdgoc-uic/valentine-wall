@@ -26,7 +26,7 @@
 
   <!-- ID Modal -->
   <teleport to="body">
-    <submit-id-modal v-if="$store.getters.isLoggedIn" />
+    <submit-id-modal v-if="!$store.state.user.associatedId && $store.getters.isLoggedIn" />
   </teleport>
 
   <router-view></router-view>
