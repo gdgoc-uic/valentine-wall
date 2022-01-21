@@ -445,6 +445,12 @@ func main() {
 			AllowCredentials: true,
 			AllowedHeaders:   []string{"Content-Type", "Authorization"},
 			Debug:            targetEnv == "development",
+			AllowedMethods: []string{
+				http.MethodHead,
+				http.MethodGet,
+				http.MethodPost,
+				http.MethodDelete,
+			},
 		}))
 	}
 
