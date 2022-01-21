@@ -623,12 +623,17 @@ func main() {
 			return generateImagePNG(rw, imageTypeTwitter, message.Message)
 		}
 
+		isDeletable := false
 		isUserSenderOrReceiver := false
 		reply := &MessageReply{}
 		if token, authClient, tErr := getAuthToken(rr, firebaseApp); token != nil {
 			gotRecipientUser, _ := getUserBySID(db, authClient, message.RecipientID)
 			if token.UID == message.UID || (gotRecipientUser != nil && token.UID == gotRecipientUser.UID) {
 				isUserSenderOrReceiver = true
+			}
+
+			if token.UID == message.UID && time.Now().Sub(message.CreatedAt) < messageSendWindowDuration {
+				isDeletable = true
 			}
 		} else if tErr != nil {
 			log.Println(tErr.Error())
@@ -650,15 +655,16 @@ func main() {
 		}
 
 		return jsonEncode(rw, map[string]interface{}{
-			"message": message,
-			"reply":   reply,
+			"is_deletable": isDeletable,
+			"message":      message,
+			"reply":        reply,
 		})
 	}))
 
 	r.With(appVerifyUser, getRawMessage).Delete("/messages/{recipientId}/{messageId}", wrapHandler(func(rw http.ResponseWriter, r *http.Request) error {
 		token := r.Context().Value("authToken").(*auth.Token)
 		message := r.Context().Value("gotMessage").(RawMessage)
-		if message.UID != token.UID {
+		if message.UID != token.UID || time.Now().Sub(message.CreatedAt) >= messageSendWindowDuration {
 			return &ResponseError{
 				StatusCode: http.StatusForbidden,
 			}
