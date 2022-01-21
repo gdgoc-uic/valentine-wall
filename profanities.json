@@ -1,5 +1,5 @@
 {
-  "Profanities": ["yawa", "gago", "bilat", "oten", "puta",  "andre"],
+  "Profanities": ["yawa", "gago", "bilat", "oten", "puta",  "andre", "joshua"],
   "FalsePositives": ["kuyawa"],
   "FalseNegatives": ["kayawa", "pota", "putangina", "putang-ina"]
 }
