@@ -19,7 +19,7 @@
               <p class="text-3xl font-bold">{{ gift.label }}</p>
             </div>
             <p v-else class="text-gray-500 text-xl mb-2">For {{ displayName }}</p>
-            <div class="mb-8" :class="{ 'mt-8 bg-amber-100 rounded-lg text-center': hasGift, 'px-8 py-16': revealContent && hasGift, 'mt-12': !hasGift }">
+            <div class="mb-8" :class="{ 'mt-8 bg-amber-100 rounded-lg text-center': hasGift, 'px-8 py-16': revealContent && hasGift, 'mt-2': !hasGift }">
               <button v-if="hasGift && !revealContent" class="w-full p-4 hover:bg-amber-200 rounded-lg" @click="revealContent = true">Reveal note</button>
               <p v-if="revealContent" class="font-bold text-4xl">{{ message.content }}</p>
             </div>
