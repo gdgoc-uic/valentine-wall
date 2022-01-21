@@ -852,7 +852,7 @@ func main() {
 			}
 
 			submittedData.UID = token.UID
-			res, err := db.NamedExec("INSERT INTO associated_ids (user_id, associated_id) VALUES (:user_id, :associated_id, :terms_agreed)", &submittedData)
+			res, err := db.NamedExec("INSERT INTO associated_ids (user_id, associated_id, terms_agreed) VALUES (:user_id, :associated_id, :terms_agreed)", &submittedData)
 			if err != nil {
 				return &ResponseError{
 					WError:     err,
