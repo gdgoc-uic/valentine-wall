@@ -47,9 +47,12 @@ func (pg Paginator) Copy(path *url.URL, page int64, limit int64, order string) P
 	}
 }
 
-func (pg Paginator) Filters(queryB sq.SelectBuilder) sq.SelectBuilder {
-	fmt.Printf("{order: %s, limit: %d, page: %d, OrderKey: %s}\n", pg.Order, pg.Limit, pg.Page, pg.OrderKey)
-	return queryB.OrderBy(pg.OrderKey + " " + pg.Order).Limit(uint64(pg.Limit)).Offset(uint64(pg.Page-1) * uint64(pg.Limit))
+func (pg Paginator) Filters(dataQuery sq.SelectBuilder) sq.SelectBuilder {
+	// fmt.Printf("{order: %s, limit: %d, page: %d, OrderKey: %s}\n", pg.Order, pg.Limit, pg.Page, pg.OrderKey)
+	return dataQuery.
+		OrderBy(pg.OrderKey + " " + pg.Order).
+		Limit(uint64(pg.Limit)).
+		Offset(uint64(pg.Page-1) * uint64(pg.Limit))
 }
 
 func generatePaginateUrl(fromUrl *url.URL, page int64, limit int64, order string) *string {
@@ -63,7 +66,7 @@ func generatePaginateUrl(fromUrl *url.URL, page int64, limit int64, order string
 	return &nextLink
 }
 
-func (pg Paginator) Load(db *sqlx.DB, tableName string, queryB sq.SelectBuilder, converter func(*sqlx.Rows) (interface{}, error)) (*PaginatedResponse, error) {
+func (pg Paginator) Load(db *sqlx.DB, baseQuery, dataQuery sq.SelectBuilder, converter func(*sqlx.Rows) (interface{}, error)) (*PaginatedResponse, error) {
 	commaCount := strings.Count(pg.Order, ",")
 	if commaCount == 1 {
 		splitted := strings.Split(pg.Order, ",")
@@ -77,7 +80,7 @@ func (pg Paginator) Load(db *sqlx.DB, tableName string, queryB sq.SelectBuilder,
 	}
 
 	count := int64(0)
-	if countQuery, _, err := sq.Select("count(*)").From(tableName).ToSql(); err != nil {
+	if countQuery, _, err := baseQuery.Column("count(*)").ToSql(); err != nil {
 		return nil, err
 	} else if err := db.Get(&count, countQuery); err != nil {
 		return nil, err
@@ -97,17 +100,17 @@ func (pg Paginator) Load(db *sqlx.DB, tableName string, queryB sq.SelectBuilder,
 		return nil, &ResponseError{StatusCode: http.StatusNotFound}
 	}
 
-	dataSql, args, err := pg.Filters(queryB.From(tableName)).ToSql()
+	finalDataQuery, args, err := pg.Filters(dataQuery).ToSql()
 	if err != nil {
 		return nil, err
 	}
 
-	results := []interface{}{}
-	rows, err := db.Queryx(dataSql, args...)
+	rows, err := db.Queryx(finalDataQuery, args...)
 	if err != nil {
 		return nil, &ResponseError{StatusCode: http.StatusNotFound, WError: err}
 	}
 
+	results := []interface{}{}
 	for rows.Next() {
 		gotData, err := converter(rows)
 		if err != nil {
@@ -116,10 +119,11 @@ func (pg Paginator) Load(db *sqlx.DB, tableName string, queryB sq.SelectBuilder,
 		results = append(results, gotData)
 	}
 
+	orderQuery := pg.OrderKey + "," + pg.Order
 	resp := &PaginatedResponse{
 		Links: PaginatedLinks{
-			First: *generatePaginateUrl(pg.Path, 1, pg.Limit, pg.OrderKey+" "+pg.Order),
-			Last:  *generatePaginateUrl(pg.Path, lastPageNumber, pg.Limit, pg.OrderKey+" "+pg.Order),
+			First: *generatePaginateUrl(pg.Path, 1, pg.Limit, orderQuery),
+			Last:  *generatePaginateUrl(pg.Path, lastPageNumber, pg.Limit, orderQuery),
 		},
 		Page:       currentPageNumber,
 		TotalCount: count,
@@ -129,11 +133,11 @@ func (pg Paginator) Load(db *sqlx.DB, tableName string, queryB sq.SelectBuilder,
 	}
 
 	if currentPageNumber+1 <= lastPageNumber {
-		resp.Links.Next = generatePaginateUrl(pg.Path, currentPageNumber+1, pg.Limit, pg.OrderKey+" "+pg.Order)
+		resp.Links.Next = generatePaginateUrl(pg.Path, currentPageNumber+1, pg.Limit, orderQuery)
 	}
 
 	if currentPageNumber > 1 {
-		resp.Links.Previous = generatePaginateUrl(pg.Path, currentPageNumber-1, pg.Limit, pg.OrderKey+" "+pg.Order)
+		resp.Links.Previous = generatePaginateUrl(pg.Path, currentPageNumber-1, pg.Limit, orderQuery)
 	}
 
 	return resp, nil

@@ -17,25 +17,28 @@
         </template>
       </div>
 
-      <div v-if="messages.length != 0" class="flex flex-wrap items-stretch justify-center">
-        <div :key="msg.id" v-for="msg in messages" class="w-1/3 p-2  min-h-16 block">
-          <router-link 
-            :to="{ name: 'message-page', params: { recipientId: $route.params.recipientId, messageId: msg.id } }" 
-            style="background: linear-gradient(to bottom,rgb(254, 243, 199) 21px,#00b0d7 1px); background-size: 100% 22px;"
-            class="rounded-lg flex flex-col justify-between border shadow-lg h-64 hover:scale-110 transition-transform">
-              <div class="px-6 pt-6">
-                <p>{{ msg.content }}</p>
-              </div>
-              <div class="bg-amber-100  px-6 pb-6 flex justify-between items-center mt-4">
-                <p class="text-gray-500 text-sm">{{ humanizeTime(msg.created_at) }} ago</p>
-                <icon-reply v-if="msg.has_replied" class="text-pink-500" />
-              </div>
-          </router-link>
-          <!-- TODO: add infinite scrolling -->
+      <div v-if="messages.length != 0" class="flex flex-col">
+        <div class="flex flex-wrap items-stretch justify-center">
+          <div :key="msg.id" v-for="msg in messages" class="w-1/3 p-2  min-h-16 block">
+            <router-link 
+              :to="{ name: 'message-page', params: { recipientId: msg.recipient_id, messageId: msg.id } }" 
+              style="background: linear-gradient(to bottom,rgb(254, 243, 199) 21px,#00b0d7 1px); background-size: 100% 22px;"
+              class="rounded-lg flex flex-col justify-between border shadow-lg h-64 hover:scale-110 transition-transform">
+                <div class="px-6 pt-6">
+                  <p>{{ msg.content }}</p>
+                </div>
+                <div class="bg-amber-100  px-6 pb-6 flex justify-between items-center mt-4">
+                  <p class="text-gray-500 text-sm">{{ humanizeTime(msg.created_at) }} ago</p>
+                  <icon-reply v-if="msg.has_replied" class="text-pink-500" />
+                </div>
+            </router-link>
+          </div>
         </div>
+
+        <button v-if="links.next" @click="loadMessages({ url: links.next, merge: true, hasGift })" class="mt-8 btn text-gray-900 px-12 self-center bg-white hover:bg-gray-100 border-gray-300 hover:border-gray-500">Load More</button>
       </div>
-      <div>
-        <!-- TODO: Empty State -->
+      <div v-else class="text-center">
+        <p>No messages found</p>
       </div>
     </div>
   </main>
@@ -48,6 +51,7 @@ import IconReply from '~icons/uil/comment-heart';
 import { analytics } from '../firebase';
 import { logEvent } from '@firebase/analytics';
 import client from '../client';
+import { catchAndNotifyError } from '../notify';
 
 dayjs.extend(relativeTime);
 
@@ -56,7 +60,7 @@ export default {
     IconReply
   },
   mounted() {
-    this.loadMessages();
+    this.loadMessages({});
   },
   data() {
     return {
@@ -71,7 +75,11 @@ export default {
   watch: {
     hasGift(newVal: boolean, oldVal: boolean) {
       if (newVal === oldVal) return;
-      this.loadMessages(newVal);
+      this.loadMessages({ hasGift: newVal });
+    },
+    '$route'() {
+      this.messages = [];
+      this.loadMessages({});
     }
   },
   methods: {
@@ -82,20 +90,29 @@ export default {
           : 'text-gray-900 border-gray-300 bg-white hover:bg-rose-50 hover:border-rose-400'
       ]
     },
-    async loadMessages(hasGift: boolean = false): Promise<void> {
-      const recipientId = this.$route.params.recipientId ?? '';
-      const resp = await client.get(`/messages/${recipientId}?${hasGift == null ? 'has_gift=2' : hasGift ? 'has_gift=1' : 'has_gift=0'}`);
-      const json = await resp.json();
+    async loadMessages({ hasGift = false, url, merge = false }: { hasGift?: boolean, url?: string | null, merge?: boolean }): Promise<void> {
+      try {
+        const recipientId = this.$route.params.recipientId ?? '';
+        const endpoint = url ?? `/messages/${recipientId}?limit=6&${hasGift == null ? 'has_gift=2' : hasGift ? 'has_gift=1' : 'has_gift=0'}`;
+        const resp = await client.get(endpoint);
+        const json = await resp.json();
 
-      if (resp.status == 200) {
-        this.links = json['links'];
-        this.page = json['page'];
-        this.perPage = json['per_page'];
-        this.pageCount = json['page_count'];
-        this.messages = json['data'];
+        if (resp.status >= 200 && resp.status <= 299) {
+          this.links = json['links'];
+          this.page = json['page'];
+          this.perPage = json['per_page'];
+          this.pageCount = json['page_count'];
+          this.messages = merge ? this.messages.concat(...json['data']) : json['data'];
+        } else if ('error_message' in json) {
+          throw new Error(json['error_message']);
+        } else {
+          throw new Error('Something went wrong.');
+        }
+
+        logEvent(analytics, 'search_messages', { recipient_id: recipientId, status_code: resp.status });
+      } catch(e) {
+        catchAndNotifyError(this, e);
       }
-
-      logEvent(analytics, 'search_messages', { recipient_id: recipientId, status_code: resp.status });
     },
     humanizeTime(date: Date | string): string {
       return dayjs(date).toNow(true);
