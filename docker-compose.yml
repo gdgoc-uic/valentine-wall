@@ -7,8 +7,6 @@ services:
       args:
         google_application_credentials: ./${GOOGLE_APPLICATION_CREDENTIALS_FILE}
         profanity_json_file_path: ./${PROFANITY_JSON_FILE_PATH}
-    ports:
-      - '4000:4000'
     volumes:
       - ${PWD}/backend/_data:/app/_data
     environment:
@@ -24,6 +22,13 @@ services:
       - MAILGUN_DOMAIN
       - MAILGUN_APIKEY
       - PROFANITY_JSON_FILE_PATH
+    networks:
+      - caddy
+    labels:
+      caddy: ${BASE_DOMAIN:localhost}
+      caddy.handle_path: /api/*
+      caddy.handle_path.0_reverse_proxy: "{{upstreams 4000}}"
+
   frontend:
     container_name: frontend
     build:
@@ -39,7 +44,14 @@ services:
         firebase_app_id: ${FIREBASE_APP_ID}
         firebase_measurement_id: ${FIREBASE_MEASUREMENT_ID}
         firebase_project_id: ${FIREBASE_PROJECT_ID}
-    ports:
-      - '3000:3000'
     volumes:
       - ${PWD}/frontend:/app
+    networks:
+      - caddy 
+    labels:
+      caddy: ${BASE_DOMAIN:localhost}
+      caddy.reverse_proxy: "{{upstreams 3000}}"
+
+networks:
+  caddy:
+    external: true
