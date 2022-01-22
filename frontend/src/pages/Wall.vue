@@ -5,6 +5,7 @@
         <template v-if="$route.params.recipientId">
           <p class="text-2xl mb-2 text-gray-500">Messages for </p>
           <h2 class="text-5xl font-bold">{{ $route.params.recipientId }}</h2>
+          <p>{{ stats.messages }} Messages, {{ stats.gift_messages }} Gift Messages</p>
 
           <div v-if="$store.getters.isLoggedIn && $store.state.user.associatedId === $route.params.recipientId" class="btn-group mt-8">
             <button @click="hasGift = false" :class="toggleBtnStyling(hasGift == false)" class="btn btn-md px-8">Messages</button> 
@@ -60,10 +61,12 @@ export default {
     IconReply
   },
   mounted() {
-    this.loadMessages({});
+    this.loadMessages({})
+      .then(this.loadStats);
   },
   data() {
     return {
+      stats: { messages: 0, gift_messages: 0 },
       links: { first: null, last: null, next: null, previous: null },
       page: 1,
       perPage: 10,
@@ -79,7 +82,9 @@ export default {
     },
     '$route'() {
       this.messages = [];
-      this.loadMessages({});
+      this.stats = { messages: 0, gift_messages: 0 };
+      this.loadMessages({})
+        .then(this.loadStats);
     }
   },
   methods: {
@@ -89,6 +94,17 @@ export default {
           ? 'text-white border-rose-700 bg-rose-500 hover:bg-rose-600 hover:border-rose-800'
           : 'text-gray-900 border-gray-300 bg-white hover:bg-rose-50 hover:border-rose-400'
       ]
+    },
+    async loadStats() {
+      try {
+        if (!this.$route.params.recipientId) return;
+        const recipientId = this.$route.params.recipientId ?? '';
+        const resp = await client.get(`/messages/${recipientId}/stats`);
+        const json = await resp.json();
+        this.stats = json;
+      } catch(e) {
+        catchAndNotifyError(this, e);
+      }
     },
     async loadMessages({ hasGift = false, url, merge = false }: { hasGift?: boolean, url?: string | null, merge?: boolean }): Promise<void> {
       try {

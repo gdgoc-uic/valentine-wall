@@ -3,6 +3,7 @@ package main
 import (
 	"bytes"
 	"context"
+	"database/sql"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -582,6 +583,38 @@ func main() {
 
 	r.With(customMsgQueryFilters, pagination(messagesPaginator)).Get("/messages", getMessagesHandler)
 	r.With(customMsgQueryFilters, pagination(messagesPaginator)).Get("/messages/{recipientId}", getMessagesHandler)
+	r.Get("/messages/{recipientId}/stats", wrapHandler(func(rw http.ResponseWriter, r *http.Request) error {
+		recipientId := chi.URLParam(r, "recipientId")
+		var stats struct {
+			Messages     int `json:"messages"`
+			GiftMessages int `json:"gift_messages"`
+		}
+
+		statSql, args, err := sq.Select("gift_id", "count(*)").From("messages").Where(sq.Eq{"recipient_id": recipientId}).GroupBy("gift_id").ToSql()
+		if err != nil {
+			return err
+		}
+
+		rows, err := db.Query(statSql, args...)
+		if err != nil {
+			return err
+		}
+
+		for rows.Next() {
+			giftId, giftCount := sql.NullInt32{}, 0
+			if err := rows.Scan(&giftId, &giftCount); err != nil {
+				log.Println(err)
+			}
+			if !giftId.Valid {
+				stats.Messages += giftCount
+			} else {
+				stats.GiftMessages += giftCount
+			}
+			rows.Next()
+		}
+
+		return jsonEncode(rw, stats)
+	}))
 	r.With(jsonOnly, appVerifyUser).
 		Post("/messages", wrapHandler(func(rw http.ResponseWriter, r *http.Request) error {
 			token := r.Context().Value("authToken").(*auth.Token)
