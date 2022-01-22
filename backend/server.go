@@ -916,11 +916,11 @@ func main() {
 				return &ResponseError{
 					WError:     err,
 					StatusCode: http.StatusUnprocessableEntity,
-					Message:    "Failure to connect ID to user. Please try again.",
+					Message:    "Failed to connect ID to user. Please try again.",
 				}
 			}
 
-			if err := wrapSqlResult(res, "Failure to connect ID to user. Please try again"); err != nil {
+			if err := wrapSqlResult(res, "Failed to connect ID to user. Please try again"); err != nil {
 				return err
 			}
 
