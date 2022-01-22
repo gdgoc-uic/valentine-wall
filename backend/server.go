@@ -50,9 +50,9 @@ type Gift struct {
 
 type AssociatedUser struct {
 	UserID       string `db:"user_id" json:"user_id"`
-	AssociatedID string `db:"associated_id" json:"associated_id"`
-	TermsAgreed  bool   `db:"terms_agreed" json:"terms_agreed"`
-	Department   string `db:"department" json:"department"`
+	AssociatedID string `db:"associated_id" json:"associated_id" validate:"required,numeric"`
+	TermsAgreed  bool   `db:"terms_agreed" json:"terms_agreed" validate:"required"`
+	Department   string `db:"department" json:"department" validate:"required"`
 }
 
 type UserConnection struct {
@@ -71,7 +71,7 @@ func (uc UserConnection) ToOauth1Token() *oauth1.Token {
 
 type Message struct {
 	ID          string    `db:"id" json:"id"`
-	RecipientID string    `db:"recipient_id" json:"recipient_id" validate:"required,len=12"`
+	RecipientID string    `db:"recipient_id" json:"recipient_id" validate:"required,numeric"`
 	Content     string    `db:"content" json:"content" validate:"required,max=240"`
 	HasReplied  bool      `db:"has_replied" json:"has_replied"`
 	GiftID      *int      `db:"gift_id" json:"gift_id" validate:"omitempty,numeric"`
@@ -871,6 +871,10 @@ func main() {
 			submittedData := AssociatedUser{}
 			if err := json.NewDecoder(r.Body).Decode(&submittedData); err != nil {
 				return err
+			}
+
+			if err := validator.Struct(&submittedData); err != nil {
+				return wrapValidationError(rw, err)
 			}
 
 			if userEmail, err := getUserEmailByUID(authClient, token.UID); err == nil {
