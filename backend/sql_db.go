@@ -3,11 +3,9 @@ package main
 import (
 	"context"
 	"database/sql"
-	"errors"
 	"fmt"
 	"log"
 	"net/http"
-	"os"
 
 	sq "github.com/Masterminds/squirrel"
 	"github.com/jmoiron/sqlx"
@@ -39,16 +37,13 @@ func runMigration(db *sqlx.DB) error {
 }
 
 func initializeDb() *sqlx.DB {
-	_, fileDbErr := os.Stat(databasePath)
 	db, err := sqlx.Open("sqlite3", databasePath)
 	if err != nil {
 		log.Fatalln(err)
 	}
 
-	if errors.Is(fileDbErr, os.ErrNotExist) {
-		if err := runMigration(db); err != nil {
-			log.Fatalln(err)
-		}
+	if err := runMigration(db); err != nil {
+		log.Fatalln(err)
 	}
 
 	return db
