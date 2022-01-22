@@ -5,7 +5,7 @@
         <label class="label">
           <span class="label-text">Enter your student ID</span>
         </label>
-        <input class="input input-bordered" type="text" name="associated_id" pattern="[0-9]{12}" placeholder="12-digit student ID">
+        <input class="input input-bordered" type="text" name="associated_id" pattern="[0-9]+" placeholder="12-digit student ID">
       </div>
       <div class="form-control">
         <label class="label">
@@ -15,7 +15,7 @@
           <option value="none" selected>None</option>
           <option :value="dept.id" :key="dept.id" v-for="dept in departments">{{ dept.label }} ({{ dept.id }})</option>
         </select>
-        <input class="input input-bordered" type="text" name="associated_id" pattern="[0-9]{12}" placeholder="12-digit student ID">
+        <input class="input input-bordered" type="text" name="associated_id" pattern="[0-9]+" placeholder="12-digit student ID">
       </div>
       <button class="self-end px-12 btn bg-rose-500 hover:bg-rose-600 border-none mt-4" type="submit">Next</button>
     </form>

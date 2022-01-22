@@ -5,7 +5,7 @@
         <label class="label">
           <span class="label-text">Recipient</span>
         </label>
-        <input class="input input-bordered" type="text" name="recipient_id" @input="recipientId = $event.target.value" pattern="[0-9]{12}" placeholder="12-digit student ID">
+        <input class="input input-bordered" type="text" name="recipient_id" @input="recipientId = $event.target.value" pattern="[0-9]+" placeholder="12-digit student ID">
       </div>
 
       <div class="flex flex-col mt-4 -mx-2 justify-center items-center">

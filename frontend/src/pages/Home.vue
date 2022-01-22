@@ -20,7 +20,7 @@
             </div>
 
             <form @submit.prevent="searchMessageForm" class="flex flex-col justify-center items-center">
-              <input class="input input-bordered w-full mb-2" type="text" name="student_id" pattern="[0-9]{12}" placeholder="12-digit student ID">
+              <input class="input input-bordered w-full mb-2" type="text" name="recipient_id" pattern="[0-9]+" placeholder="12-digit student ID">
               <button class="btn w-full border-none rounded-full bg-rose-100 text-rose-500 hover:bg-rose-200">Search</button>
             </form>
           </div>
@@ -87,9 +87,13 @@ export default {
     async searchMessageForm(e: SubmitEvent) {
       let target = e.target;
       if (target && target instanceof HTMLFormElement) {
-        const studentId = target.children.namedItem('student_id');
-        if (!studentId || !(studentId instanceof HTMLInputElement) || studentId.value.length == 0) return;
-        this.$router.push({ name: 'message-wall-page', params: { recipientId: studentId.value } });
+        const formData = new FormData(target);
+        const studentId = formData.get('recipient_id');
+        if (!studentId || typeof studentId !== 'string' || studentId.length == 0) {
+          this.$notify({ type: 'error', text: 'Invalid search query input.' });
+          return;
+        }
+        this.$router.push({ name: 'message-wall-page', params: { recipientId: studentId } });
         target.reset();
       }
     },
