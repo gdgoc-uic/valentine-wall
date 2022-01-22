@@ -427,11 +427,11 @@ func getUserBySID(db *sqlx.DB, authClient *auth.Client, sid string) (*auth.UserR
 
 func getAssociatedUserBy(db *sqlx.DB, pred Predicate) (*AssociatedUser, error) {
 	associatedData := &AssociatedUser{}
-	sql, args, err := sq.Select().From("associated_ids").Where(pred).ToSql()
+	sql, args, err := sq.Select("*").From("associated_ids").Where(pred).ToSql()
 	if err != nil {
 		return nil, err
 	}
-	if err := db.Get(associatedData, sql, args); err != nil {
+	if err := db.Get(associatedData, sql, args...); err != nil {
 		return nil, err
 	}
 	return associatedData, nil
