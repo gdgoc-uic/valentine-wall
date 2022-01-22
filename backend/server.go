@@ -411,16 +411,20 @@ func getUserEmailByUID(authClient *auth.Client, uid string) (string, error) {
 }
 
 func getUserBySID(db *sqlx.DB, authClient *auth.Client, sid string) (*auth.UserRecord, error) {
-	associatedData := AssociatedUser{}
-	if err := db.Get(&associatedData, "SELECT * FROM associated_ids WHERE associated_id = ?", sid); err != nil {
+	associatedData, err := getAssociatedUserBy(db, sq.Eq{"associated_id": sid})
+	if err != nil {
 		return nil, err
 	}
 	return authClient.GetUser(context.Background(), associatedData.UserID)
 }
 
-func getAssociatedUserByUID(db *sqlx.DB, uid string) (*AssociatedUser, error) {
+func getAssociatedUserBy(db *sqlx.DB, pred Predicate) (*AssociatedUser, error) {
 	associatedData := &AssociatedUser{}
-	if err := db.Get(associatedData, "SELECT * FROM associated_ids WHERE user_id = ?", uid); err != nil {
+	sql, args, err := sq.Select().From("associated_ids").Where(pred).ToSql()
+	if err != nil {
+		return nil, err
+	}
+	if err := db.Get(associatedData, sql, args); err != nil {
 		return nil, err
 	}
 	return associatedData, nil
@@ -531,7 +535,7 @@ func main() {
 					}
 				}
 				recipientId := chi.URLParam(r, "recipientId")
-				if associatedUser, err := getAssociatedUserByUID(db, token.UID); err == nil && associatedUser.AssociatedID == recipientId {
+				if associatedUser, err := getAssociatedUserBy(db, sq.Eq{"user_id": token.UID}); err == nil && associatedUser.AssociatedID == recipientId {
 					if queryVal == "1" {
 						*sb = (*sb).Where("gift_id IS NOT NULL")
 					} else if queryVal == "2" {
@@ -817,7 +821,7 @@ func main() {
 	r.With(appVerifyUser).
 		Post("/user/login_callback", wrapHandler(func(rw http.ResponseWriter, r *http.Request) error {
 			token := r.Context().Value("authToken").(*auth.Token)
-			associatedData, err := getAssociatedUserByUID(db, token.UID)
+			associatedData, err := getAssociatedUserBy(db, sq.Eq{"user_id": token.UID})
 			if err != nil {
 				log.Println(err)
 				// return err
@@ -852,8 +856,7 @@ func main() {
 				return err
 			}
 
-			existingAssoc := AssociatedUser{}
-			if err := db.Get(&existingAssoc, "SELECT associated_id FROM associated_ids WHERE user_id = ? OR associated_id = ?", token.UID, submittedData.AssociatedID); err == nil {
+			if _, err := getAssociatedUserBy(db, sq.Or{sq.Eq{"user_id": token.UID, "associated_id": submittedData.AssociatedID}}); err == nil {
 				return &ResponseError{
 					StatusCode: http.StatusBadRequest,
 					Message:    "You have already registered.",

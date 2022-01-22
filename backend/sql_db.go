@@ -90,3 +90,7 @@ func customSelectFilters(filters map[string]FilterFunc) func(http.Handler) http.
 		})
 	}
 }
+
+type Predicate interface {
+	ToSql() (string, []interface{}, error)
+}
