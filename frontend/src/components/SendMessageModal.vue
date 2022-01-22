@@ -102,7 +102,6 @@ export default {
 
       if (!e.target || !(e.target instanceof HTMLFormElement)) return;
       const formData = new FormData(e.target);
-      console.log(formData);
 
       try {
         let giftId: number | null = null;
