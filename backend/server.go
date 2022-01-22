@@ -438,7 +438,7 @@ func getAssociatedUserBy(db *sqlx.DB, pred Predicate) (*AssociatedUser, error) {
 }
 
 func main() {
-	emailRegex, err := regexp.Compile(`\A[a-z]+_[0-9]+@uic.edu.ph\z`)
+	emailRegex, err := regexp.Compile(`\A[a-z]+_([0-9]+)@uic.edu.ph\z`)
 	if err != nil {
 		log.Fatalln(err)
 	}
@@ -873,8 +873,14 @@ func main() {
 				return err
 			}
 
-			if userEmail, err := getUserEmailByUID(authClient, token.UID); err == nil && !emailRegex.MatchString(userEmail) {
-				shouldDenyService = true
+			if userEmail, err := getUserEmailByUID(authClient, token.UID); err == nil {
+				matches := emailRegex.FindAllStringSubmatch(userEmail, -1)
+				// deny service if no matching ID found when scanning the email through regex
+				if (matches == nil || len(matches) == 0) || (len(matches[0]) < 2 || len(matches[0][1]) == 0) {
+					shouldDenyService = true
+				} else if gotId := matches[0][1]; gotId != submittedData.AssociatedID {
+					shouldDenyService = true
+				}
 			} else if !submittedData.TermsAgreed {
 				shouldDenyService = true
 			}

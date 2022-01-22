@@ -55,6 +55,8 @@ import client from '../client';
 import { catchAndNotifyError, notify } from '../notify';
 import Modal from './Modal.vue';
 
+const emailRegex = /^[a-z]+_([0-9]+)@uic.edu.ph$/;
+
 export default {
   components: { Modal },
   data() {
@@ -68,6 +70,11 @@ export default {
     this.loadDepartments();
   },
   methods: {
+    getIdFromEmail(input: string): string {
+      const matches = emailRegex.exec(input)
+      return matches?.[1] ?? '';
+    },
+
     async loadDepartments() {
       try {
         const resp = await client.get('/deparments');
@@ -85,6 +92,12 @@ export default {
         this.$notify({
           type: 'error',
           text: 'Please input your ID.'
+        });
+        return;
+      } else if (formData.get('associated_id')?.toString() !== this.getIdFromEmail(this.$store.state.user.email)) {
+        this.$notify({
+          type: 'error',
+          text: 'Your ID from e-mail does not match with the one you have inputted.'
         });
         return;
       }
