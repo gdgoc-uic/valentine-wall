@@ -9,6 +9,7 @@ import (
 	"log"
 	"mime/multipart"
 	"net/http"
+	"regexp"
 	"strings"
 	"time"
 
@@ -437,6 +438,11 @@ func getAssociatedUserBy(db *sqlx.DB, pred Predicate) (*AssociatedUser, error) {
 }
 
 func main() {
+	emailRegex, err := regexp.Compile(`\A[a-z]+_[0-9]+@uic.edu.ph\z`)
+	if err != nil {
+		log.Fatalln(err)
+	}
+
 	// TODO:
 	store := sessions.NewCookieStore([]byte("TEST_123"))
 	store.Options.SameSite = http.SameSiteDefaultMode
@@ -859,6 +865,7 @@ func main() {
 
 	r.With(jsonOnly, appVerifyUser).
 		Post("/user/setup", wrapHandler(func(rw http.ResponseWriter, r *http.Request) error {
+			shouldDenyService := false
 			token := r.Context().Value("authToken").(*auth.Token)
 			authClient := r.Context().Value("authClient").(*auth.Client)
 			submittedData := AssociatedUser{}
@@ -873,10 +880,18 @@ func main() {
 				}
 			}
 
-			if !submittedData.TermsAgreed {
-				// delete user
-				if err := authClient.DeleteUser(context.Background(), token.UID); err != nil {
-					log.Println(err)
+			if userEmail, err := getUserEmailByUID(authClient, token.UID); err == nil && !emailRegex.MatchString(userEmail) {
+				shouldDenyService = true
+			} else if !submittedData.TermsAgreed {
+				shouldDenyService = true
+			}
+
+			if shouldDenyService {
+				if targetEnv == "production" {
+					// delete user
+					if err := authClient.DeleteUser(context.Background(), token.UID); err != nil {
+						log.Println(err)
+					}
 				}
 
 				return &ResponseError{
