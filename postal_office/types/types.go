@@ -2,7 +2,7 @@ package types
 
 import "time"
 
-const DefaultEmailSendExp = 1 * time.Minute
+const DefaultEmailSendExp = 5 * time.Minute
 
 type JobType int
 
