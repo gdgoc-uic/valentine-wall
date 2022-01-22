@@ -14,6 +14,21 @@ services:
       - caddy_data:/data
     restart: unless-stopped
 
+  backend:
+    networks:
+      - caddy
+    labels:
+      caddy: ${BASE_DOMAIN}
+      caddy.handle_path: /api/*
+      caddy.handle_path.0_reverse_proxy: "{{upstreams 4000}}"
+
+  frontend:
+    networks:
+      - caddy 
+    labels:
+      caddy: ${BASE_DOMAIN}
+      caddy.reverse_proxy: "{{upstreams 3000}}"
+
 networks:
   caddy:
     external: true

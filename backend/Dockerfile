@@ -14,19 +14,13 @@ RUN go build -o ./backend-server
 FROM debian:buster-slim
 
 WORKDIR /app
-ARG google_application_credentials
-ARG profanity_json_file_path
 
 RUN apt-get update \
  && apt-get install -y --no-install-recommends ca-certificates
 
 RUN update-ca-certificates
 
-COPY ${google_application_credentials} .
-COPY ${profanity_json_file_path} .
-COPY --from=builder /app .
-
-RUN usermod -u 1000 www-data
+COPY --from=builder /app/backend-server .
 
 EXPOSE 4000
 ENTRYPOINT ["./backend-server"]
