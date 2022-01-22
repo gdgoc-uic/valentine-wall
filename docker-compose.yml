@@ -21,6 +21,7 @@ services:
     volumes:
       - ./backend/_data:/app/_data
       - ./backend/fonts:/app/fonts
+      - ./backend/migrations:/app/migrations
       - ./${PROFANITY_JSON_FILE_NAME}:/app/${PROFANITY_JSON_FILE_NAME}
       - ./${GOOGLE_APPLICATION_CREDENTIALS_FILE}:/app/${GOOGLE_APPLICATION_CREDENTIALS_FILE}
     environment:
