@@ -873,13 +873,6 @@ func main() {
 				return err
 			}
 
-			if _, err := getAssociatedUserBy(db, sq.Or{sq.Eq{"user_id": token.UID, "associated_id": submittedData.AssociatedID}}); err == nil {
-				return &ResponseError{
-					StatusCode: http.StatusBadRequest,
-					Message:    "You have already registered.",
-				}
-			}
-
 			if userEmail, err := getUserEmailByUID(authClient, token.UID); err == nil && !emailRegex.MatchString(userEmail) {
 				shouldDenyService = true
 			} else if !submittedData.TermsAgreed {
@@ -897,6 +890,13 @@ func main() {
 				return &ResponseError{
 					StatusCode: http.StatusForbidden,
 					Message:    "Access to the service is denied.",
+				}
+			}
+
+			if _, err := getAssociatedUserBy(db, sq.Or{sq.Eq{"user_id": token.UID, "associated_id": submittedData.AssociatedID}}); err == nil {
+				return &ResponseError{
+					StatusCode: http.StatusBadRequest,
+					Message:    "You have already registered.",
 				}
 			}
 
