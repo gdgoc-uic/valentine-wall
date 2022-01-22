@@ -15,7 +15,6 @@
           <option value="none" selected>None</option>
           <option :value="dept.id" :key="dept.id" v-for="dept in departments">{{ dept.label }} ({{ dept.id }})</option>
         </select>
-        <input class="input input-bordered" type="text" name="associated_id" pattern="[0-9]+" placeholder="12-digit student ID">
       </div>
       <button class="self-end px-12 btn bg-rose-500 hover:bg-rose-600 border-none mt-4" type="submit">Next</button>
     </form>
@@ -41,8 +40,8 @@
         </ul>
         <p class="mt-4">By clicking "Accept", you have agreed to the terms and conditions of this site. Should you violate any of the text above will result to account termination.</p>
       </div>
-      <div class="self-start space-x-2 mt-4">
-        <button @click="proceedToTerms = false" class="px-6 btn mr-auto">Go back</button>
+      <div class="w-full space-x-2 mt-4 flex">
+        <button @click.prevent="proceedToTerms = false" class="px-6 btn mr-auto">Go back</button>
         <button @click="termsAgreed = true" class="px-6 btn bg-rose-500 hover:bg-rose-600 border-none" type="submit">Agree</button>
         <button @click="termsAgreed = false" class="btn px-6">Disagree</button>
       </div>
@@ -77,9 +76,9 @@ export default {
 
     async loadDepartments() {
       try {
-        const resp = await client.get('/deparments');
+        const resp = await client.get('/departments');
         const json = await resp.json();
-        this.departments = json['departments'];
+        this.departments = json;
       } catch(e) {
         catchAndNotifyError(this, e);
       }
