@@ -50,6 +50,9 @@ var giftList = []Gift{
 	{8, "chocolate", "Chocolate"},
 	{9, "pizza", "Pizza"},
 }
+var collegeDepartments = []CollegeDepartment{
+	{"CCS", "College of Computer Studies"},
+}
 
 func loadCustomProfanityDetector(customDictionary *CustomProfanityDictionary) *goaway.ProfanityDetector {
 	return goaway.NewProfanityDetector().WithCustomDictionary(

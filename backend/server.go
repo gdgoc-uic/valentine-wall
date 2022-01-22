@@ -36,6 +36,11 @@ var messagesPaginator = Paginator{
 	OrderKey: "id",
 }
 
+type CollegeDepartment struct {
+	ID    string `json:"id"`
+	Label string `json:"label"`
+}
+
 type Gift struct {
 	ID    int    `json:"id"`
 	UID   string `json:"uid"`
@@ -46,6 +51,7 @@ type AssociatedUser struct {
 	UserID       string `db:"user_id" json:"user_id"`
 	AssociatedID string `db:"associated_id" json:"associated_id"`
 	TermsAgreed  bool   `db:"terms_agreed" json:"terms_agreed"`
+	Department   string `db:"department" json:"department"`
 }
 
 type UserConnection struct {
@@ -484,6 +490,10 @@ func main() {
 
 	jsonOnly := middleware.AllowContentType("application/json")
 	appVerifyUser := verifyUser(firebaseApp)
+
+	r.Get("/departments", wrapHandler(func(rw http.ResponseWriter, r *http.Request) error {
+		return jsonEncode(rw, collegeDepartments)
+	}))
 
 	r.Get("/gifts", wrapHandler(func(rw http.ResponseWriter, r *http.Request) error {
 		return jsonEncode(rw, giftList)

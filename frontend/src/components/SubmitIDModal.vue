@@ -7,6 +7,16 @@
         </label>
         <input class="input input-bordered" type="text" name="associated_id" pattern="[0-9]{12}" placeholder="12-digit student ID">
       </div>
+      <div class="form-control">
+        <label class="label">
+          <span class="label-text">College Deparment</span>
+        </label>
+        <select name="department" class="select select-bordered">
+          <option value="none" selected>None</option>
+          <option :value="dept.id" :key="dept.id" v-for="dept in departments">{{ dept.label }} ({{ dept.id }})</option>
+        </select>
+        <input class="input input-bordered" type="text" name="associated_id" pattern="[0-9]{12}" placeholder="12-digit student ID">
+      </div>
       <button class="self-end px-12 btn bg-rose-500 hover:bg-rose-600 border-none mt-4" type="submit">Next</button>
     </form>
     <form @submit.prevent="submitSetupForm" :class="[proceedToTerms ? 'flex' : 'hidden']" class="flex-col">
@@ -31,7 +41,8 @@
         </ul>
         <p class="mt-4">By clicking "Accept", you have agreed to the terms and conditions of this site. Should you violate any of the text above will result to account termination.</p>
       </div>
-      <div class="self-end space-x-2 mt-4">
+      <div class="self-start space-x-2 mt-4">
+        <button @click="proceedToTerms = false" class="px-6 btn mr-auto">Go back</button>
         <button @click="termsAgreed = true" class="px-6 btn bg-rose-500 hover:bg-rose-600 border-none" type="submit">Agree</button>
         <button @click="termsAgreed = false" class="btn px-6">Disagree</button>
       </div>
@@ -50,16 +61,38 @@ export default {
     return {
       termsAgreed: false,
       proceedToTerms: false,
+      departments: []
     };
   },
+  mounted() {
+    this.loadDepartments();
+  },
   methods: {
+    async loadDepartments() {
+      try {
+        const resp = await client.get('/deparments');
+        const json = await resp.json();
+        this.departments = json['departments'];
+      } catch(e) {
+        catchAndNotifyError(this, e);
+      }
+    },
+
     shouldProceed(e: SubmitEvent) {
       if (!e.target || !(e.target instanceof HTMLFormElement)) return;
       const formData = new FormData(e.target);
       if (!formData.get("associated_id")) {
         this.$notify({
           type: 'error',
-          text: 'Input your ID first.'
+          text: 'Please input your ID.'
+        });
+        return;
+      }
+
+      if (!formData.get('department') || formData.get('department')?.toString() == 'none') {
+        this.$notify({
+          type: 'error',
+          text: 'Please select your department.'
         });
         return;
       }
@@ -76,6 +109,7 @@ export default {
         const formData = new FormData(assocIdForm);
         const resp = await client.postJson('/user/setup', {
           associated_id: formData.get('associated_id')?.toString(),
+          department: formData.get('department')?.toString(),
           terms_agreed: this.termsAgreed
         });
 
