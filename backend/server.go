@@ -71,7 +71,7 @@ func (uc UserConnection) ToOauth1Token() *oauth1.Token {
 
 type Message struct {
 	ID          string    `db:"id" json:"id"`
-	RecipientID string    `db:"recipient_id" json:"recipient_id" validate:"required,numeric"`
+	RecipientID string    `db:"recipient_id" json:"recipient_id" validate:"required,numeric,min:6,max:12"`
 	Content     string    `db:"content" json:"content" validate:"required,max=240"`
 	HasReplied  bool      `db:"has_replied" json:"has_replied"`
 	GiftID      *int      `db:"gift_id" json:"gift_id" validate:"omitempty,numeric"`

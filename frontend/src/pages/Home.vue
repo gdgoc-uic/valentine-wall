@@ -20,7 +20,7 @@
             </div>
 
             <form @submit.prevent="searchMessageForm" class="flex flex-col justify-center items-center">
-              <input class="input input-bordered w-full mb-2" type="text" name="recipient_id" pattern="[0-9]+" placeholder="12-digit student ID">
+              <input class="input input-bordered w-full mb-2" type="text" name="recipient_id" pattern="[0-9]{6,12}" placeholder="12-digit student ID">
               <button class="btn w-full border-none rounded-full bg-rose-100 text-rose-500 hover:bg-rose-200">Search</button>
             </form>
           </div>
