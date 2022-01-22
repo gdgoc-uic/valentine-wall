@@ -1,4 +1,18 @@
 services:
+  postal_office:
+    container_name: postal_office
+    build:
+      context: .
+      dockerfile: ./postal_office/Dockerfile
+    ports:
+      - '3350:3350'
+    environment:
+      - MAILGUN_DOMAIN
+      - MAILGUN_API_KEY
+      - MAX_JOBS
+    networks:
+      - backend
+
   backend:
     container_name: backend
     build:
@@ -7,21 +21,24 @@ services:
     volumes:
       - ./backend/_data:/app/_data
       - ./backend/fonts:/app/fonts
-      - ./${PROFANITY_JSON_FILE_PATH}:/app/${PROFANITY_JSON_FILE_PATH}
+      - ./${PROFANITY_JSON_FILE_NAME}:/app/${PROFANITY_JSON_FILE_NAME}
       - ./${GOOGLE_APPLICATION_CREDENTIALS_FILE}:/app/${GOOGLE_APPLICATION_CREDENTIALS_FILE}
     environment:
       - ENV
       - BASE_URL=${BACKEND_URL}
       - FRONTEND_URL
       - GOOGLE_APPLICATION_CREDENTIALS=./${GOOGLE_APPLICATION_CREDENTIALS_FILE}
-      - PROFANITY_JSON_FILE_PATH=./${PROFANITY_JSON_FILE_PATH}
+      - PROFANITY_JSON_FILE_PATH=./${PROFANITY_JSON_FILE_NAME}
       - DATABASE_PREFIX
       - SESSION_COOKIE_NAME
       - TWITTER_CLIENT_ID
       - TWITTER_CLIENT_SECRET
       - TWITTER_CALLBACK_URL
-      - MAILGUN_DOMAIN
-      - MAILGUN_APIKEY
+      - POSTAL_OFFICE_ADDRESS=postal_office:3350
+    networks:
+      - backend
+    depends_on:
+      - postal_office
 
   frontend:
     container_name: frontend
@@ -40,3 +57,7 @@ services:
         firebase_project_id: ${FIREBASE_PROJECT_ID}
     volumes:
       - ./frontend:/app
+
+networks:
+  backend:
+    driver: bridge

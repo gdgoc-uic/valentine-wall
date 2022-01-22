@@ -26,8 +26,6 @@ var databasePath string
 var baseUrl string
 var twitterOauth1Config *oauth1.Config
 var gAppCredPath string
-var mailgunApiKey string
-var mailgunDomain string
 
 // TODO: add custom dictionary for bisaya and tagalog
 var profanityDetector *goaway.ProfanityDetector
@@ -37,6 +35,7 @@ var serverPort = 4000
 var sessionName = "vw-session"
 var frontendUrl = "http://localhost:3000"
 var targetEnv = "development"
+var postalOfficeAddress = "localhost:3350"
 
 var validator = goValidator.New()
 var giftList = []Gift{
@@ -94,14 +93,6 @@ func init() {
 		log.Fatalln("path to firebase/google service account file is required")
 	}
 
-	if gotMailgunDomain, exists := os.LookupEnv("MAILGUN_DOMAIN"); exists {
-		mailgunDomain = gotMailgunDomain
-	}
-
-	if gotMailgunApiKey, exists := os.LookupEnv("MAILGUN_API_KEY"); exists {
-		mailgunApiKey = gotMailgunApiKey
-	}
-
 	if gotFrontendUrl, exists := os.LookupEnv("FRONTEND_URL"); exists {
 		frontendUrl = gotFrontendUrl
 	}
@@ -143,5 +134,9 @@ func init() {
 		profanityDetector = loadCustomProfanityDetector(customDictionary)
 	} else {
 		profanityDetector = goaway.NewProfanityDetector()
+	}
+
+	if gotPoAddress, exists := os.LookupEnv("POSTAL_OFFICE_ADDRESS"); exists {
+		postalOfficeAddress = gotPoAddress
 	}
 }

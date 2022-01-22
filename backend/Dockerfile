@@ -5,6 +5,7 @@ WORKDIR /app
 COPY ./go.mod .
 COPY ./go.sum .
 COPY ./backend .
+COPY ./postal_office/types ./postal_office/types
 
 # Download deps and build
 RUN go mod download

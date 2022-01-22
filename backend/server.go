@@ -9,6 +9,7 @@ import (
 	"log"
 	"mime/multipart"
 	"net/http"
+	"net/rpc"
 	"regexp"
 	"strings"
 	"time"
@@ -30,7 +31,8 @@ import (
 	"github.com/dghubble/oauth1"
 
 	sq "github.com/Masterminds/squirrel"
-	"github.com/mailgun/mailgun-go/v4"
+
+	"github.com/nedpals/valentine-wall/postal_office/types"
 )
 
 var messagesPaginator = Paginator{
@@ -80,13 +82,17 @@ type Message struct {
 }
 
 // TODO: Add mail template
-func (msg Message) Message(mg *mailgun.MailgunImpl, toRecipientEmail string) *mailgun.Message {
-	return mg.NewMessage(
-		fmt.Sprintf("Mr. Kupido <mailgun@%s>", mailgunDomain),
-		"You've got a message!",
-		msg.Content,
-		toRecipientEmail,
-	)
+func (msg Message) Message(toRecipientEmail string) types.MailMessage {
+	return types.MailMessage{
+		Name:    "Mr. Kupido",
+		Subject: "Your message has received a reply!",
+		Content: msg.Content,
+		ToEmail: toRecipientEmail,
+	}
+}
+
+func (msg Message) SendAfter() time.Duration {
+	return types.DefaultEmailSendExp
 }
 
 func (msg Message) PendingMessageID() string {
@@ -107,17 +113,17 @@ type MessageReply struct {
 
 // TODO: Add mail template
 // TODO: include emojis to mails
-func (mr MessageReply) Message(mg *mailgun.MailgunImpl, toRecipientEmail string) *mailgun.Message {
-	return mg.NewMessage(
-		fmt.Sprintf("Mr. Kupido <mailgun@%s>", mailgunDomain),
-		"Your message has received a reply!",
-		mr.Content,
-		toRecipientEmail,
-	)
+func (mr MessageReply) Message(toRecipientEmail string) types.MailMessage {
+	return types.MailMessage{
+		Name:    "Mr. Kupido",
+		Subject: "Your message has received a reply!",
+		Content: mr.Content,
+		ToEmail: toRecipientEmail,
+	}
 }
 
-func (mr MessageReply) PendingMessageID() string {
-	return mr.MessageID
+func (mr MessageReply) SendAfter() time.Duration {
+	return 10 * time.Second
 }
 
 type ResponseError struct {
@@ -347,7 +353,7 @@ func replyViaTwitter(twitterUserConnection UserConnection, message RawMessage, r
 
 type ReplyFunc func(UserConnection, RawMessage, MessageReply) error
 
-func replyViaEmail(mg *mailgun.MailgunImpl, db *sqlx.DB, authClient *auth.Client) ReplyFunc {
+func replyViaEmail(cl *rpc.Client, db *sqlx.DB, authClient *auth.Client) ReplyFunc {
 	return func(emailUserConnection UserConnection, message RawMessage, reply MessageReply) error {
 		if emailUserConnection.Provider != "email" {
 			return fmt.Errorf("invalid provider: expected email, got %s", emailUserConnection.Provider)
@@ -360,7 +366,7 @@ func replyViaEmail(mg *mailgun.MailgunImpl, db *sqlx.DB, authClient *auth.Client
 		}
 
 		// TODO: send reply later (?)
-		if _, _, err := sendEmail(mg, reply, senderEmail); err != nil {
+		if _, err := newEmailSendJob(cl, reply, senderEmail, message.ID); err != nil {
 			return err
 		}
 
@@ -438,6 +444,11 @@ func getAssociatedUserBy(db *sqlx.DB, pred Predicate) (*AssociatedUser, error) {
 }
 
 func main() {
+	postalOfficeClient, err := rpc.DialHTTP("tcp", postalOfficeAddress)
+	if err != nil {
+		log.Println("dialing:", err)
+	}
+
 	emailRegex, err := regexp.Compile(`\A[a-z]+_([0-9]+)@uic.edu.ph\z`)
 	if err != nil {
 		log.Fatalln(err)
@@ -447,9 +458,6 @@ func main() {
 	store := sessions.NewCookieStore([]byte("TEST_123"))
 	store.Options.SameSite = http.SameSiteDefaultMode
 	store.Options.HttpOnly = true
-
-	// mailgun
-	mg := mailgun.NewMailgun(mailgunDomain, mailgunApiKey)
 
 	// firebase
 	opt := option.WithCredentialsFile(gAppCredPath)
@@ -582,13 +590,9 @@ func main() {
 			var submittedMsg RawMessage
 			if err := json.NewDecoder(r.Body).Decode(&submittedMsg); err != nil {
 				return err
-			}
-
-			if err := checkProfanity(submittedMsg.Content); err != nil {
+			} else if err := checkProfanity(submittedMsg.Content); err != nil {
 				return err
-			}
-
-			if token.UID != submittedMsg.UID {
+			} else if token.UID != submittedMsg.UID {
 				return &ResponseError{
 					StatusCode: http.StatusBadRequest,
 				}
@@ -614,10 +618,10 @@ func main() {
 						StatusCode: http.StatusBadRequest,
 						Message:    "You have posted a similar message to a similar recipient.",
 					}
-				} else if diff := submittedMsg.CreatedAt.Sub(lastPostInfo.CreatedAt); diff < 10*time.Minute {
+				} else if diff := submittedMsg.CreatedAt.Sub(lastPostInfo.CreatedAt); diff < submittedMsg.SendAfter() {
 					return &ResponseError{
 						StatusCode: http.StatusTooManyRequests,
-						Message:    "You are being limited to post every 10 minutes.",
+						Message:    fmt.Sprintf("You have %s before you can post again.", diff),
 					}
 				}
 			}
@@ -648,10 +652,13 @@ func main() {
 			// ignore the errors, just pass through
 			if err != nil {
 				log.Println(err)
+			} else {
+				// send the mail within n minutes.
+				if _, err := newEmailSendJob(postalOfficeClient, submittedMsg.Message, recipientUser.Email, submittedMsg.ID); err != nil {
+					log.Println(err)
+				}
 			}
 
-			// send the mail within 10 minutes.
-			defer addEmailSendEntry("send", mg, submittedMsg.Message, recipientUser.Email)
 			return jsonEncode(rw, map[string]interface{}{
 				"message": "Message created successfully",
 				"path":    fmt.Sprintf("/messages/%s/%s", submittedMsg.RecipientID, submittedMsg.ID),
@@ -692,7 +699,7 @@ func main() {
 				isUserSenderOrReceiver = true
 			}
 
-			if token.UID == message.UID && time.Now().Sub(message.CreatedAt) < messageSendWindowDuration {
+			if token.UID == message.UID && time.Now().Sub(message.CreatedAt) < message.SendAfter() {
 				isDeletable = true
 			}
 		} else if tErr != nil {
@@ -724,7 +731,7 @@ func main() {
 	r.With(appVerifyUser, getRawMessage).Delete("/messages/{recipientId}/{messageId}", wrapHandler(func(rw http.ResponseWriter, r *http.Request) error {
 		token := r.Context().Value("authToken").(*auth.Token)
 		message := r.Context().Value("gotMessage").(RawMessage)
-		if message.UID != token.UID || time.Now().Sub(message.CreatedAt) >= messageSendWindowDuration {
+		if message.UID != token.UID || time.Now().Sub(message.CreatedAt) >= message.SendAfter() {
 			return &ResponseError{
 				StatusCode: http.StatusForbidden,
 			}
@@ -737,13 +744,16 @@ func main() {
 			return err
 		}
 
-		// cancel pending email job
-		jobId := fmt.Sprintf("send_%s", message.PendingMessageID())
-		if pendingMailAfterFunc, hasPending := pendingEmailMessages.Load(jobId); hasPending {
-			if pendingTimer, ok := pendingMailAfterFunc.(*time.Timer); ok {
-				pendingTimer.Stop()
-				pendingEmailMessages.Delete(jobId)
+		// get job id
+		var receivedJobId string
+		if err := postalOfficeClient.Call("PostalOffice.GetJobID", &types.GetJobIDArgs{UniqueID: message.ID}, &receivedJobId); err == nil {
+			// cancel pending email job
+			var ok bool
+			if _ = postalOfficeClient.Call("PostalOffice.CancelJob", &types.CancelJobArgs{JobID: receivedJobId}, &ok); !ok {
+				log.Printf("job %s was not cancelled successfully. \n", receivedJobId)
 			}
+		} else {
+			log.Println(err)
 		}
 
 		return jsonEncode(rw, map[string]string{
@@ -787,7 +797,7 @@ func main() {
 					return err
 				}
 			} else if emailIdx, hasEmail := isConnectedTo(connections, "email"); hasEmail {
-				if err := replyViaEmail(mg, db, authClient)(connections[emailIdx], message, reply); err != nil {
+				if err := replyViaEmail(postalOfficeClient, db, authClient)(connections[emailIdx], message, reply); err != nil {
 					return err
 				}
 			} else {

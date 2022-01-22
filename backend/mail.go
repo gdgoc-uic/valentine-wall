@@ -1,36 +1,32 @@
 package main
 
 import (
-	"context"
 	"fmt"
-	"log"
-	"sync"
+	"net/rpc"
 	"time"
 
-	"github.com/mailgun/mailgun-go/v4"
+	"github.com/nedpals/valentine-wall/postal_office/types"
 )
 
-var messageSendWindowDuration = 10 * time.Minute
-var pendingEmailMessages = &sync.Map{}
-
-func addEmailSendEntry(typ string, mg *mailgun.MailgunImpl, es EmailSender, recipientEmail string) {
-	id := fmt.Sprintf("send_%s", es.PendingMessageID())
-	pendingEmailMessages.Store(id, time.AfterFunc(messageSendWindowDuration, func() {
-		defer pendingEmailMessages.Delete(id)
-		if _, _, err := sendEmail(mg, es, recipientEmail); err != nil {
-			log.Println(err)
-		}
-	}))
-}
-
 type EmailSender interface {
-	Message(mg *mailgun.MailgunImpl, toRecipientEmail string) *mailgun.Message
-	PendingMessageID() string
+	Message(toRecipientEmail string) types.MailMessage
+	SendAfter() time.Duration
 }
 
-func sendEmail(mg *mailgun.MailgunImpl, ms EmailSender, toRecipient string) (string, string, error) {
-	msg := ms.Message(mg, toRecipient)
-	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
-	defer cancel()
-	return mg.Send(ctx, msg)
+func newEmailSendJob(cl *rpc.Client, ms EmailSender, toRecipient string, uid string) (string, error) {
+	if cl == nil {
+		return "", fmt.Errorf("postal client is disconnected")
+	}
+
+	var receivedJobId string
+	mailJobArgs := &types.NewJobArgs{
+		Type:     types.JobSend,
+		After:    ms.SendAfter(),
+		Payload:  ms.Message(toRecipient),
+		UniqueID: uid,
+	}
+	if err := cl.Call("PostalOffice.NewJob", mailJobArgs, &receivedJobId); err != nil {
+		return "", err
+	}
+	return receivedJobId, nil
 }
