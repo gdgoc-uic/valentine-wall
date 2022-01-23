@@ -72,7 +72,9 @@ export default {
       perPage: 10,
       pageCount: 1,
       messages: [],
-      hasGift: false
+      // TODO: disable_restricted_access_to_gift_messages
+      // hasGift: false
+      hasGift: null
     }
   },
   watch: {
@@ -109,7 +111,7 @@ export default {
     async loadMessages({ hasGift = false, url, merge = false }: { hasGift?: boolean, url?: string | null, merge?: boolean }): Promise<void> {
       try {
         const recipientId = this.$route.params.recipientId ?? '';
-        const endpoint = url ?? `/messages/${recipientId}?order=created_at,desc&limit=6&${hasGift == null ? 'has_gift=2' : hasGift ? 'has_gift=1' : 'has_gift=0'}`;
+        const endpoint = url ?? `/messages/${recipientId}?order=created_at,desc&limit=6&${hasGift == null ? 'has_gift=2' : hasGift ? 'has_gift=1' : 'has_gift=2'}`;
         const resp = await client.get(endpoint);
         const json = await resp.json();
 
