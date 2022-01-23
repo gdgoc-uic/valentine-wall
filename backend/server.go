@@ -23,11 +23,9 @@ import (
 	"github.com/jmoiron/sqlx"
 	"google.golang.org/api/option"
 
-	goNanoid "github.com/matoous/go-nanoid/v2"
-	_ "github.com/mattn/go-sqlite3"
-
 	firebase "firebase.google.com/go/v4"
 	"firebase.google.com/go/v4/auth"
+	goNanoid "github.com/matoous/go-nanoid/v2"
 
 	"github.com/dghubble/oauth1"
 
