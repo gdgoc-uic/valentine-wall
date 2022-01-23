@@ -22,6 +22,7 @@ var mailgunApiKey string
 var mailgunDomain string
 var maxJobs = 1250
 var port = 3350
+var targetEnv = "development"
 
 func init() {
 	if gotMailgunDomain, exists := os.LookupEnv("MAILGUN_DOMAIN"); exists {
@@ -47,6 +48,11 @@ func init() {
 			port = convertPort
 		}
 	}
+
+	if gotEnv, exists := os.LookupEnv("ENV"); exists {
+		targetEnv = gotEnv
+	}
+}
 }
 
 type PostalOffice struct {
