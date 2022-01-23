@@ -548,30 +548,31 @@ func main() {
 
 	customMsgQueryFilters := customSelectFilters(map[string]FilterFunc{
 		"has_gift": func(r *http.Request, queryVal string, sb *sq.SelectBuilder) error {
-			token, _, err := getAuthToken(r, firebaseApp)
+			// TODO: disable_restricted_access_to_gift_messages
+			// token, _, err := getAuthToken(r, firebaseApp)
 			switch queryVal {
 			case "1", "2":
-				if token == nil {
-					return &ResponseError{
-						WError:     err,
-						StatusCode: http.StatusForbidden,
-					}
+				// if token == nil {
+				// 	return &ResponseError{
+				// 		WError:     err,
+				// 		StatusCode: http.StatusForbidden,
+				// 	}
+				// }
+				// recipientId := chi.URLParam(r, "recipientId")
+				// if associatedUser, err := getAssociatedUserBy(db, sq.Eq{"user_id": token.UID}); err == nil && associatedUser.AssociatedID == recipientId {
+				if queryVal == "1" {
+					*sb = (*sb).Where("gift_id IS NOT NULL")
+				} else if queryVal == "2" {
+					// leave as is
 				}
-				recipientId := chi.URLParam(r, "recipientId")
-				if associatedUser, err := getAssociatedUserBy(db, sq.Eq{"user_id": token.UID}); err == nil && associatedUser.AssociatedID == recipientId {
-					if queryVal == "1" {
-						*sb = (*sb).Where("gift_id IS NOT NULL")
-					} else if queryVal == "2" {
-						// leave as is
-					}
-					return nil
-				}
-				if err != nil {
-					log.Println(err)
-				}
-				return &ResponseError{
-					StatusCode: http.StatusForbidden,
-				}
+				return nil
+				// }
+				// if err != nil {
+				// 	log.Println(err)
+				// }
+				// return &ResponseError{
+				// 	StatusCode: http.StatusForbidden,
+				// }
 			default:
 				*sb = (*sb).Where("gift_id IS NULL")
 			}
@@ -747,9 +748,10 @@ func main() {
 			}
 		} else if message.GiftID != nil {
 			// make notes with gifts limited to sender and receivers only
-			return &ResponseError{
-				StatusCode: http.StatusForbidden,
-			}
+			// TODO: disable_restricted_access_to_gift_messages
+			// return &ResponseError{
+			// 	StatusCode: http.StatusForbidden,
+			// }
 		}
 
 		return jsonEncode(rw, map[string]interface{}{
