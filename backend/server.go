@@ -516,18 +516,18 @@ func main() {
 		recipientId := chi.URLParam(rr, "recipientId")
 		pg := rr.Context().Value("paginator").(Paginator)
 
-		baseQuery, hasQuery := rr.Context().Value("selectQuery").(sq.SelectBuilder)
-		if !hasQuery {
-			baseQuery = sq.Select().From("messages")
-		} else {
+		baseQuery, okQuery := rr.Context().Value("selectQuery").(sq.SelectBuilder)
+		if okQuery {
 			baseQuery = baseQuery.From("messages")
+		} else {
+			baseQuery = sq.Select().From("messages")
+		}
+
+		if len(recipientId) != 0 {
+			baseQuery = baseQuery.Where(sq.Eq{"recipient_id": recipientId})
 		}
 
 		dataQuery := baseQuery.Columns("id", "recipient_id", "content", "has_replied", "gift_id", "created_at", "updated_at")
-		if len(recipientId) != 0 {
-			dataQuery = dataQuery.Where(sq.Eq{"recipient_id": recipientId})
-		}
-
 		resp, err := pg.Load(db, baseQuery, dataQuery, func(r *sqlx.Rows) (interface{}, error) {
 			msg := Message{}
 			if err := r.StructScan(&msg); err != nil {
@@ -538,7 +538,7 @@ func main() {
 
 		if err != nil {
 			return err
-		} else if len(recipientId) != 0 && len(resp.Data) == 0 {
+		} else if resp.Page > resp.PageCount && len(resp.Data) == 0 {
 			r.NotFoundHandler().ServeHTTP(rw, rr)
 			return nil
 		}

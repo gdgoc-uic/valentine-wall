@@ -80,9 +80,9 @@ func (pg Paginator) Load(db *sqlx.DB, baseQuery, dataQuery sq.SelectBuilder, con
 	}
 
 	count := int64(0)
-	if countQuery, _, err := baseQuery.Column("count(*)").ToSql(); err != nil {
+	if countQuery, args, err := baseQuery.Column("count(*)").ToSql(); err != nil {
 		return nil, err
-	} else if err := db.Get(&count, countQuery); err != nil {
+	} else if err := db.Get(&count, countQuery, args...); err != nil {
 		return nil, err
 	}
 
