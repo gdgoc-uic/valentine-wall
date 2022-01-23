@@ -1,4 +1,4 @@
 #!/bin/sh
 
-docker-compose build $@
-docker-compose up --no-deps $@
+docker-compose -f docker-compose.yml -f docker-compose.prod.yml build $@
+docker-compose -f docker-compose.yml -f docker-compose.prod.yml up --no-deps $@
