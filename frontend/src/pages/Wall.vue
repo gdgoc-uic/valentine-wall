@@ -109,7 +109,7 @@ export default {
     async loadMessages({ hasGift = false, url, merge = false }: { hasGift?: boolean, url?: string | null, merge?: boolean }): Promise<void> {
       try {
         const recipientId = this.$route.params.recipientId ?? '';
-        const endpoint = url ?? `/messages/${recipientId}?limit=6&${hasGift == null ? 'has_gift=2' : hasGift ? 'has_gift=1' : 'has_gift=0'}`;
+        const endpoint = url ?? `/messages/${recipientId}?order=created_at,desc&limit=6&${hasGift == null ? 'has_gift=2' : hasGift ? 'has_gift=1' : 'has_gift=0'}`;
         const resp = await client.get(endpoint);
         const json = await resp.json();
 
