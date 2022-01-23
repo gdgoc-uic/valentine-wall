@@ -4,6 +4,8 @@ services:
     build:
       context: .
       dockerfile: ./postal_office/Dockerfile
+    volumes:
+      - ./postal_office/_data:/app/_data
     ports:
       - '3350:3350'
     environment:
