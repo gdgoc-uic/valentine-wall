@@ -604,12 +604,12 @@ func main() {
 			if err := rows.Scan(&giftId, &giftCount); err != nil {
 				log.Println(err)
 			}
-			if !giftId.Valid {
-				stats.Messages += giftCount
-			} else {
+
+			if giftId.Valid {
 				stats.GiftMessages += giftCount
+			} else {
+				stats.Messages += giftCount
 			}
-			rows.Next()
 		}
 
 		return jsonEncode(rw, stats)
