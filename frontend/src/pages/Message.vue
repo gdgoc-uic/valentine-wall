@@ -121,6 +121,10 @@ export default {
     Modal,
   },
   mounted() {
+    if (this.$route.query.from) {
+      logEvent(analytics, "traffic_source", { from: this.$route.query.from });
+    }
+
     // workaround in order to load gift messages
     this.authLoadingWatcher = this.$watch('$store.state.isAuthLoading', (newVal: boolean) => {
       if (!newVal) {
