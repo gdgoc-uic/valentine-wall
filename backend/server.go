@@ -779,14 +779,16 @@ func main() {
 
 		// get job id
 		var receivedJobId string
-		if err := postalOfficeClient.Call("PostalOffice.GetJobID", &types.GetJobIDArgs{UniqueID: message.ID}, &receivedJobId); err == nil {
-			// cancel pending email job
-			var ok bool
-			if _ = postalOfficeClient.Call("PostalOffice.CancelJob", &types.CancelJobArgs{JobID: receivedJobId}, &ok); !ok {
-				log.Printf("job %s was not cancelled successfully. \n", receivedJobId)
+		if postalOfficeClient != nil {
+			if err := postalOfficeClient.Call("PostalOffice.GetJobID", &types.GetJobIDArgs{UniqueID: message.ID}, &receivedJobId); err == nil {
+				// cancel pending email job
+				var ok bool
+				if _ = postalOfficeClient.Call("PostalOffice.CancelJob", &types.CancelJobArgs{JobID: receivedJobId}, &ok); !ok {
+					log.Printf("job %s was not cancelled successfully. \n", receivedJobId)
+				}
+			} else {
+				log.Println(err)
 			}
-		} else {
-			log.Println(err)
 		}
 
 		return jsonEncode(rw, map[string]string{
