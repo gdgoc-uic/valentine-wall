@@ -693,7 +693,11 @@ func main() {
 
 			return jsonEncode(rw, map[string]interface{}{
 				"message": "Message created successfully",
-				"path":    fmt.Sprintf("/messages/%s/%s", submittedMsg.RecipientID, submittedMsg.ID),
+				"route": map[string]interface{}{
+					"name":   "message-page",
+					"params": map[string]string{"recipientId": submittedMsg.RecipientID, "messageId": submittedMsg.ID},
+					"query":  map[string]string{"from": "send_message_modal"},
+				},
 			})
 		}))
 

@@ -125,6 +125,7 @@ export default {
           notify(this, { type: 'success', text: json['message'] });
           e.target.reset();
           this.$emit('update:open', false);
+          this.$router.push(json['route']);
         } else if ('error_message' in json) {
           throw new Error(json['error_message']);
         } else {
