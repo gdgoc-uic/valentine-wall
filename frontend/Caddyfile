@@ -1,5 +1,5 @@
-http://localhost:3000 {
-  root * dist/
+:3000 {
+  root * {$FRONTEND_ROOT:.}
   encode gzip
 	try_files {path} index.html
 	file_server
