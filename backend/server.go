@@ -87,13 +87,13 @@ type Message struct {
 }
 
 // TODO: Add mail template
-func (msg Message) Message(toRecipientEmail string) types.MailMessage {
-	return types.MailMessage{
+func (msg Message) Message(toRecipientEmail string) (*types.MailMessage, error) {
+	return &types.MailMessage{
 		Name:    "Mr. Kupido",
 		Subject: "Your message has received a reply!",
 		Content: msg.Content,
 		ToEmail: toRecipientEmail,
-	}
+	}, nil
 }
 
 func (msg Message) SendAfter() time.Duration {
@@ -118,13 +118,13 @@ type MessageReply struct {
 
 // TODO: Add mail template
 // TODO: include emojis to mails
-func (mr MessageReply) Message(toRecipientEmail string) types.MailMessage {
-	return types.MailMessage{
+func (mr MessageReply) Message(toRecipientEmail string) (*types.MailMessage, error) {
+	return &types.MailMessage{
 		Name:    "Mr. Kupido",
 		Subject: "Your message has received a reply!",
 		Content: mr.Content,
 		ToEmail: toRecipientEmail,
-	}
+	}, nil
 }
 
 func (mr MessageReply) SendAfter() time.Duration {

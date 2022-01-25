@@ -9,7 +9,7 @@ import (
 )
 
 type EmailSender interface {
-	Message(toRecipientEmail string) types.MailMessage
+	Message(toRecipientEmail string) (*types.MailMessage, error)
 	SendAfter() time.Duration
 }
 
@@ -18,11 +18,16 @@ func newEmailSendJob(cl *rpc.Client, ms EmailSender, toRecipient string, uid str
 		return "", fmt.Errorf("postal client is disconnected")
 	}
 
+	gotMsgPayload, err := ms.Message(toRecipient)
+	if err != nil {
+		return "", err
+	}
+
 	var receivedJobId string
 	mailJobArgs := &types.NewJobArgs{
 		Type:     types.JobSend,
 		After:    ms.SendAfter(),
-		Payload:  ms.Message(toRecipient),
+		Payload:  gotMsgPayload,
 		UniqueID: uid,
 	}
 	if err := cl.Call("PostalOffice.NewJob", mailJobArgs, &receivedJobId); err != nil {

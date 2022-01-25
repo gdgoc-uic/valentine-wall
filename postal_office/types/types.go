@@ -20,7 +20,7 @@ type NewJobArgs struct {
 	Type     JobType
 	UniqueID string
 	After    time.Duration
-	Payload  MailMessage
+	Payload  *MailMessage
 }
 
 type MailMessage struct {
@@ -43,7 +43,7 @@ type JobPayload struct {
 	Type               JobType       `json:"type"`
 	SendAfter          time.Duration `json:"send_after"`
 	RemainingSendAfter time.Duration `json:"remaining_send_after"`
-	Message            MailMessage   `json:"message"`
+	Message            *MailMessage  `json:"message"`
 }
 
 func (jp *JobPayload) Scan(value interface{}) error {

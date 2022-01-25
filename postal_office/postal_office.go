@@ -145,7 +145,7 @@ func (po *PostalOffice) NewJob(args *types.NewJobArgs, jobId *string) error {
 	}
 
 	timeNow := time.Now()
-	go func(po *PostalOffice, msg types.MailMessage, sendDuration time.Duration, assignedJobId string, assignedUniqueId string) {
+	go func(po *PostalOffice, msg *types.MailMessage, sendDuration time.Duration, assignedJobId string, assignedUniqueId string) {
 		defer deleteJob(po, assignedUniqueId)
 
 		for {
