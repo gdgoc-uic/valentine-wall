@@ -44,15 +44,22 @@
           </div>
         </div>
 
-        <div v-if="$store.getters.isLoggedIn" class="bg-gray-200 px-4 py-2 rounded-lg flex flex-wrap justify-center self-center mt-8 text-center">
+        <div v-if="$store.getters.isLoggedIn" class="bg-gray-200 px-4 py-2 rounded-lg flex flex-wrap justify-center self-center mt-8 text-center space-x-2">
           <span>Signed in as {{ $store.state.user.email }}</span>
           <span
             class="cursor-pointer font-bold hover:underline lg:ml-2"
             @click="$store.dispatch('logout')">Log out</span>
+          <span class="cursor-pointer font-bold hover:underline lg:ml-2" @click="openSettingsModal = true">
+            Settings
+          </span>
         </div>
       </div>
     </div>
   </main>
+
+  <teleport to="body">
+    <settings-modal v-model:open="openSettingsModal" />
+  </teleport>
 </template>
 
 <script lang="ts">
@@ -60,12 +67,14 @@ import { logEvent } from '@firebase/analytics';
 import SubmitMessageModal from '../components/SendMessageModal.vue';
 import { analytics } from '../firebase';
 import { catchAndNotifyError } from '../notify';
+import SettingsModal from '../components/SettingsModal.vue';
 
 export default {
-  components: { SubmitMessageModal },
+  components: { SubmitMessageModal, SettingsModal },
   data() {
     return {
-      isFormOpen: false
+      isFormOpen: false,
+      openSettingsModal: false
     }
   },
   methods: {
