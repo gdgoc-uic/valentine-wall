@@ -13,6 +13,7 @@ import (
 	"net/rpc"
 	"regexp"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/go-chi/chi/v5"
@@ -828,6 +829,42 @@ func main() {
 
 			if err := wrapSqlResult(res, "Failed to connect ID to user. Please try again"); err != nil {
 				return err
+			}
+
+			// generate welcome message
+			if userEmail, err := getUserEmailByUID(authClient, token.UID); err == nil {
+				// associatedUser, err :=
+
+				emailId, _ := goNanoid.New()
+				_, err = newEmailSendJob(postalOfficeClient, EmailSenderFunc(func(recipientEmail string) (string, error) {
+					associatedUser, err := getAssociatedUserByEmail(db, authClient, userEmail)
+					if err != nil {
+						return "", err
+					}
+
+					stats, err := getMessageStatsBySID(db, associatedUser.AssociatedID)
+					if err != nil {
+						return "", err
+					}
+
+					// TODO: message
+					msgContent := []string{
+						fmt.Sprintf("Hello! %s\n", recipientEmail),
+						"Welcome to UIC Valentine Wall! From here, you can now do the following with your newly created account:\n",
+						"- Post, confess, or share your thoughts to your fellow ignacian anonymously!",
+						"- No money? No problem! You can also send virtual gifts alongside your message!",
+						"- Receive gifts and messages from others. Reply them back to show your appreciation!\n",
+						fmt.Sprintf("While you are not around, your ID have received %d messages and %d gifts.\n\n", stats.Messages, stats.GiftMessages),
+						"Make your valentines day well spent this pandemic! Good luck and have a nice day!",
+					}
+
+					return strings.Join(msgContent, "\n"), nil
+				}), userEmail, emailId)
+				if err != nil {
+					log.Println(err)
+				}
+			} else {
+				log.Println(err)
 			}
 
 			return jsonEncode(rw, map[string]string{

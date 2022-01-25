@@ -205,6 +205,14 @@ func getUserBySID(db *sqlx.DB, authClient *auth.Client, sid string) (*auth.UserR
 	return authClient.GetUser(context.Background(), associatedData.UserID)
 }
 
+func getAssociatedUserByEmail(db *sqlx.DB, authClient *auth.Client, email string) (*AssociatedUser, error) {
+	gotUser, err := authClient.GetUserByEmail(context.Background(), email)
+	if err != nil {
+		return nil, err
+	}
+	return getAssociatedUserBy(db, sq.Eq{"user_id": gotUser.UID})
+}
+
 func getAssociatedUserBy(db *sqlx.DB, pred Predicate) (*AssociatedUser, error) {
 	associatedData := &AssociatedUser{}
 	sql, args, err := sq.Select("*").From("associated_ids").Where(pred).ToSql()
