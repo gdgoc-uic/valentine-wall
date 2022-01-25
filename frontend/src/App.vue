@@ -33,14 +33,29 @@
 </template>
 
 <script lang="ts">
-import { defineComponent } from "@vue/runtime-core";
+import { computed, defineComponent } from "@vue/runtime-core";
 import { auth } from "./firebase";
+import { HeadAttrs, useHead } from "@vueuse/head";
 
 import BasicAlert from "./components/BasicAlert.vue";
 import SubmitIDModal from "./components/SubmitIDModal.vue";
+import { useRoute } from "vue-router";
+import { getPageTitle } from "./router";
 
 export default defineComponent({
   components: { BasicAlert, SubmitIdModal: SubmitIDModal },
+  setup() {
+    const route = useRoute();
+    useHead({
+      title: computed(() => getPageTitle(route, 'UIC Valentine Wall')),
+      meta: computed(() => {
+        if (route.meta.metaTags && route.meta.metaTags instanceof Function) {
+          return route.meta.metaTags(route);
+        }
+        return route.meta.metaTags as HeadAttrs[] ?? [];
+      }),
+    });
+  },
   mounted() {
     this.$store.dispatch('getGiftList');
     auth.onAuthStateChanged((user) => {

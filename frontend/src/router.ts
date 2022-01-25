@@ -1,6 +1,16 @@
 import { logEvent, setCurrentScreen } from 'firebase/analytics';
-import { createRouter, createWebHistory } from 'vue-router';
+import { createRouter, createWebHistory, RouteLocationNormalizedLoaded } from 'vue-router';
 import { analytics } from './firebase';
+
+export function getPageTitle(route: RouteLocationNormalizedLoaded, pageSuffix: string): string {
+  const pageTitle = route.meta.pageTitle;
+  if (!pageTitle) return pageSuffix;
+
+  if (pageTitle instanceof Function) {
+    return `${pageTitle(route)} | ${pageSuffix}`
+  }
+  return `${pageTitle} | ${pageSuffix}`;
+}
 
 const router = createRouter({
   history: createWebHistory(),
@@ -8,17 +18,16 @@ const router = createRouter({
     {
       name: 'home-page',
       path: '/',
-      component: () => import('./pages/Home.vue'),
-      meta: {
-        pageTitle: 'UIC Valentines Wall'
-      }
+      component: () => import('./pages/Home.vue')
     },
     {
       name: 'message-wall-page',
       path: '/wall/:recipientId?',
       component: () => import('./pages/Wall.vue'),
       meta: {
-        pageTitle: 'Message Wall | UIC Valentines Wall'
+        pageTitle: (route: RouteLocationNormalizedLoaded) => {
+          return route.params.recipientId ? `Messages for ${route.params.recipientId}` : 'Recent messages';
+        }
       }
     },
     {
@@ -26,7 +35,23 @@ const router = createRouter({
       path: '/wall/:recipientId/:messageId',
       component: () => import('./pages/Message.vue'),
       meta: {
-        pageTitle: 'Message Page | UIC Valentines Wall'
+        pageTitle: (route: RouteLocationNormalizedLoaded) => {
+          return `Message for ${route.params.recipientId}`;
+        },
+        metaTags: (route: RouteLocationNormalizedLoaded) => [
+          {
+            name: 'og:image',
+            content: `${import.meta.env.VITE_BACKEND_URL}/messages/${route.params.recipientId}/${route.params.messageId}?image`
+          },
+          {
+            name: 'og:image:width',
+            content: '1200'
+          },
+          {
+            name: 'og:image:height',
+            content: '675'
+          }
+        ]
       }
     },
     {
@@ -34,7 +59,7 @@ const router = createRouter({
       path: '/rankings',
       component: () => import('./pages/Rankings.vue'),
       meta: {
-        pageTitle: 'Rankings | UIC Valentine Wall'
+        pageTitle: 'Rankings'
       }
     }
   ]

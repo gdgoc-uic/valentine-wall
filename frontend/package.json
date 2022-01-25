@@ -8,6 +8,7 @@
   },
   "dependencies": {
     "@iconify-json/twemoji": "^1.0.2",
+    "@vueuse/head": "^0.7.5",
     "daisyui": "^1.22.0",
     "dayjs": "^1.10.7",
     "firebase": "^9.6.3",
