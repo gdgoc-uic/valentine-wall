@@ -53,5 +53,5 @@ func (esf EmailSenderFunc) Message(toRecipientEmail string) (*types.MailMessage,
 }
 
 func (esf EmailSenderFunc) SendAfter() time.Duration {
-	return 0
+	return 20 * time.Second
 }
