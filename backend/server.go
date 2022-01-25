@@ -360,7 +360,7 @@ func main() {
 				// recipientId := chi.URLParam(r, "recipientId")
 				// if associatedUser, err := getAssociatedUserBy(db, sq.Eq{"user_id": token.UID}); err == nil && associatedUser.AssociatedID == recipientId {
 				if queryVal == "1" {
-					*sb = (*sb).InnerJoin("message_gifts on message_gifts.message_id = messages.id")
+					*sb = (*sb).Distinct().InnerJoin("message_gifts on message_gifts.message_id = messages.id")
 				} else if queryVal == "2" {
 					// leave as is
 				}
@@ -388,15 +388,21 @@ func main() {
 			GiftMessages int `json:"gift_messages"`
 		}
 
-		baseQuery := sq.Select("count(*)").From("messages").Where(sq.Eq{"recipient_id": recipientId})
+		eqId := sq.Eq{"recipient_id": recipientId}
 		joinStmt := "message_gifts on message_gifts.message_id = messages.id"
-		giftMessagesCountQuery := baseQuery.From("messages").InnerJoin(joinStmt)
-		nonGiftMessagesCountSql, ngmArgs, err := baseQuery.LeftJoin(joinStmt).Where("message_gifts.gift_id IS NULL").ToSql()
+		baseQuery := sq.Select("count(*)")
+		giftMessageCountQuery := sq.Select("id", "recipient_id").Distinct().From("messages").InnerJoin(joinStmt).Where(eqId)
+		giftMessagesCountQuery2 := baseQuery.FromSelect(giftMessageCountQuery, "msg").GroupBy("recipient_id")
+		nonGiftMessagesCountSql, ngmArgs, err := baseQuery.From("messages").LeftJoin(joinStmt).Where("message_gifts.gift_id IS NULL").Where(eqId).ToSql()
 		if err != nil {
 			return err
 		}
 
-		statSql, args, err := giftMessagesCountQuery.Suffix("UNION ALL "+nonGiftMessagesCountSql, ngmArgs...).ToSql()
+		statSql, args, err := giftMessagesCountQuery2.Suffix("UNION ALL "+nonGiftMessagesCountSql, ngmArgs...).ToSql()
+		if err != nil {
+			return err
+		}
+
 		rows, err := db.Query(statSql, args...)
 		if err != nil {
 			return err
