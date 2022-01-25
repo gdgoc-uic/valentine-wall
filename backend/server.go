@@ -267,6 +267,10 @@ func main() {
 	db := initializeDb()
 	defer db.Close()
 
+	// middlewares
+	jsonOnly := middleware.AllowContentType("application/json")
+	appVerifyUser := verifyUser(firebaseApp)
+
 	r := chi.NewRouter()
 	r.Use(middleware.Logger)
 	// r.Use(recoverer)
@@ -299,9 +303,6 @@ func main() {
 			StatusCode: http.StatusMethodNotAllowed,
 		}
 	}))
-
-	jsonOnly := middleware.AllowContentType("application/json")
-	appVerifyUser := verifyUser(firebaseApp)
 
 	r.Get("/departments", wrapHandler(func(rw http.ResponseWriter, r *http.Request) error {
 		return jsonEncode(rw, collegeDepartments)
