@@ -28,6 +28,14 @@ const router = createRouter({
       meta: {
         pageTitle: 'Message Page | UIC Valentines Wall'
       }
+    },
+    {
+      name: 'rankings-page',
+      path: '/rankings',
+      component: () => import('./pages/Rankings.vue'),
+      meta: {
+        pageTitle: 'Rankings | UIC Valentine Wall'
+      }
     }
   ]
 });

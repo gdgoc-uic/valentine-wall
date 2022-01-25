@@ -12,6 +12,7 @@ import (
 	"net/http"
 	"net/rpc"
 	"regexp"
+	"strconv"
 	"time"
 
 	"github.com/go-chi/chi/v5"
@@ -310,6 +311,59 @@ func main() {
 
 	r.Get("/gifts", wrapHandler(func(rw http.ResponseWriter, r *http.Request) error {
 		return jsonEncode(rw, giftList)
+	}))
+
+	r.Get("/rankings", wrapHandler(func(rw http.ResponseWriter, r *http.Request) error {
+		limit := 0
+		if gotLimit, exists := r.URL.Query()["limit"]; exists || len(gotLimit) != 0 {
+			var err error
+			if limit, err = strconv.Atoi(gotLimit[0]); err != nil {
+				return err
+			} else if limit < 5 {
+				return &ResponseError{
+					StatusCode: http.StatusBadRequest,
+					Message:    "invalid limit value", // TODO
+				}
+			}
+		}
+
+		// TODO: cache results
+		// get number of gift message for each recipient
+		giftInnerJoinSubquery := sq.Select("id", "recipient_id").Distinct().From("messages").InnerJoin("message_gifts on message_gifts.message_id = messages.id")
+		giftMessagesCountSubquerySQL, gSqArgs, err := sq.Select("recipient_id", "count(*) gift_messages_count").FromSelect(giftInnerJoinSubquery, "msg").GroupBy("recipient_id").ToSql()
+		if err != nil {
+			return err
+		}
+
+		// get number of ordinary messages for each recipient
+		messagesCountSubQuery := sq.Select("messages.recipient_id", "count(*) messages_count", "gift_messages_rankings.gift_messages_count").
+			From("messages").LeftJoin(fmt.Sprintf("(%s) gift_messages_rankings on gift_messages_rankings.recipient_id = messages.recipient_id", giftMessagesCountSubquerySQL), gSqArgs...).
+			GroupBy("messages.recipient_id")
+
+		// get all
+		rankingsResults := []struct {
+			RecipientID       string `db:"recipient_id" json:"recipient_id"`
+			Department        string `db:"department" json:"department"`
+			GiftMessagesCount string `db:"gift_messages_count" json:"gift_messages_count"`
+			MessagesCount     string `db:"messages_count" json:"messages_count"`
+		}{}
+
+		rankingsQuery := sq.Select("recipient_id", "associated_ids.department", "ifnull(rankings.gift_messages_count, 0) gift_messages_count", "ifnull(rankings.messages_count, 0) messages_count").
+			FromSelect(messagesCountSubQuery, "rankings").InnerJoin("associated_ids on associated_ids.associated_id = rankings.recipient_id").
+			OrderBy("rankings.gift_messages_count desc", "rankings.messages_count desc")
+
+		if limit != 0 {
+			rankingsQuery = rankingsQuery.Limit(uint64(limit))
+		}
+
+		rankingsQuerySQL, rqArgs, err := rankingsQuery.ToSql()
+		if err != nil {
+			return err
+		} else if err := db.Select(&rankingsResults, rankingsQuerySQL, rqArgs...); err != nil {
+			return err
+		}
+
+		return jsonEncode(rw, rankingsResults)
 	}))
 
 	getMessagesHandler := wrapHandler(func(rw http.ResponseWriter, rr *http.Request) error {
