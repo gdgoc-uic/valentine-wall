@@ -53,6 +53,7 @@ require (
 	github.com/go-playground/locales v0.14.0 // indirect
 	github.com/go-playground/universal-translator v0.18.0 // indirect
 	github.com/gorilla/sessions v1.2.1
+	github.com/hako/durafmt v0.0.0-20210608085754-5c1018a4e16b
 	github.com/jmoiron/sqlx v1.3.4
 	github.com/leodido/go-urn v1.2.1 // indirect
 	github.com/mailgun/mailgun-go v2.0.0+incompatible

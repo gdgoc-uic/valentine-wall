@@ -30,6 +30,7 @@ import (
 	"github.com/dghubble/oauth1"
 
 	sq "github.com/Masterminds/squirrel"
+	"github.com/hako/durafmt"
 
 	"github.com/nedpals/valentine-wall/postal_office/types"
 )
@@ -649,9 +650,10 @@ func main() {
 						Message:    "You have posted a similar message to a similar recipient.",
 					}
 				} else if diff := submittedMsg.CreatedAt.Sub(lastPostInfo.CreatedAt); diff < submittedMsg.SendAfter() {
+					fmtDuration := durafmt.Parse(submittedMsg.SendAfter() - diff).LimitFirstN(1)
 					return &ResponseError{
 						StatusCode: http.StatusTooManyRequests,
-						Message:    fmt.Sprintf("You have %s before you can post again.", diff),
+						Message:    fmt.Sprintf("You have %s left before you can post again.", fmtDuration),
 					}
 				}
 			}
