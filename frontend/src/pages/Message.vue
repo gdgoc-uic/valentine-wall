@@ -11,19 +11,21 @@
       <template v-else-if="!notFound && message">
         <div class="w-full bg-white rounded-lg divide-y-2">
           <div class="p-12">
-            <div class="flex flex-col items-center text-center" v-if="hasGift">
-              <div class="p-8 bg-white border-gray-200 border rounded-full shadow-md">
-                <gift-icon :uid="gift.uid" class="text-4xl" />
+            <div class="flex flex-col items-center text-center" v-if="hasGifts">
+              <div class="flex flex-row space-x-2 items-center justify-center">
+                <div :key="gift.uid" v-for="gift in gifts" class="p-8 bg-white border-gray-200 border rounded-full shadow-md">
+                  <gift-icon :uid="gift.uid" class="text-4xl" />
+                </div>
               </div>
               <p class="mt-4 text-gray-500 text-xl mb-2">Someone gifted {{ displayName }}</p>
-              <p class="text-3xl font-bold">{{ gift.label }}</p>
+              <p class="text-3xl font-bold">{{ displayedGiftLabels }}</p>
             </div>
             <p v-else class="text-gray-500 text-xl mb-2">For {{ displayName }}</p>
-            <div class="mb-8" :class="{ 'mt-8 bg-amber-100 rounded-lg text-center': hasGift, 'px-8 py-16': revealContent && hasGift, 'mt-2': !hasGift }">
-              <button v-if="hasGift && !revealContent" class="w-full p-4 hover:bg-amber-200 rounded-lg" @click="revealContent = true">Reveal note</button>
+            <div class="mb-8" :class="{ 'mt-8 bg-amber-100 rounded-lg text-center': hasGifts, 'px-8 py-16': revealContent && hasGifts, 'mt-2': !hasGifts }">
+              <button v-if="hasGifts && !revealContent" class="w-full p-4 hover:bg-amber-200 rounded-lg" @click="revealContent = true">Reveal note</button>
               <p v-if="revealContent" class="font-bold text-4xl">{{ message.content }}</p>
             </div>
-            <p class="text-gray-500" :class="{ 'text-center': hasGift }">
+            <p class="text-gray-500" :class="{ 'text-center': hasGifts }">
               Posted {{ relativifyDate(message.created_at) }} ({{ formatDate(message.created_at, 'MMMM D, YYYY h:mm A') }})
             </p>
           </div>
@@ -174,7 +176,7 @@ export default {
           this.message = json['message'];
           this.reply = json['reply'];
 
-          if (!this.hasGift) {
+          if (!this.hasGifts) {
             this.revealContent = true;
           }
         } else if (resp.status == 404) {
@@ -196,14 +198,25 @@ export default {
     formatDate(date: Date, format: string) {
       return dayjs(date).format(format);
     },
+    generateDisplayGiftLabelString(g: Gift, i: number, arr: Gift[]) {
+      let displayStr = g.label;
+      if (arr.length > 1 && i === arr.length - 1) {
+        displayStr = 'and ' + displayStr;
+      }
+      return displayStr;
+    }
   },
   computed: {
-    hasGift(): boolean {
-      return this.message.gift_id && this.gift;
+    hasGifts(): boolean {
+      return this.message.gift_ids && this.gifts?.length;
     },
-    gift(): Gift | null {
+    gifts(): Gift[] | null {
       if (!this.message) return null;
-      return this.$store.state.giftList.find(g => g.id === this.message.gift_id) ?? null;
+      return this.$store.state.giftList.filter(g => this.message.gift_ids?.includes(g.id) ?? false) ?? null;
+    },
+    displayedGiftLabels(): string {
+      if (!this.hasGifts || !this.gifts) return '';
+      return this.gifts.map(this.generateDisplayGiftLabelString).join(this.gifts.length > 2 ? ', ' : '');
     },
     displayName(): string {
       if (this.message.recipient_id === this.$store.state.user.associatedId) {

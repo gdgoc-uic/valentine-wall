@@ -11,17 +11,9 @@
       <div class="flex flex-col mt-4 -mx-2 justify-center items-center">
         <p>Select gift</p>
         <fieldset class="gift-list-checkboxes">
-          <div class="gift-item">
-            <div class="gift-item-btn-wrapper">
-              <input class="absolute appearance-none top-0 left-0" type="radio" name="gift_id" :value="-1" id="none" checked>
-              <label class="btn btn-checkbox h-full w-full" for="none">
-                None
-              </label>
-            </div>
-          </div>
           <div class="gift-item" :key="'gift_' + gift.uid" v-for="(gift, i) in $store.state.giftList">
             <div class="gift-item-btn-wrapper">
-              <input class="absolute appearance-none top-0 left-0" type="radio" name="gift_id" :value="gift.id" :id="gift.uid">
+              <input class="absolute appearance-none top-0 left-0" type="checkbox" :name="'gift_ids['+gift.id+']'" :id="gift.uid">
               <label class="btn btn-checkbox p-1 flex flex-col text-center h-full w-full" :for="gift.uid">
                 <gift-icon :uid="gift.uid" class="text-4xl" />
                 <span class="mt-2">{{ gift.label }}</span>
@@ -102,20 +94,26 @@ export default {
 
       if (!e.target || !(e.target instanceof HTMLFormElement)) return;
       const formData = new FormData(e.target);
+      const giftIdRegex = /^gift_ids\[([0-9]+)\]$/;
 
       try {
-        let giftId: number | null = null;
-        if (formData.get('gift_id')) {
-          giftId = parseInt(formData.get('gift_id')!.toString());
-          if (giftId == -1) {
-            giftId = null;
+        let giftIds: number[] = [];
+        formData.forEach((value, key) => {
+          if (key.startsWith('gift_ids') && value === 'on') {
+            const matches = giftIdRegex.exec(key);
+            if (!matches || matches.length == 0) return;
+            giftIds.push(parseInt(matches[1]));
           }
+        });
+
+        if (giftIds.length > 3) {
+          throw new Error('Maximum of 3 gifts is allowed.');
         }
 
         const resp = await client.postJson('/messages', {
           recipient_id: formData.get('recipient_id'),
           content: formData.get('content'),
-          gift_id: giftId,
+          gift_ids: giftIds,
           uid: this.$store.state.user.id
         });
 
@@ -155,7 +153,7 @@ export default {
   @apply w-full relative;
 }
 
-.gift-list-checkboxes .gift-item .gift-item-btn-wrapper input[type="radio"]:checked + label {
+.gift-list-checkboxes .gift-item .gift-item-btn-wrapper input[type="checkbox"]:checked + label {
   @apply bg-rose-100 border-rose-600;
 }
 

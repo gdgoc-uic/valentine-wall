@@ -71,13 +71,14 @@ func (uc UserConnection) ToOauth1Token() *oauth1.Token {
 }
 
 type Message struct {
-	ID          string    `db:"id" json:"id"`
-	RecipientID string    `db:"recipient_id" json:"recipient_id" validate:"required,min=6,max=12,numeric"`
-	Content     string    `db:"content" json:"content" validate:"required,max=240"`
-	HasReplied  bool      `db:"has_replied" json:"has_replied"`
-	GiftID      *int      `db:"gift_id" json:"gift_id" validate:"omitempty,numeric"`
-	CreatedAt   time.Time `db:"created_at" json:"created_at"`
-	UpdatedAt   time.Time `db:"updated_at" json:"updated_at"`
+	ID          string `db:"id" json:"id"`
+	RecipientID string `db:"recipient_id" json:"recipient_id" validate:"required,min=6,max=12,numeric"`
+	Content     string `db:"content" json:"content" validate:"required,max=240"`
+	HasReplied  bool   `db:"has_replied" json:"has_replied"`
+	GiftIDs     []int  `json:"gift_ids" validate:"omitempty,max=3"`
+
+	CreatedAt time.Time `db:"created_at" json:"created_at"`
+	UpdatedAt time.Time `db:"updated_at" json:"updated_at"`
 }
 
 // TODO: Add mail template
@@ -527,7 +528,7 @@ func main() {
 			baseQuery = baseQuery.Where(sq.Eq{"recipient_id": recipientId})
 		}
 
-		dataQuery := baseQuery.Columns("id", "recipient_id", "content", "has_replied", "gift_id", "created_at", "updated_at")
+		dataQuery := baseQuery.Columns("id", "recipient_id", "content", "has_replied", "created_at", "updated_at")
 		resp, err := pg.Load(db, baseQuery, dataQuery, func(r *sqlx.Rows) (interface{}, error) {
 			msg := Message{}
 			if err := r.StructScan(&msg); err != nil {
@@ -561,7 +562,7 @@ func main() {
 				// recipientId := chi.URLParam(r, "recipientId")
 				// if associatedUser, err := getAssociatedUserBy(db, sq.Eq{"user_id": token.UID}); err == nil && associatedUser.AssociatedID == recipientId {
 				if queryVal == "1" {
-					*sb = (*sb).Where("gift_id IS NOT NULL")
+					*sb = (*sb).InnerJoin("message_gifts on message_gifts.message_id = messages.id")
 				} else if queryVal == "2" {
 					// leave as is
 				}
@@ -574,7 +575,7 @@ func main() {
 				// 	StatusCode: http.StatusForbidden,
 				// }
 			default:
-				*sb = (*sb).Where("gift_id IS NULL")
+				*sb = (*sb).LeftJoin("message_gifts on message_gifts.message_id = messages.id").Where("message_gifts.gift_id IS NULL")
 			}
 			return nil
 		},
@@ -589,27 +590,28 @@ func main() {
 			GiftMessages int `json:"gift_messages"`
 		}
 
-		statSql, args, err := sq.Select("gift_id", "count(*)").From("messages").Where(sq.Eq{"recipient_id": recipientId}).GroupBy("gift_id").ToSql()
+		baseQuery := sq.Select("count(*)").From("messages").Where(sq.Eq{"recipient_id": recipientId})
+		joinStmt := "message_gifts on message_gifts.message_id = messages.id"
+		giftMessagesCountQuery := baseQuery.From("messages").InnerJoin(joinStmt)
+		nonGiftMessagesCountSql, ngmArgs, err := baseQuery.LeftJoin(joinStmt).Where("message_gifts.gift_id IS NULL").ToSql()
 		if err != nil {
 			return err
 		}
 
+		statSql, args, err := giftMessagesCountQuery.Suffix("UNION ALL "+nonGiftMessagesCountSql, ngmArgs...).ToSql()
 		rows, err := db.Query(statSql, args...)
 		if err != nil {
 			return err
 		}
 
-		for rows.Next() {
-			giftId, giftCount := sql.NullInt32{}, 0
-			if err := rows.Scan(&giftId, &giftCount); err != nil {
-				log.Println(err)
-			}
+		rows.Next()
+		if err := rows.Scan(&stats.GiftMessages); err != nil {
+			log.Println(err)
+		}
 
-			if giftId.Valid {
-				stats.GiftMessages += giftCount
-			} else {
-				stats.Messages += giftCount
-			}
+		rows.Next()
+		if err := rows.Scan(&stats.Messages); err != nil {
+			log.Println(err)
 		}
 
 		return jsonEncode(rw, stats)
@@ -631,10 +633,6 @@ func main() {
 			}
 
 			submittedMsg.CreatedAt = time.Now()
-			// set to null if none
-			if submittedMsg.GiftID != nil && *submittedMsg.GiftID == -1 {
-				submittedMsg.GiftID = nil
-			}
 
 			// make lastpostinfo an array in order to avoid false positive error
 			// when user posts for the first time
@@ -670,12 +668,33 @@ func main() {
 			}
 
 			submittedMsg.ID = id
-			res, err := db.NamedExec("INSERT INTO messages (id, recipient_id, content, gift_id, submitter_user_id) VALUES (:id, :recipient_id, :content, :gift_id, :submitter_user_id)", &submittedMsg)
+			tx, err := db.BeginTxx(r.Context(), &sql.TxOptions{})
 			if err != nil {
 				return err
 			}
 
+			res, err := tx.NamedExec("INSERT INTO messages (id, recipient_id, content, submitter_user_id) VALUES (:id, :recipient_id, :content, :submitter_user_id)", &submittedMsg)
+			if err != nil {
+				log.Println(tx.Rollback())
+				return err
+			}
+
 			if err := wrapSqlResult(res); err != nil {
+				log.Println(tx.Rollback())
+				return err
+			}
+
+			for _, giftId := range submittedMsg.GiftIDs {
+				if res, err := tx.Exec("INSERT INTO message_gifts (message_id, gift_id) VALUES (?, ?)", submittedMsg.ID, giftId); err != nil {
+					log.Println(tx.Rollback())
+					return err
+				} else if err := wrapSqlResult(res); err != nil {
+					log.Println(tx.Rollback())
+					return err
+				}
+			}
+
+			if err := tx.Commit(); err != nil {
 				return err
 			}
 
@@ -710,6 +729,10 @@ func main() {
 				log.Println(err)
 				r.NotFoundHandler().ServeHTTP(rw, rr)
 				return
+			}
+
+			if err := db.Select(&message.GiftIDs, "SELECT gift_id FROM message_gifts WHERE message_id = ?", messageId); err != nil {
+				log.Println(err)
 			}
 
 			newCtx := context.WithValue(rr.Context(), "gotMessage", message)
@@ -750,7 +773,7 @@ func main() {
 					log.Println(err)
 				}
 			}
-		} else if message.GiftID != nil {
+		} else if len(message.GiftIDs) != 0 {
 			// make notes with gifts limited to sender and receivers only
 			// TODO: disable_restricted_access_to_gift_messages
 			// return &ResponseError{
