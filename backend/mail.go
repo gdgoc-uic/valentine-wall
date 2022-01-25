@@ -35,3 +35,23 @@ func newEmailSendJob(cl *rpc.Client, ms EmailSender, toRecipient string, uid str
 	}
 	return receivedJobId, nil
 }
+
+type EmailSenderFunc func(string) (string, error)
+
+func (esf EmailSenderFunc) Message(toRecipientEmail string) (*types.MailMessage, error) {
+	gotContent, err := esf(toRecipientEmail)
+	if err != nil {
+		return nil, err
+	}
+
+	return &types.MailMessage{
+		Name:    "Mr. Kupido",
+		ToEmail: toRecipientEmail,
+		Subject: "Valentine Wall - Welcome!",
+		Content: gotContent,
+	}, nil
+}
+
+func (esf EmailSenderFunc) SendAfter() time.Duration {
+	return 0
+}
