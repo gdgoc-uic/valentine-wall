@@ -49,6 +49,11 @@ type Gift struct {
 	Label string `json:"label"`
 }
 
+type MessageStats struct {
+	Messages     int `json:"messages"`
+	GiftMessages int `json:"gift_messages"`
+}
+
 type AssociatedUser struct {
 	UserID       string `db:"user_id" json:"user_id"`
 	AssociatedID string `db:"associated_id" json:"associated_id" validate:"required,numeric"`
@@ -438,41 +443,10 @@ func main() {
 	r.With(customMsgQueryFilters, pagination(messagesPaginator)).Get("/messages/{recipientId}", getMessagesHandler)
 	r.Get("/messages/{recipientId}/stats", wrapHandler(func(rw http.ResponseWriter, r *http.Request) error {
 		recipientId := chi.URLParam(r, "recipientId")
-		var stats struct {
-			Messages     int `json:"messages"`
-			GiftMessages int `json:"gift_messages"`
-		}
-
-		eqId := sq.Eq{"recipient_id": recipientId}
-		joinStmt := "message_gifts on message_gifts.message_id = messages.id"
-		baseQuery := sq.Select("count(*)")
-		giftMessageCountQuery := sq.Select("id", "recipient_id").Distinct().From("messages").InnerJoin(joinStmt).Where(eqId)
-		giftMessagesCountQuery2 := baseQuery.FromSelect(giftMessageCountQuery, "msg").GroupBy("recipient_id")
-		nonGiftMessagesCountSql, ngmArgs, err := baseQuery.From("messages").LeftJoin(joinStmt).Where("message_gifts.gift_id IS NULL").Where(eqId).ToSql()
+		stats, err := getMessageStatsBySID(db, recipientId)
 		if err != nil {
 			return err
 		}
-
-		statSql, args, err := giftMessagesCountQuery2.Suffix("UNION ALL "+nonGiftMessagesCountSql, ngmArgs...).ToSql()
-		if err != nil {
-			return err
-		}
-
-		rows, err := db.Query(statSql, args...)
-		if err != nil {
-			return err
-		}
-
-		rows.Next()
-		if err := rows.Scan(&stats.GiftMessages); err != nil {
-			log.Println(err)
-		}
-
-		rows.Next()
-		if err := rows.Scan(&stats.Messages); err != nil {
-			log.Println(err)
-		}
-
 		return jsonEncode(rw, stats)
 	}))
 	r.With(jsonOnly, appVerifyUser).
