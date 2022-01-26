@@ -16,11 +16,11 @@ const (
 )
 
 type NewJobArgs struct {
-	ID       string
-	Type     JobType
-	UniqueID string
-	After    time.Duration
-	Payload  *MailMessage
+	ID         string
+	Type       JobType
+	UniqueID   string
+	TimeToSend time.Duration
+	Payload    *MailMessage
 }
 
 type MailMessage struct {
@@ -39,11 +39,10 @@ type GetJobIDArgs struct {
 }
 
 type JobPayload struct {
-	ParentJob          *PendingJob   `json:"-"`
-	Type               JobType       `json:"type"`
-	SendAfter          time.Duration `json:"send_after"`
-	RemainingSendAfter time.Duration `json:"remaining_send_after"`
-	Message            *MailMessage  `json:"message"`
+	ParentJob  *PendingJob   `json:"-"`
+	Type       JobType       `json:"type"`
+	TimeToSend time.Duration `json:"time_to_send"`
+	Message    *MailMessage  `json:"message"`
 }
 
 func (jp *JobPayload) Scan(value interface{}) error {

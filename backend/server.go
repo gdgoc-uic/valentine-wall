@@ -6,7 +6,7 @@ import (
 	"database/sql"
 	"encoding/json"
 	"fmt"
-	"html/template"
+	htmlTemplate "html/template"
 	"io"
 	"log"
 	"mime/multipart"
@@ -14,7 +14,7 @@ import (
 	"net/rpc"
 	"regexp"
 	"strconv"
-	"strings"
+	"text/template"
 	"time"
 
 	"github.com/chromedp/chromedp"
@@ -99,14 +99,6 @@ func (msg Message) Message(toRecipientEmail string) (*types.MailMessage, error) 
 	}, nil
 }
 
-func (msg Message) SendAfter() time.Duration {
-	return types.DefaultEmailSendExp
-}
-
-func (msg Message) PendingMessageID() string {
-	return msg.ID
-}
-
 type RawMessage struct {
 	Message
 	UID string `db:"submitter_user_id" json:"uid" validate:"required"`
@@ -117,21 +109,6 @@ type MessageReply struct {
 	Content   string    `db:"content" json:"content" validate:"required"`
 	CreatedAt time.Time `db:"created_at" json:"created_at"`
 	UpdatedAt time.Time `db:"updated_at" json:"updated_at"`
-}
-
-// TODO: Add mail template
-// TODO: include emojis to mails
-func (mr MessageReply) Message(toRecipientEmail string) (*types.MailMessage, error) {
-	return &types.MailMessage{
-		Name:    "Mr. Kupido",
-		Subject: "Your message has received a reply!",
-		Content: mr.Content,
-		ToEmail: toRecipientEmail,
-	}, nil
-}
-
-func (mr MessageReply) SendAfter() time.Duration {
-	return 10 * time.Second
 }
 
 type ResponseError struct {
@@ -229,7 +206,7 @@ func replyViaTwitter(twitterUserConnection UserConnection, message RawMessage, r
 
 type ReplyFunc func(UserConnection, RawMessage, MessageReply) error
 
-func replyViaEmail(cl *rpc.Client, db *sqlx.DB, authClient *auth.Client) ReplyFunc {
+func replyViaEmail(cl *rpc.Client, db *sqlx.DB, tmpl *TemplatedMailSender, authClient *auth.Client) ReplyFunc {
 	return func(emailUserConnection UserConnection, message RawMessage, reply MessageReply) error {
 		if emailUserConnection.Provider != "email" {
 			return fmt.Errorf("invalid provider: expected email, got %s", emailUserConnection.Provider)
@@ -242,7 +219,7 @@ func replyViaEmail(cl *rpc.Client, db *sqlx.DB, authClient *auth.Client) ReplyFu
 		}
 
 		// TODO: send reply later (?)
-		if _, err := newEmailSendJob(cl, reply, senderEmail, message.ID); err != nil {
+		if _, err := newEmailSendJob(cl, tmpl.With(reply), senderEmail, message.ID); err != nil {
 			return err
 		}
 
@@ -253,7 +230,7 @@ func replyViaEmail(cl *rpc.Client, db *sqlx.DB, authClient *auth.Client) ReplyFu
 func main() {
 	var chromeCtx context.Context
 	var chromeCancel context.CancelFunc
-	var imageTmpl *template.Template
+	htmlTemplates := &htmlTemplate.Template{}
 
 	// chrome/browser-based image rendering specific code
 	if len(chromeDevtoolsURL) != 0 {
@@ -265,13 +242,9 @@ func main() {
 		chromeCtx, chromeCancel = chromedp.NewContext(remoteChromeCtx)
 		defer chromeCancel()
 
-		// templates
-		log.Println("loading image templates...")
-		var err error
-		imageTmpl, err = template.ParseGlob("./templates/image/*.html.tpl")
-		if err != nil {
-			log.Fatalln(err)
-		}
+		// load template
+		log.Println("loading image template...")
+		htmlTemplate.Must(htmlTemplates.New("image").ParseFiles("./templates/html/message_image.html.tpl"))
 	}
 
 	// postal client
@@ -279,6 +252,14 @@ func main() {
 	postalOfficeClient, err := rpc.DialHTTP("tcp", postalOfficeAddress)
 	if err != nil {
 		log.Println("dialing:", err)
+	}
+
+	// load email templates
+	rawEmailTemplates := template.Must(template.ParseGlob("./templates/mail/*.txt.tpl"))
+	emailTemplates := map[string]*TemplatedMailSender{
+		"reply":   newTemplatedMailSender(rawEmailTemplates.Lookup("reply.txt.tpl"), "Mr. Kupido", "Your message has received a reply!", 10*time.Second),
+		"message": newTemplatedMailSender(rawEmailTemplates.Lookup("message.txt.tpl"), "Mr. Kupido", "You received a new message!", types.DefaultEmailSendExp),
+		"welcome": newTemplatedMailSender(rawEmailTemplates.Lookup("welcome.txt.tpl"), "Mr. Kupido", "Welcome to UIC Valentine Wall 2021!", 10*time.Second),
 	}
 
 	// email verification
@@ -509,13 +490,14 @@ func main() {
 
 			if len(lastPostInfos) != 0 {
 				lastPostInfo := lastPostInfos[0]
+				timeToSend := emailTemplates["message"].TimeToSend()
 				if submittedMsg.RecipientID == lastPostInfo.RecipientID && submittedMsg.Content == lastPostInfo.Content {
 					return &ResponseError{
 						StatusCode: http.StatusBadRequest,
 						Message:    "You have posted a similar message to a similar recipient.",
 					}
-				} else if diff := submittedMsg.CreatedAt.Sub(lastPostInfo.CreatedAt); diff < submittedMsg.SendAfter() {
-					fmtDuration := durafmt.Parse(submittedMsg.SendAfter() - diff).LimitFirstN(1)
+				} else if diff := submittedMsg.CreatedAt.Sub(lastPostInfo.CreatedAt); diff < timeToSend {
+					fmtDuration := durafmt.Parse(timeToSend - diff).LimitFirstN(1)
 					return &ResponseError{
 						StatusCode: http.StatusTooManyRequests,
 						Message:    fmt.Sprintf("You have %s left before you can post again.", fmtDuration),
@@ -572,7 +554,7 @@ func main() {
 				log.Println(err)
 			} else {
 				// send the mail within n minutes.
-				if _, err := newEmailSendJob(postalOfficeClient, submittedMsg.Message, recipientUser.Email, submittedMsg.ID); err != nil {
+				if _, err := newEmailSendJob(postalOfficeClient, emailTemplates["message"].With(submittedMsg.Message), recipientUser.Email, submittedMsg.ID); err != nil {
 					log.Println(err)
 				}
 			}
@@ -614,7 +596,7 @@ func main() {
 		// generate image if ?image query
 		if rr.URL.Query().Has("image") {
 			if len(chromeDevtoolsURL) != 0 {
-				return generateImagePNGChrome(rw, chromeCtx, imageTmpl, message.Message)
+				return generateImagePNGChrome(rw, chromeCtx, htmlTemplates.Lookup("image"), message.Message)
 			} else {
 				return generateImagePNG(rw, imageTypeTwitter, message.Message)
 			}
@@ -629,7 +611,8 @@ func main() {
 				isUserSenderOrReceiver = true
 			}
 
-			if token.UID == message.UID && time.Now().Sub(message.CreatedAt) < message.SendAfter() {
+			timeToSend := emailTemplates["message"].TimeToSend()
+			if token.UID == message.UID && time.Now().Sub(message.CreatedAt) < timeToSend {
 				isDeletable = true
 			}
 		} else if tErr != nil {
@@ -662,7 +645,9 @@ func main() {
 	r.With(appVerifyUser, getRawMessage).Delete("/messages/{recipientId}/{messageId}", wrapHandler(func(rw http.ResponseWriter, r *http.Request) error {
 		token := r.Context().Value("authToken").(*auth.Token)
 		message := r.Context().Value("gotMessage").(RawMessage)
-		if message.UID != token.UID || time.Now().Sub(message.CreatedAt) >= message.SendAfter() {
+		timeToSend := emailTemplates["message"].TimeToSend()
+
+		if message.UID != token.UID || time.Now().Sub(message.CreatedAt) >= timeToSend {
 			return &ResponseError{
 				StatusCode: http.StatusForbidden,
 			}
@@ -730,7 +715,7 @@ func main() {
 					return err
 				}
 			} else if emailIdx, hasEmail := isConnectedTo(connections, "email"); hasEmail {
-				if err := replyViaEmail(postalOfficeClient, db, authClient)(connections[emailIdx], message, reply); err != nil {
+				if err := replyViaEmail(postalOfficeClient, db, emailTemplates["reply"], authClient)(connections[emailIdx], message, reply); err != nil {
 					return err
 				}
 			} else {
@@ -869,34 +854,25 @@ func main() {
 
 			// generate welcome message
 			if userEmail, err := getUserEmailByUID(authClient, token.UID); err == nil {
-				// associatedUser, err :=
-
 				emailId, _ := goNanoid.New()
-				_, err = newEmailSendJob(postalOfficeClient, EmailSenderFunc(func(recipientEmail string) (string, error) {
-					associatedUser, err := getAssociatedUserByEmail(db, authClient, userEmail)
-					if err != nil {
-						return "", err
-					}
-
-					stats, err := getMessageStatsBySID(db, associatedUser.AssociatedID)
-					if err != nil {
-						return "", err
-					}
-
-					// TODO: message
-					msgContent := []string{
-						fmt.Sprintf("Hello! %s\n", recipientEmail),
-						"Welcome to UIC Valentine Wall! From here, you can now do the following with your newly created account:\n",
-						"- Post, confess, or share your thoughts to your fellow ignacian anonymously!",
-						"- No money? No problem! You can also send virtual gifts alongside your message!",
-						"- Receive gifts and messages from others. Reply them back to show your appreciation!\n",
-						fmt.Sprintf("While you are not around, your ID have received %d messages and %d gifts.\n\n", stats.Messages, stats.GiftMessages),
-						"Make your valentines day well spent this pandemic! Good luck and have a nice day!",
-					}
-
-					return strings.Join(msgContent, "\n"), nil
-				}), userEmail, emailId)
+				associatedUser, err := getAssociatedUserByEmail(db, authClient, userEmail)
 				if err != nil {
+					log.Println(err)
+				}
+
+				stats, err := getMessageStatsBySID(db, associatedUser.AssociatedID)
+				if err != nil {
+					log.Println(err)
+				}
+
+				sender := emailTemplates["welcome"].With(struct {
+					Email string
+					Stats *MessageStats
+				}{
+					Email: userEmail,
+					Stats: stats,
+				})
+				if _, err := newEmailSendJob(postalOfficeClient, sender, userEmail, emailId); err != nil {
 					log.Println(err)
 				}
 			} else {

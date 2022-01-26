@@ -145,7 +145,7 @@ func (po *PostalOffice) NewJob(args *types.NewJobArgs, jobId *string) error {
 	}
 
 	timeNow := time.Now()
-	go func(po *PostalOffice, msg *types.MailMessage, sendDuration time.Duration, assignedJobId string, assignedUniqueId string) {
+	go func(po *PostalOffice, msg *types.MailMessage, timeToSend time.Duration, assignedJobId string, assignedUniqueId string) {
 		defer deleteJob(po, assignedUniqueId)
 
 		for {
@@ -155,7 +155,7 @@ func (po *PostalOffice) NewJob(args *types.NewJobArgs, jobId *string) error {
 					log.Printf("[%s] job cancelled\n", assignedJobId)
 					return
 				}
-			case <-time.After(sendDuration):
+			case <-time.After(timeToSend):
 				mgMsg := po.mg.NewMessage(
 					fmt.Sprintf("%s <mailgun@%s>", msg.Name, mailgunDomain),
 					msg.Subject,
@@ -175,16 +175,16 @@ func (po *PostalOffice) NewJob(args *types.NewJobArgs, jobId *string) error {
 				return
 			}
 		}
-	}(po, args.Payload, args.After, gotJobId, args.UniqueID)
+	}(po, args.Payload, args.TimeToSend, gotJobId, args.UniqueID)
 
 	*jobId = gotJobId
 	pendingJob := &types.PendingJob{
 		ID:       gotJobId,
 		UniqueID: args.UniqueID,
 		Payload: &types.JobPayload{
-			Type:      args.Type,
-			SendAfter: args.After,
-			Message:   args.Payload,
+			Type:       args.Type,
+			TimeToSend: args.TimeToSend,
+			Message:    args.Payload,
 		},
 		UpdatedAt: timeNow,
 	}
@@ -234,11 +234,11 @@ func loadPendingJobs(po *PostalOffice) error {
 	for _, pj := range pendingJobs {
 		var jobId string
 		err := po.NewJob(&types.NewJobArgs{
-			Type:     pj.Payload.Type,
-			UniqueID: pj.UniqueID,
-			ID:       pj.ID,
-			After:    pj.Payload.RemainingSendAfter,
-			Payload:  pj.Payload.Message,
+			Type:       pj.Payload.Type,
+			UniqueID:   pj.UniqueID,
+			ID:         pj.ID,
+			TimeToSend: pj.Payload.TimeToSend,
+			Payload:    pj.Payload.Message,
 		}, &jobId)
 		if err != nil {
 			log.Println(err)
@@ -268,7 +268,7 @@ func savePendingJobs(po *PostalOffice) error {
 	po.mappedPendingJobs.Range(func(key, value interface{}) bool {
 		pj := value.(*types.PendingJob)
 		timeDiff := time.Now().Sub(pj.UpdatedAt)
-		pj.Payload.RemainingSendAfter = pj.Payload.SendAfter - timeDiff
+		pj.Payload.TimeToSend = pj.Payload.TimeToSend - timeDiff
 		if _, err := tx.NamedExec("INSERT INTO pending_jobs (id, unique_id, payload, updated_at) VALUES (:id, :unique_id, :payload, :updated_at)", pj); err != nil {
 			log.Println(err)
 			return false
