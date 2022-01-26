@@ -6,8 +6,6 @@ services:
       dockerfile: ./postal_office/Dockerfile
     volumes:
       - ./postal_office/_data:/app/_data
-    ports:
-      - '3350:3350'
     environment:
       - MAILGUN_DOMAIN
       - MAILGUN_API_KEY

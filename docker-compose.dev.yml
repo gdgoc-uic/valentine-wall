@@ -1,4 +1,8 @@
 services:
+  postal_office:
+    ports:
+      - '3350:3350'
+
   backend:
     ports:
       - '4000:4000'
