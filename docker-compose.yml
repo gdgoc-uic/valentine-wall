@@ -1,4 +1,10 @@
 services:
+  headless_chrome:
+    container_name: headless_chrome
+    image: browserless/chrome
+    networks:
+      - backend
+
   postal_office:
     container_name: postal_office
     build:
@@ -22,6 +28,7 @@ services:
       - ./backend/_data:/app/_data
       - ./backend/fonts:/app/fonts
       - ./backend/migrations:/app/migrations
+      - ./backend/templates:/app/templates
       - ./${PROFANITY_JSON_FILE_NAME}:/app/${PROFANITY_JSON_FILE_NAME}
       - ./${GOOGLE_APPLICATION_CREDENTIALS_FILE}:/app/${GOOGLE_APPLICATION_CREDENTIALS_FILE}
     environment:
@@ -36,10 +43,12 @@ services:
       - TWITTER_CLIENT_SECRET
       - TWITTER_CALLBACK_URL
       - POSTAL_OFFICE_ADDRESS=postal_office:3350
+      - CHROME_DEVTOOLS_URL=ws://headless_chrome:3000
     networks:
       - backend
     depends_on:
       - postal_office
+      - headless_chrome
 
   frontend:
     container_name: frontend

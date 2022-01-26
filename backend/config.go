@@ -26,6 +26,7 @@ var databasePath string
 var baseUrl string
 var twitterOauth1Config *oauth1.Config
 var gAppCredPath string
+var chromeDevtoolsURL string
 
 // TODO: add custom dictionary for bisaya and tagalog
 var profanityDetector *goaway.ProfanityDetector
@@ -138,5 +139,9 @@ func init() {
 
 	if gotPoAddress, exists := os.LookupEnv("POSTAL_OFFICE_ADDRESS"); exists {
 		postalOfficeAddress = gotPoAddress
+	}
+
+	if gotChromeDevtoolsURL, exists := os.LookupEnv("CHROME_DEVTOOLS_URL"); exists {
+		chromeDevtoolsURL = gotChromeDevtoolsURL
 	}
 }

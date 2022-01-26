@@ -1,4 +1,8 @@
 services:
+  headless_chrome:
+    ports:
+      - '5000:3000'
+
   postal_office:
     ports:
       - '3350:3350'

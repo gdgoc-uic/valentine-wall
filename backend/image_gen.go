@@ -1,11 +1,17 @@
 package main
 
 import (
+	"bytes"
+	"context"
 	"fmt"
+	"html/template"
 	"io"
 	"log"
 	"os"
+	"time"
 
+	"github.com/chromedp/cdproto/page"
+	"github.com/chromedp/chromedp"
 	"github.com/fogleman/gg"
 	"github.com/golang/freetype/truetype"
 )
@@ -112,4 +118,42 @@ func generateImagePNG(wr io.Writer, itype ImageType, message Message) error {
 	dc.DrawStringWrapped(fmt.Sprintf("Posted on %s", message.CreatedAt), centerX, containerEndY+10, 0.5, 0.5, innerContainerStartX, 1, gg.AlignCenter)
 
 	return dc.EncodePNG(wr)
+}
+
+func generateImagePNGChrome(wr io.Writer, parentChromeCtx context.Context, tmpl *template.Template, message Message) error {
+	// TODO: cache rendering
+
+	// compile template first
+	output := &bytes.Buffer{}
+	if err := tmpl.Execute(output, message); err != nil {
+		return err
+	}
+
+	ctx, cancel := chromedp.NewContext(parentChromeCtx)
+	defer cancel()
+
+	actx, acancel := context.WithTimeout(ctx, 15*time.Second)
+	defer acancel()
+
+	// render to browser
+	var buf []byte
+	actions := chromedp.Tasks{
+		chromedp.Navigate("about:blank"),
+		chromedp.ActionFunc(func(c context.Context) error {
+			frameTree, err := page.GetFrameTree().Do(c)
+			if err != nil {
+				return err
+			}
+			return page.SetDocumentContent(frameTree.Frame.ID, output.String()).Do(c)
+		}),
+		chromedp.Screenshot("#image-preview", &buf, chromedp.NodeVisible),
+	}
+
+	if err := chromedp.Run(actx, actions...); err != nil {
+		return err
+	} else if _, err := wr.Write(buf); err != nil {
+		return err
+	}
+
+	return nil
 }

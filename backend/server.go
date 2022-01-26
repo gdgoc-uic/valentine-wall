@@ -6,6 +6,7 @@ import (
 	"database/sql"
 	"encoding/json"
 	"fmt"
+	"html/template"
 	"io"
 	"log"
 	"mime/multipart"
@@ -16,6 +17,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/chromedp/chromedp"
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
 	"github.com/go-chi/cors"
@@ -249,6 +251,29 @@ func replyViaEmail(cl *rpc.Client, db *sqlx.DB, authClient *auth.Client) ReplyFu
 }
 
 func main() {
+	var chromeCtx context.Context
+	var chromeCancel context.CancelFunc
+	var imageTmpl *template.Template
+
+	// chrome/browser-based image rendering specific code
+	if len(chromeDevtoolsURL) != 0 {
+		// launch chrome instance
+		log.Printf("connecting chrome via: %s\n", chromeDevtoolsURL)
+		remoteChromeCtx, remoteCtxCancel := chromedp.NewRemoteAllocator(context.Background(), chromeDevtoolsURL)
+		defer remoteCtxCancel()
+
+		chromeCtx, chromeCancel = chromedp.NewContext(remoteChromeCtx)
+		defer chromeCancel()
+
+		// templates
+		log.Println("loading templates...")
+		var err error
+		imageTmpl, err = template.ParseGlob("./templates/image/*.tpl")
+		if err != nil {
+			log.Fatalln(err)
+		}
+	}
+
 	// postal client
 	log.Printf("connecting postal service via %s...\n", postalOfficeAddress)
 	postalOfficeClient, err := rpc.DialHTTP("tcp", postalOfficeAddress)
@@ -588,7 +613,11 @@ func main() {
 
 		// generate image if ?image query
 		if rr.URL.Query().Has("image") {
-			return generateImagePNG(rw, imageTypeTwitter, message.Message)
+			if len(chromeDevtoolsURL) != 0 {
+				return generateImagePNGChrome(rw, chromeCtx, imageTmpl, message.Message)
+			} else {
+				return generateImagePNG(rw, imageTypeTwitter, message.Message)
+			}
 		}
 
 		isDeletable := false
