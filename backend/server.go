@@ -266,9 +266,9 @@ func main() {
 		defer chromeCancel()
 
 		// templates
-		log.Println("loading templates...")
+		log.Println("loading image templates...")
 		var err error
-		imageTmpl, err = template.ParseGlob("./templates/image/*.tpl")
+		imageTmpl, err = template.ParseGlob("./templates/image/*.html.tpl")
 		if err != nil {
 			log.Fatalln(err)
 		}
