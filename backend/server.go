@@ -7,9 +7,7 @@ import (
 	"encoding/json"
 	"fmt"
 	htmlTemplate "html/template"
-	"io"
 	"log"
-	"mime/multipart"
 	"net/http"
 	"regexp"
 	"strconv"
@@ -114,106 +112,6 @@ func (re *ResponseError) Error() string {
 		return http.StatusText(re.StatusCode)
 	} else {
 		return re.Message
-	}
-}
-
-func replyViaTwitter(twitterUserConnection UserConnection, message RawMessage, reply MessageReply) error {
-	if twitterUserConnection.Provider != "twitter" {
-		return fmt.Errorf("invalid provider: expected twitter, got %s", twitterUserConnection.Provider)
-	}
-
-	// commence posting process
-	twClient := twitterOauth1Config.Client(oauth1.NoContext, twitterUserConnection.ToOauth1Token())
-
-	// upload image first
-	uploadImgBody := &bytes.Buffer{}
-	uploadImgData := multipart.NewWriter(uploadImgBody)
-	mw, _ := uploadImgData.CreateFormFile("media", "msg.png")
-
-	imageData := &bytes.Buffer{}
-	if err := generateImagePNG(imageData, imageTypeTwitter, message.Message); err != nil {
-		return err
-	}
-
-	_, err := io.Copy(mw, imageData)
-	if err != nil {
-		return err
-	}
-
-	uploadImgData.Close()
-	uploadImageResponse, err := twClient.Post("https://upload.twitter.com/1.1/media/upload.json?media_category=tweet_image", uploadImgData.FormDataContentType(), bytes.NewReader(uploadImgBody.Bytes()))
-	if err != nil {
-		return err
-	}
-
-	defer uploadImageResponse.Body.Close()
-	if uploadImageResponse.StatusCode != http.StatusOK {
-		return wrapRequestError(uploadImageResponse)
-	}
-
-	var uploadImageRespPayload struct {
-		MediaID          int    `json:"media_id"`
-		MediaIDString    string `json:"media_id_string"`
-		MediaKey         string `json:"media_key"`
-		Size             int    `json:"size"`
-		ExpiresAfterSecs int    `json:"expires_after_secs"`
-		Image            struct {
-			ImageType string `json:"image_type"`
-			Width     int    `json:"w"`
-			Height    int    `json:"h"`
-		} `json:"image"`
-	}
-
-	if err := json.NewDecoder(uploadImageResponse.Body).Decode(&uploadImageRespPayload); err != nil {
-		return err
-	}
-
-	// tweet
-	bodyBuf := &bytes.Buffer{}
-	if err := json.NewEncoder(bodyBuf).Encode(map[string]interface{}{
-		"text": reply.Content,
-		"media": map[string]interface{}{
-			"media_ids": []string{uploadImageRespPayload.MediaIDString},
-		},
-	}); err != nil {
-		return &ResponseError{
-			StatusCode: http.StatusUnprocessableEntity,
-			WError:     err,
-		}
-	}
-
-	createTweetResp, err := twClient.Post("https://api.twitter.com/2/tweets", "application/json", bytes.NewReader(bodyBuf.Bytes()))
-	if err != nil {
-		return err
-	}
-	defer createTweetResp.Body.Close()
-	if createTweetResp.StatusCode < 200 || createTweetResp.StatusCode > 299 {
-		return wrapRequestError(createTweetResp)
-	}
-
-	return nil
-}
-
-type ReplyFunc func(UserConnection, RawMessage, MessageReply) error
-
-func replyViaEmail(cl *poClient.Client, db *sqlx.DB, tmpl *TemplatedMailSender, authClient *auth.Client) ReplyFunc {
-	return func(emailUserConnection UserConnection, message RawMessage, reply MessageReply) error {
-		if emailUserConnection.Provider != "email" {
-			return fmt.Errorf("invalid provider: expected email, got %s", emailUserConnection.Provider)
-		}
-
-		// get sender email
-		senderEmail, err := getUserEmailByUID(authClient, message.UID)
-		if err != nil {
-			return err
-		}
-
-		// TODO: send reply later (?)
-		if _, err := newSendJob(cl, tmpl.With(reply), senderEmail, message.ID); err != nil {
-			return err
-		}
-
-		return nil
 	}
 }
 
@@ -692,21 +590,39 @@ func main() {
 			}
 
 			reply.MessageID = message.ID
+			var notifier Notifier
 			if twitterIdx, hasTwitter := isConnectedTo(connections, "twitter"); hasTwitter {
-				if err := replyViaTwitter(connections[twitterIdx], message, reply); err != nil {
+				imageData := &bytes.Buffer{}
+				if err := generateImagePNG(imageData, imageTypeTwitter, message.Message); err != nil {
 					return err
 				}
-			} else if emailIdx, hasEmail := isConnectedTo(connections, "email"); hasEmail {
-				if err := replyViaEmail(postalOfficeClient, db, emailTemplates["reply"], authClient)(connections[emailIdx], message, reply); err != nil {
+
+				notifier = &TwitterNotifier{
+					Connection:  connections[twitterIdx],
+					ImageData:   imageData,
+					TextContent: reply.Content,
+				}
+			} else if _, hasEmail := isConnectedTo(connections, "email"); hasEmail {
+				// get sender email
+				senderEmail, err := getUserEmailByUID(authClient, message.UID)
+				if err != nil {
 					return err
+				}
+
+				notifier = &EmailNotifier{
+					PostalOfficeClient: postalOfficeClient,
+					Template:           emailTemplates["reply"].With(reply),
+					RecipientEmail:     senderEmail,
+					MessageID:          reply.MessageID,
 				}
 			} else {
 				// just to be sure
 				return noConnectionErr
 			}
 
-			updateRes, err := db.NamedExec("INSERT INTO message_replies (message_id, content) VALUES (:message_id, :content)", &reply)
-			if err != nil {
+			if err := notifier.Notify(); err != nil {
+				return err
+			} else if updateRes, err := db.NamedExec("INSERT INTO message_replies (message_id, content) VALUES (:message_id, :content)", &reply); err != nil {
 				return err
 			} else if err := wrapSqlResult(updateRes); err != nil {
 				return err
