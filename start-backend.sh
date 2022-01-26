@@ -1,3 +1,2 @@
 #!/bin/sh
-cd backend
-npx dotenv -e ../.env -e .env go run .
+(cd backend && npx dotenv -e ../.env -e .env go run .)
