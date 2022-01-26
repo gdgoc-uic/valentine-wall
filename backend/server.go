@@ -249,28 +249,35 @@ func replyViaEmail(cl *rpc.Client, db *sqlx.DB, authClient *auth.Client) ReplyFu
 }
 
 func main() {
+	// postal client
+	log.Printf("connecting postal service via %s...\n", postalOfficeAddress)
 	postalOfficeClient, err := rpc.DialHTTP("tcp", postalOfficeAddress)
 	if err != nil {
 		log.Println("dialing:", err)
 	}
 
+	// email verification
+	log.Println("compiling email regex...")
 	emailRegex, err := regexp.Compile(`\A[a-z]+_([0-9]+)@uic.edu.ph\z`)
 	if err != nil {
 		log.Fatalln(err)
 	}
 
 	// TODO:
+	log.Println("setting up sessions...")
 	store := sessions.NewCookieStore([]byte("TEST_123"))
 	store.Options.SameSite = http.SameSiteDefaultMode
 	store.Options.HttpOnly = true
 
 	// firebase
+	log.Println("connect firebase admin api...")
 	opt := option.WithCredentialsFile(gAppCredPath)
 	firebaseApp, err := firebase.NewApp(context.Background(), nil, opt)
 	if err != nil {
 		log.Fatalln(err)
 	}
 
+	log.Println("initializing database...")
 	db := initializeDb()
 	defer db.Close()
 
@@ -965,9 +972,8 @@ func main() {
 		return htmlEncode(rw, "<p>success</p>"+scriptJs)
 	}, htmlEncode))
 
+	log.Printf("Server opened on http://localhost:%d\n", serverPort)
 	if err := http.ListenAndServe(fmt.Sprintf(":%d", serverPort), r); err != nil {
 		log.Fatalln(err)
 	}
-
-	log.Printf("Server opened on http://localhost:%d\n", serverPort)
 }

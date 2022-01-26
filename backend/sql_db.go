@@ -33,7 +33,7 @@ func runMigration(db *sqlx.DB) error {
 		return err
 	}
 
-	fmt.Printf("Applied %d migrations\n", n)
+	log.Printf("Applied %d migrations\n", n)
 	return nil
 }
 

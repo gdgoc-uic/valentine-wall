@@ -117,7 +117,7 @@ func wrapRequestError(resp *http.Response) error {
 	if err2 != nil {
 		log.Println(err2.Error())
 	}
-	fmt.Printf("%s: body read - %d\n", resp.Request.URL, len(bodyBytes))
+	log.Printf("%s: body read - %d\n", resp.Request.URL, len(bodyBytes))
 	return fmt.Errorf("%s: got status %d, headers: %s, body: %s", resp.Request.URL, resp.StatusCode, resp.Request.Header, string(bodyBytes))
 }
 
