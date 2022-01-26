@@ -16,6 +16,14 @@
           <option :value="dept.id" :key="dept.id" v-for="dept in departments">{{ dept.label }} ({{ dept.id }})</option>
         </select>
       </div>
+      <div class="form-control">
+        <label class="label">
+          <span class="label-text">Gender</span>
+        </label>
+        <select name="gender" class="select select-bordered">
+          <option :value="g.value" :key="g.value" v-for="g in genderList">{{ g.label }}</option>
+        </select>
+      </div>
       <button class="self-end px-12 btn bg-rose-500 hover:bg-rose-600 border-none mt-4" type="submit">Next</button>
     </form>
     <form @submit.prevent="submitSetupForm" :class="[proceedToTerms ? 'flex' : 'hidden']" class="flex-col">
@@ -73,6 +81,20 @@ export default {
       associatedIdField.value = extractedId;
     }
   },
+  computed: {
+    genderList() {
+      return [
+        {
+          label: 'Male',
+          value: 'male'
+        },
+        {
+          label: 'Female',
+          value: 'female'
+        }
+      ];
+    }
+  },
   methods: {
     getIdFromEmail(input: string): string {
       const matches = emailRegex.exec(input)
@@ -127,6 +149,7 @@ export default {
         const resp = await client.postJson('/user/setup', {
           associated_id: formData.get('associated_id')?.toString(),
           department: formData.get('department')?.toString(),
+          gender: formData.get('gender')?.toString(),
           terms_agreed: this.termsAgreed
         });
 

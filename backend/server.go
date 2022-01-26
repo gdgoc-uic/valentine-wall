@@ -60,6 +60,7 @@ type AssociatedUser struct {
 	AssociatedID string `db:"associated_id" json:"associated_id" validate:"required,numeric"`
 	TermsAgreed  bool   `db:"terms_agreed" json:"terms_agreed" validate:"required"`
 	Department   string `db:"department" json:"department" validate:"required"`
+	Gender       string `db:"gender" json:"gender" validate:"required"`
 }
 
 type UserConnection struct {

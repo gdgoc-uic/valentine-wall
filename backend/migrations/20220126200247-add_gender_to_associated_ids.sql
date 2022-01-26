@@ -1,0 +1,6 @@
+
+-- +migrate Up
+ALTER TABLE associated_ids ADD COLUMN gender TEXT NOT NULL DEFAULT "unknown";
+
+-- +migrate Down
+ALTER TABLE associated_ids DROP COLUMN gender;
