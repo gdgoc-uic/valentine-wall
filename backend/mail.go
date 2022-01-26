@@ -2,40 +2,36 @@ package main
 
 import (
 	"bytes"
-	"fmt"
-	"net/rpc"
 	"text/template"
 	"time"
 
+	poClient "github.com/nedpals/valentine-wall/postal_office/client"
 	"github.com/nedpals/valentine-wall/postal_office/types"
+	poTypes "github.com/nedpals/valentine-wall/postal_office/types"
 )
 
-type EmailSender interface {
-	Message(toRecipientEmail string) (*types.MailMessage, error)
-	TimeToSend() time.Duration
-}
-
-func newEmailSendJob(cl *rpc.Client, ms EmailSender, toRecipient string, uid string) (string, error) {
-	if cl == nil {
-		return "", fmt.Errorf("postal client is disconnected")
-	}
-
+func newSendJob(cl *poClient.Client, ms EmailSender, toRecipient string, uids ...string) (string, error) {
 	gotMsgPayload, err := ms.Message(toRecipient)
 	if err != nil {
 		return "", err
 	}
 
-	var receivedJobId string
-	mailJobArgs := &types.NewJobArgs{
-		Type:       types.JobSend,
+	uid := ""
+	if len(uids) != 0 {
+		uid = uids[0]
+	}
+
+	return cl.NewJob(&poTypes.NewJobArgs{
+		Type:       poTypes.JobSend,
 		TimeToSend: ms.TimeToSend(),
 		Payload:    gotMsgPayload,
 		UniqueID:   uid,
-	}
-	if err := cl.Call("PostalOffice.NewJob", mailJobArgs, &receivedJobId); err != nil {
-		return "", err
-	}
-	return receivedJobId, nil
+	})
+}
+
+type EmailSender interface {
+	Message(toRecipientEmail string) (*types.MailMessage, error)
+	TimeToSend() time.Duration
 }
 
 type TemplatedMailSender struct {

@@ -6,6 +6,7 @@ COPY ./go.mod .
 COPY ./go.sum .
 COPY ./backend .
 COPY ./postal_office/types ./postal_office/types
+COPY ./postal_office/client ./postal_office/client
 
 # Download deps and build
 RUN go mod download

@@ -127,8 +127,9 @@ func deleteJob(po *PostalOffice, uniqueId string) {
 }
 
 func (po *PostalOffice) NewJob(args *types.NewJobArgs, jobId *string) error {
-	if len(args.UniqueID) == 0 {
-		return fmt.Errorf("provide a unique id")
+	uid := args.UniqueID
+	if len(uid) == 0 {
+		uid, _ = goNanoid.New()
 	}
 
 	if err := po.sema.Acquire(po.ctx, 1); err != nil {
@@ -175,12 +176,12 @@ func (po *PostalOffice) NewJob(args *types.NewJobArgs, jobId *string) error {
 				return
 			}
 		}
-	}(po, args.Payload, args.TimeToSend, gotJobId, args.UniqueID)
+	}(po, args.Payload, args.TimeToSend, gotJobId, uid)
 
 	*jobId = gotJobId
 	pendingJob := &types.PendingJob{
 		ID:       gotJobId,
-		UniqueID: args.UniqueID,
+		UniqueID: uid,
 		Payload: &types.JobPayload{
 			Type:       args.Type,
 			TimeToSend: args.TimeToSend,
@@ -190,7 +191,7 @@ func (po *PostalOffice) NewJob(args *types.NewJobArgs, jobId *string) error {
 	}
 
 	pendingJob.Payload.ParentJob = pendingJob
-	po.mappedPendingJobs.Store(args.UniqueID, pendingJob)
+	po.mappedPendingJobs.Store(uid, pendingJob)
 	po.pendingJobsCount++
 
 	log.Printf("new job received: %s\n", gotJobId)

@@ -11,7 +11,6 @@ import (
 	"log"
 	"mime/multipart"
 	"net/http"
-	"net/rpc"
 	"regexp"
 	"strconv"
 	"text/template"
@@ -34,7 +33,8 @@ import (
 	sq "github.com/Masterminds/squirrel"
 	"github.com/hako/durafmt"
 
-	"github.com/nedpals/valentine-wall/postal_office/types"
+	poClient "github.com/nedpals/valentine-wall/postal_office/client"
+	poTypes "github.com/nedpals/valentine-wall/postal_office/types"
 )
 
 var messagesPaginator = Paginator{
@@ -90,8 +90,8 @@ type Message struct {
 }
 
 // TODO: Add mail template
-func (msg Message) Message(toRecipientEmail string) (*types.MailMessage, error) {
-	return &types.MailMessage{
+func (msg Message) Message(toRecipientEmail string) (*poTypes.MailMessage, error) {
+	return &poTypes.MailMessage{
 		Name:    "Mr. Kupido",
 		Subject: "Your message has received a reply!",
 		Content: msg.Content,
@@ -206,7 +206,7 @@ func replyViaTwitter(twitterUserConnection UserConnection, message RawMessage, r
 
 type ReplyFunc func(UserConnection, RawMessage, MessageReply) error
 
-func replyViaEmail(cl *rpc.Client, db *sqlx.DB, tmpl *TemplatedMailSender, authClient *auth.Client) ReplyFunc {
+func replyViaEmail(cl *poClient.Client, db *sqlx.DB, tmpl *TemplatedMailSender, authClient *auth.Client) ReplyFunc {
 	return func(emailUserConnection UserConnection, message RawMessage, reply MessageReply) error {
 		if emailUserConnection.Provider != "email" {
 			return fmt.Errorf("invalid provider: expected email, got %s", emailUserConnection.Provider)
@@ -219,7 +219,7 @@ func replyViaEmail(cl *rpc.Client, db *sqlx.DB, tmpl *TemplatedMailSender, authC
 		}
 
 		// TODO: send reply later (?)
-		if _, err := newEmailSendJob(cl, tmpl.With(reply), senderEmail, message.ID); err != nil {
+		if _, err := newSendJob(cl, tmpl.With(reply), senderEmail, message.ID); err != nil {
 			return err
 		}
 
@@ -249,7 +249,7 @@ func main() {
 
 	// postal client
 	log.Printf("connecting postal service via %s...\n", postalOfficeAddress)
-	postalOfficeClient, err := rpc.DialHTTP("tcp", postalOfficeAddress)
+	postalOfficeClient, err := poClient.DialHTTP(postalOfficeAddress)
 	if err != nil {
 		log.Println("dialing:", err)
 	}
@@ -258,7 +258,7 @@ func main() {
 	rawEmailTemplates := template.Must(template.ParseGlob("./templates/mail/*.txt.tpl"))
 	emailTemplates := map[string]*TemplatedMailSender{
 		"reply":   newTemplatedMailSender(rawEmailTemplates.Lookup("reply.txt.tpl"), "Mr. Kupido", "Your message has received a reply!", 10*time.Second),
-		"message": newTemplatedMailSender(rawEmailTemplates.Lookup("message.txt.tpl"), "Mr. Kupido", "You received a new message!", types.DefaultEmailSendExp),
+		"message": newTemplatedMailSender(rawEmailTemplates.Lookup("message.txt.tpl"), "Mr. Kupido", "You received a new message!", poTypes.DefaultEmailSendExp),
 		"welcome": newTemplatedMailSender(rawEmailTemplates.Lookup("welcome.txt.tpl"), "Mr. Kupido", "Welcome to UIC Valentine Wall 2021!", 10*time.Second),
 	}
 
@@ -554,7 +554,8 @@ func main() {
 				log.Println(err)
 			} else {
 				// send the mail within n minutes.
-				if _, err := newEmailSendJob(postalOfficeClient, emailTemplates["message"].With(submittedMsg.Message), recipientUser.Email, submittedMsg.ID); err != nil {
+				sender := emailTemplates["message"].With(submittedMsg.Message)
+				if _, err := newSendJob(postalOfficeClient, sender, recipientUser.Email, submittedMsg.ID); err != nil {
 					log.Println(err)
 				}
 			}
@@ -660,18 +661,9 @@ func main() {
 			return err
 		}
 
-		// get job id
-		var receivedJobId string
-		if postalOfficeClient != nil {
-			if err := postalOfficeClient.Call("PostalOffice.GetJobID", &types.GetJobIDArgs{UniqueID: message.ID}, &receivedJobId); err == nil {
-				// cancel pending email job
-				var ok bool
-				if _ = postalOfficeClient.Call("PostalOffice.CancelJob", &types.CancelJobArgs{JobID: receivedJobId}, &ok); !ok {
-					log.Printf("job %s was not cancelled successfully. \n", receivedJobId)
-				}
-			} else {
-				log.Println(err)
-			}
+		// cancel send job if possible
+		if err := postalOfficeClient.CancelJobByUID(message.ID); err != nil {
+			log.Println(err)
 		}
 
 		return jsonEncode(rw, map[string]string{
@@ -872,7 +864,7 @@ func main() {
 					Email: userEmail,
 					Stats: stats,
 				})
-				if _, err := newEmailSendJob(postalOfficeClient, sender, userEmail, emailId); err != nil {
+				if _, err := newSendJob(postalOfficeClient, sender, userEmail, emailId); err != nil {
 					log.Println(err)
 				}
 			} else {
