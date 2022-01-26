@@ -133,7 +133,12 @@ func main() {
 
 		// load template
 		log.Println("loading image template...")
-		htmlTemplate.Must(htmlTemplates.New("image").ParseFiles("./templates/html/message_image.html.tpl"))
+		var err error
+		if htmlTemplates, err = htmlTemplate.ParseGlob("./templates/html/*.html.tpl"); err != nil {
+			log.Fatalln(err)
+		} else {
+			log.Printf("%d html templates have been loaded\n", len(htmlTemplates.Templates()))
+		}
 	}
 
 	// postal client
@@ -144,7 +149,9 @@ func main() {
 	}
 
 	// load email templates
+	log.Println("loading email templates...")
 	rawEmailTemplates := template.Must(template.ParseGlob("./templates/mail/*.txt.tpl"))
+	log.Printf("%d email templates have been loaded\n", len(rawEmailTemplates.Templates()))
 	emailTemplates := map[string]*TemplatedMailSender{
 		"reply":   newTemplatedMailSender(rawEmailTemplates.Lookup("reply.txt.tpl"), "Mr. Kupido", "Your message has received a reply!", 10*time.Second),
 		"message": newTemplatedMailSender(rawEmailTemplates.Lookup("message.txt.tpl"), "Mr. Kupido", "You received a new message!", poTypes.DefaultEmailSendExp),
@@ -443,7 +450,12 @@ func main() {
 				log.Println(err)
 			} else {
 				// send the mail within n minutes.
-				sender := emailTemplates["message"].With(submittedMsg.Message)
+				sender := emailTemplates["message"].With(&MailSenderContext{
+					Email:       recipientUser.Email,
+					RecipientID: submittedMsg.RecipientID,
+					MessageID:   submittedMsg.ID,
+					FrontendURL: frontendUrl,
+				})
 				if _, err := newSendJob(postalOfficeClient, sender, recipientUser.Email, submittedMsg.ID); err != nil {
 					log.Println(err)
 				}
@@ -486,7 +498,7 @@ func main() {
 		// generate image if ?image query
 		if rr.URL.Query().Has("image") {
 			if len(chromeDevtoolsURL) != 0 {
-				return generateImagePNGChrome(rw, chromeCtx, htmlTemplates.Lookup("image"), message.Message)
+				return generateImagePNGChrome(rw, chromeCtx, htmlTemplates.Lookup("message_image.html.tpl"), message.Message)
 			} else {
 				return generateImagePNG(rw, imageTypeTwitter, message.Message)
 			}
@@ -612,9 +624,14 @@ func main() {
 
 				notifier = &EmailNotifier{
 					PostalOfficeClient: postalOfficeClient,
-					Template:           emailTemplates["reply"].With(reply),
-					RecipientEmail:     senderEmail,
-					MessageID:          reply.MessageID,
+					Template: emailTemplates["reply"].With(&MailSenderContext{
+						Email:       senderEmail,
+						RecipientID: message.RecipientID,
+						MessageID:   message.ID,
+						FrontendURL: frontendUrl,
+					}),
+					RecipientEmail: senderEmail,
+					MessageID:      reply.MessageID,
 				}
 			} else {
 				// just to be sure

@@ -10,6 +10,13 @@ import (
 	poTypes "github.com/nedpals/valentine-wall/postal_office/types"
 )
 
+type MailSenderContext struct {
+	Email       string
+	RecipientID string
+	MessageID   string
+	FrontendURL string
+}
+
 func newSendJob(cl *poClient.Client, ms EmailSender, toRecipient string, uids ...string) (string, error) {
 	gotMsgPayload, err := ms.Message(toRecipient)
 	if err != nil {
