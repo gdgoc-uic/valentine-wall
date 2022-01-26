@@ -876,6 +876,70 @@ func main() {
 		return htmlEncode(rw, "<p>success</p>"+scriptJs)
 	}, htmlEncode))
 
+	r.With(appVerifyUser).Get("/user/delete", wrapHandler(func(rw http.ResponseWriter, r *http.Request) error {
+		authClient := r.Context().Value("authClient").(*auth.Client)
+		token := r.Context().Value("authToken").(*auth.Token)
+
+		var confirmationData struct {
+			InputSID string `json:"input_sid"`
+			InputUID string `json:"input_uid"`
+		}
+
+		if err := json.NewDecoder(r.Body).Decode(&confirmationData); err != nil {
+			return err
+		} else if confirmationData.InputUID != token.UID {
+			return &ResponseError{
+				StatusCode: http.StatusForbidden,
+				WError:     fmt.Errorf("input uid mismatched"),
+				Message:    "Unable to delete account.",
+			}
+		}
+
+		gotAssociatedUser, err := getAssociatedUserBy(db, sq.Eq{"associated_id": confirmationData.InputSID})
+		if err != nil {
+			return &ResponseError{
+				StatusCode: http.StatusForbidden,
+				WError:     err,
+				Message:    "Unable to delete account.",
+			}
+		} else if gotAssociatedUser.UserID != confirmationData.InputUID {
+			return &ResponseError{
+				StatusCode: http.StatusForbidden,
+				WError:     fmt.Errorf("input uid mismatched"),
+				Message:    "Unable to delete account.",
+			}
+		}
+
+		// delete from associated_ids and user_connections
+		tx, err := db.BeginTxx(r.Context(), &sql.TxOptions{})
+		if err != nil {
+			return err
+		}
+
+		for _, tableName := range []string{"user_connections", "associated_ids"} {
+			if deleteSql, deleteArgs, err := sq.Delete(tableName).Where(sq.Eq{"user_id": token.UID}).ToSql(); err != nil {
+				return err
+			} else if res, err := tx.Exec(deleteSql, deleteArgs...); err != nil {
+				return err
+			} else if err := wrapSqlResult(res); err != nil {
+				return err
+			}
+		}
+
+		if err := tx.Commit(); err != nil {
+			if err := tx.Rollback(); err != nil {
+				log.Println(err)
+			}
+			return err
+		} else if err := authClient.DeleteUser(r.Context(), token.UID); err != nil {
+			return err
+		}
+
+		return jsonEncode(rw, map[string]interface{}{
+			"message": "user deleted successfully",
+		})
+	}))
+
 	log.Printf("Server opened on http://localhost:%d\n", serverPort)
 	if err := http.ListenAndServe(fmt.Sprintf(":%d", serverPort), r); err != nil {
 		log.Fatalln(err)
