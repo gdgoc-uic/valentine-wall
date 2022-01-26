@@ -89,16 +89,6 @@ type Message struct {
 	UpdatedAt time.Time `db:"updated_at" json:"updated_at"`
 }
 
-// TODO: Add mail template
-func (msg Message) Message(toRecipientEmail string) (*poTypes.MailMessage, error) {
-	return &poTypes.MailMessage{
-		Name:    "Mr. Kupido",
-		Subject: "Your message has received a reply!",
-		Content: msg.Content,
-		ToEmail: toRecipientEmail,
-	}, nil
-}
-
 type RawMessage struct {
 	Message
 	UID string `db:"submitter_user_id" json:"uid" validate:"required"`
