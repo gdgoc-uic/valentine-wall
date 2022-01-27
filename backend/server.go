@@ -36,6 +36,8 @@ import (
 
 	poClient "github.com/nedpals/valentine-wall/postal_office/client"
 	poTypes "github.com/nedpals/valentine-wall/postal_office/types"
+
+	"github.com/patrickmn/go-cache"
 )
 
 var messagesPaginator = &Paginator{
@@ -171,6 +173,9 @@ func main() {
 	var chromeCtx context.Context
 	var chromeCancel context.CancelFunc
 	htmlTemplates := &htmlTemplate.Template{}
+
+	// cache
+	cacher := cache.New(1*time.Hour, 1*time.Minute)
 
 	// chrome/browser-based image rendering specific code
 	if len(chromeDevtoolsURL) != 0 {
@@ -601,11 +606,31 @@ func main() {
 
 		// generate image if ?image query
 		if rr.URL.Query().Has("image") {
-			if chromeCtx != nil {
-				return generateImagePNGChrome(rw, chromeCtx, htmlTemplates.Lookup("message_image.html.tpl"), message.Message)
-			} else {
-				return generateImagePNG(rw, imageTypeTwitter, message.Message)
+			// use cached image if available
+			imageCacheKey := fmt.Sprintf("image/%s", message.ID)
+			if cachedImage, isImageCached := cacher.Get(imageCacheKey); isImageCached && cachedImage != nil {
+				log.Println("using cached image...")
+				rw.Write(cachedImage.([]byte))
+				return nil
 			}
+
+			imgBuf := &bytes.Buffer{}
+			var err error
+			if chromeCtx != nil {
+				// use alternative gg-based mode if not connected to chrome
+				err = generateImagePNGChrome(imgBuf, chromeCtx, htmlTemplates.Lookup("message_image.html.tpl"), message.Message)
+			}
+
+			if err != nil {
+				log.Println(err)
+				if err2 := generateImagePNG(imgBuf, imageTypeTwitter, message.Message); err2 != nil {
+					return err2
+				}
+			}
+
+			cacher.Set(imageCacheKey, imgBuf.Bytes(), cache.DefaultExpiration)
+			rw.Write(imgBuf.Bytes())
+			return nil
 		}
 
 		isDeletable := false
@@ -675,6 +700,7 @@ func main() {
 			log.Println(err)
 		}
 
+		cacher.Delete(fmt.Sprintf("image/%s", message.ID))
 		return jsonEncode(rw, map[string]string{
 			"message": "message deleted successfully",
 		})
