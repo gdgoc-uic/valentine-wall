@@ -440,7 +440,7 @@ func main() {
 	r.With(messageListMiddlewares...).Get("/messages/{recipientId}", getMessagesHandler)
 	r.Get("/messages/{recipientId}/stats", wrapHandler(func(rw http.ResponseWriter, r *http.Request) error {
 		recipientId := chi.URLParam(r, "recipientId")
-		stats, err := getMessageStatsBySID(db, recipientId)
+		stats, err := getMessageStatsBySID(messagesSearchIndex, recipientId)
 		if err != nil {
 			return err
 		}
@@ -884,7 +884,7 @@ func main() {
 					log.Println(err)
 				}
 
-				stats, err := getMessageStatsBySID(db, associatedUser.AssociatedID)
+				stats, err := getMessageStatsBySID(messagesSearchIndex, associatedUser.AssociatedID)
 				if err != nil {
 					log.Println(err)
 				}

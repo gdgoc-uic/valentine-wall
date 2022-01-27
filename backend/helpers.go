@@ -12,6 +12,7 @@ import (
 	firebase "firebase.google.com/go/v4"
 	"firebase.google.com/go/v4/auth"
 	sq "github.com/Masterminds/squirrel"
+	"github.com/blevesearch/bleve"
 	goValidator "github.com/go-playground/validator/v10"
 	"github.com/jmoiron/sqlx"
 )
@@ -225,37 +226,27 @@ func getAssociatedUserBy(db *sqlx.DB, pred Predicate) (*AssociatedUser, error) {
 	return associatedData, nil
 }
 
-func getMessageStatsBySID(db *sqlx.DB, sid string) (*MessageStats, error) {
+func getMessageStatsBySID(index bleve.Index, sid string) (*MessageStats, error) {
 	stats := &MessageStats{}
-	eqId := sq.Eq{"recipient_id": sid}
-	joinStmt := "message_gifts on message_gifts.message_id = messages.id"
-	baseQuery := sq.Select("count(*)")
-	giftMessageCountQuery := sq.Select("id", "recipient_id").Distinct().From("messages").InnerJoin(joinStmt).Where(eqId)
-	giftMessagesCountQuery2 := baseQuery.FromSelect(giftMessageCountQuery, "msg").GroupBy("recipient_id")
-	nonGiftMessagesCountSql, ngmArgs, err := baseQuery.From("messages").LeftJoin(joinStmt).Where("message_gifts.gift_id IS NULL").Where(eqId).ToSql()
-	if err != nil {
-		return nil, err
+	filter := bleve.NewTermQuery(sid)
+	filter.SetField("recipient_id")
+
+	for i, opt := range []bool{true, false} {
+		gFilter := bleve.NewBoolFieldQuery(opt)
+		gFilter.SetField("has_gifts")
+		req := bleve.NewSearchRequest(bleve.NewConjunctionQuery(gFilter, filter))
+		req.Fields = []string{}
+		res, err := index.Search(req)
+		if err != nil {
+			return nil, err
+		}
+		if i == 0 {
+			stats.GiftMessages = int(res.Total)
+		} else {
+			stats.Messages = int(res.Total)
+		}
 	}
 
-	statSql, args, err := giftMessagesCountQuery2.Suffix("UNION ALL "+nonGiftMessagesCountSql, ngmArgs...).ToSql()
-	if err != nil {
-		return nil, err
-	}
-
-	rows, err := db.Query(statSql, args...)
-	if err != nil {
-		return nil, err
-	}
-
-	rows.Next()
-	if err := rows.Scan(&stats.GiftMessages); err != nil {
-		log.Println(err)
-	}
-
-	rows.Next()
-	if err := rows.Scan(&stats.Messages); err != nil {
-		log.Println(err)
-	}
 	return stats, nil
 }
 
