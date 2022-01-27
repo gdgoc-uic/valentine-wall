@@ -498,7 +498,7 @@ func main() {
 
 		// generate image if ?image query
 		if rr.URL.Query().Has("image") {
-			if len(chromeDevtoolsURL) != 0 {
+			if chromeCtx != nil {
 				return generateImagePNGChrome(rw, chromeCtx, htmlTemplates.Lookup("message_image.html.tpl"), message.Message)
 			} else {
 				return generateImagePNG(rw, imageTypeTwitter, message.Message)
