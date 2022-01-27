@@ -258,3 +258,30 @@ func getMessageStatsBySID(db *sqlx.DB, sid string) (*MessageStats, error) {
 	}
 	return stats, nil
 }
+
+type FilterFunc func(*http.Request, context.Context, Filter) error
+
+type Filter struct {
+	Exists bool
+	Value  string
+	Name   string
+}
+
+func customFilters(filters map[string]FilterFunc) func(http.Handler) http.Handler {
+	return func(next http.Handler) http.Handler {
+		return wrapHandler(func(rw http.ResponseWriter, r *http.Request) error {
+			query := r.URL.Query()
+			ctx := r.Context()
+			for targetQueryName, queryFunc := range filters {
+				if err := queryFunc(r, ctx, Filter{
+					Exists: query.Has(targetQueryName),
+					Value:  query.Get(targetQueryName),
+					Name:   targetQueryName}); err != nil {
+					return err
+				}
+			}
+			next.ServeHTTP(rw, r.WithContext(ctx))
+			return nil
+		})
+	}
+}

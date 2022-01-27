@@ -172,13 +172,14 @@ func main() {
 	store.Options.HttpOnly = true
 
 	// firebase
-	log.Println("connect firebase admin api...")
+	log.Println("connecting to firebase admin api...")
 	opt := option.WithCredentialsFile(gAppCredPath)
 	firebaseApp, err := firebase.NewApp(context.Background(), nil, opt)
 	if err != nil {
 		log.Fatalln(err)
 	}
 
+	// database
 	log.Println("initializing database...")
 	db := initializeDb()
 	defer db.Close()
@@ -283,13 +284,11 @@ func main() {
 
 	getMessagesHandler := wrapHandler(func(rw http.ResponseWriter, rr *http.Request) error {
 		recipientId := chi.URLParam(rr, "recipientId")
-		pg := rr.Context().Value("paginator").(Paginator)
-
-		baseQuery, okQuery := rr.Context().Value("selectQuery").(sq.SelectBuilder)
+		pg := rr.Context().Value("paginator").(*Paginator)
+		queryPtr, okQuery := rr.Context().Value("selectQuery").(*sq.SelectBuilder)
+		baseQuery := sq.Select().From("messages")
 		if okQuery {
-			baseQuery = baseQuery.From("messages")
-		} else {
-			baseQuery = sq.Select().From("messages")
+			baseQuery = (*queryPtr).From("messages")
 		}
 
 		if len(recipientId) != 0 {
@@ -315,11 +314,12 @@ func main() {
 		return jsonEncode(rw, resp)
 	})
 
-	customMsgQueryFilters := customSelectFilters(map[string]FilterFunc{
-		"has_gift": func(r *http.Request, queryVal string, sb *sq.SelectBuilder) error {
+	customMsgQueryFilters := customFilters(map[string]FilterFunc{
+		"has_gift": func(r *http.Request, ctx context.Context, filter Filter) error {
+			sb := ctx.Value("selectQuery").(*sq.SelectBuilder)
 			// TODO: disable_restricted_access_to_gift_messages
 			// token, _, err := getAuthToken(r, firebaseApp)
-			switch queryVal {
+			switch filter.Value {
 			case "1", "2":
 				// if token == nil {
 				// 	return &ResponseError{
@@ -329,9 +329,9 @@ func main() {
 				// }
 				// recipientId := chi.URLParam(r, "recipientId")
 				// if associatedUser, err := getAssociatedUserBy(db, sq.Eq{"user_id": token.UID}); err == nil && associatedUser.AssociatedID == recipientId {
-				if queryVal == "1" {
-					*sb = (*sb).Distinct().InnerJoin("message_gifts on message_gifts.message_id = messages.id")
-				} else if queryVal == "2" {
+				if filter.Value == "1" {
+					(*sb) = (*sb).Distinct().InnerJoin("message_gifts on message_gifts.message_id = messages.id")
+				} else if filter.Value == "2" {
 					// leave as is
 				}
 				return nil
@@ -343,14 +343,15 @@ func main() {
 				// 	StatusCode: http.StatusForbidden,
 				// }
 			default:
-				*sb = (*sb).LeftJoin("message_gifts on message_gifts.message_id = messages.id").Where("message_gifts.gift_id IS NULL")
+				(*sb) = (*sb).LeftJoin("message_gifts on message_gifts.message_id = messages.id").Where("message_gifts.gift_id IS NULL")
 			}
 			return nil
 		},
 	})
 
-	r.With(customMsgQueryFilters, pagination(messagesPaginator)).Get("/messages", getMessagesHandler)
-	r.With(customMsgQueryFilters, pagination(messagesPaginator)).Get("/messages/{recipientId}", getMessagesHandler)
+	messageListMiddlewares := []func(http.Handler) http.Handler{injectSelectQuery, customMsgQueryFilters, pagination(messagesPaginator)}
+	r.With(messageListMiddlewares...).Get("/messages", getMessagesHandler)
+	r.With(messageListMiddlewares...).Get("/messages/{recipientId}", getMessagesHandler)
 	r.Get("/messages/{recipientId}/stats", wrapHandler(func(rw http.ResponseWriter, r *http.Request) error {
 		recipientId := chi.URLParam(r, "recipientId")
 		stats, err := getMessageStatsBySID(db, recipientId)

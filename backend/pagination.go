@@ -37,8 +37,8 @@ type Paginator struct {
 	TableName string
 }
 
-func (pg Paginator) Copy(path *url.URL, page int64, limit int64, order string) Paginator {
-	return Paginator{
+func (pg *Paginator) Copy(path *url.URL, page int64, limit int64, order string) *Paginator {
+	return &Paginator{
 		Path:     path,
 		OrderKey: pg.OrderKey,
 		Page:     page,
@@ -47,7 +47,7 @@ func (pg Paginator) Copy(path *url.URL, page int64, limit int64, order string) P
 	}
 }
 
-func (pg Paginator) Filters(dataQuery sq.SelectBuilder) sq.SelectBuilder {
+func (pg *Paginator) Filters(dataQuery sq.SelectBuilder) sq.SelectBuilder {
 	// fmt.Printf("{order: %s, limit: %d, page: %d, OrderKey: %s}\n", pg.Order, pg.Limit, pg.Page, pg.OrderKey)
 	return dataQuery.
 		OrderBy(pg.OrderKey + " " + pg.Order).
@@ -66,7 +66,7 @@ func generatePaginateUrl(fromUrl *url.URL, page int64, limit int64, order string
 	return &nextLink
 }
 
-func (pg Paginator) Load(db *sqlx.DB, baseQuery, dataQuery sq.SelectBuilder, converter func(*sqlx.Rows) (interface{}, error)) (*PaginatedResponse, error) {
+func (pg *Paginator) Load(db *sqlx.DB, baseQuery, dataQuery sq.SelectBuilder, converter func(*sqlx.Rows) (interface{}, error)) (*PaginatedResponse, error) {
 	commaCount := strings.Count(pg.Order, ",")
 	if commaCount == 1 {
 		splitted := strings.Split(pg.Order, ",")
@@ -143,48 +143,71 @@ func (pg Paginator) Load(db *sqlx.DB, baseQuery, dataQuery sq.SelectBuilder, con
 	return resp, nil
 }
 
-func pagination(pg Paginator) func(http.Handler) http.Handler {
-	return func(next http.Handler) http.Handler {
-		return wrapHandler(func(rw http.ResponseWriter, r *http.Request) error {
-			pageNumber := 1
-			limitCount := 10
-			order := "asc"
-
-			if rawOrder := r.URL.Query().Get("order"); len(rawOrder) != 0 {
-				splitted := strings.Split(rawOrder, ",")
-				lastIndex := len(splitted) - 1
-				if splitted[lastIndex] != "desc" && splitted[lastIndex] != "asc" {
-					return &ResponseError{
-						StatusCode: http.StatusBadRequest,
-						Message:    "order invalid value",
-					}
-				}
-				order = rawOrder
+func pagination(pg *Paginator) func(http.Handler) http.Handler {
+	filterMiddleware := customFilters(map[string]FilterFunc{
+		"order": func(r *http.Request, ctx context.Context, f Filter) error {
+			if !f.Exists || len(f.Value) == 0 {
+				return nil
 			}
 
-			if rawLimitCount := r.URL.Query().Get("limit"); len(rawLimitCount) != 0 {
-				var err error
-				if limitCount, err = strconv.Atoi(rawLimitCount); err != nil {
-					return &ResponseError{
-						StatusCode: http.StatusBadRequest,
-						Message:    "limit invalid value",
-					}
-				}
-			}
+			pg := ctx.Value("paginator").(*Paginator)
+			rawOrder := f.Value
+			splitted := strings.Split(rawOrder, ",")
+			lastIndex := len(splitted) - 1
 
-			if rawPageNumber := r.URL.Query().Get("page"); len(rawPageNumber) != 0 {
-				var err error
-				if pageNumber, err = strconv.Atoi(rawPageNumber); err != nil {
-					return &ResponseError{
-						StatusCode: http.StatusBadRequest,
-						Message:    "page invalid value",
-					}
+			if splitted[lastIndex] != "desc" && splitted[lastIndex] != "asc" {
+				return &ResponseError{
+					StatusCode: http.StatusBadRequest,
+					Message:    "order invalid value",
 				}
+			} else if len(splitted) == 2 {
+				pg.OrderKey = splitted[0]
+				pg.Order = splitted[1]
+			} else {
+				pg.Order = rawOrder
 			}
-
-			ctx := context.WithValue(r.Context(), "paginator", pg.Copy(r.URL, int64(pageNumber), int64(limitCount), order))
-			next.ServeHTTP(rw, r.WithContext(ctx))
 			return nil
+		},
+		"limit": func(r *http.Request, ctx context.Context, f Filter) error {
+			if !f.Exists || len(f.Value) == 0 {
+				return nil
+			}
+
+			pg := ctx.Value("paginator").(*Paginator)
+			limitCount, err := strconv.Atoi(f.Value)
+			if err != nil {
+				return &ResponseError{
+					StatusCode: http.StatusBadRequest,
+					Message:    "limit invalid value",
+				}
+			}
+
+			pg.Limit = int64(limitCount)
+			return nil
+		},
+		"page": func(r *http.Request, ctx context.Context, f Filter) error {
+			if !f.Exists || len(f.Value) == 0 {
+				return nil
+			}
+
+			pg := ctx.Value("paginator").(*Paginator)
+			pageNumber, err := strconv.Atoi(f.Value)
+			if err != nil {
+				return &ResponseError{
+					StatusCode: http.StatusBadRequest,
+					Message:    "page invalid value",
+				}
+			}
+
+			pg.Page = int64(pageNumber)
+			return nil
+		},
+	})
+
+	return func(next http.Handler) http.Handler {
+		return http.HandlerFunc(func(rw http.ResponseWriter, r *http.Request) {
+			ctx := context.WithValue(r.Context(), "paginator", pg.Copy(r.URL, 1, 10, "asc"))
+			filterMiddleware(next).ServeHTTP(rw, r.WithContext(ctx))
 		})
 	}
 }
