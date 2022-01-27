@@ -73,7 +73,7 @@ type Predicate interface {
 
 func injectSelectQuery(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(rw http.ResponseWriter, r *http.Request) {
-		_, ok := r.Context().Value("selectQuery").(sq.SelectBuilder)
+		_, ok := r.Context().Value("selectQuery").(*sq.SelectBuilder)
 		if !ok {
 			selectQuery := sq.Select()
 			ctx := context.WithValue(r.Context(), "selectQuery", &selectQuery)

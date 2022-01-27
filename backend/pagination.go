@@ -9,6 +9,7 @@ import (
 	"strings"
 
 	sq "github.com/Masterminds/squirrel"
+	"github.com/blevesearch/bleve"
 	"github.com/jmoiron/sqlx"
 )
 
@@ -47,13 +48,10 @@ func (pg *Paginator) Copy(path *url.URL, page int64, limit int64, order string) 
 	}
 }
 
-func (pg *Paginator) Filters(dataQuery sq.SelectBuilder) sq.SelectBuilder {
-	// fmt.Printf("{order: %s, limit: %d, page: %d, OrderKey: %s}\n", pg.Order, pg.Limit, pg.Page, pg.OrderKey)
-	return dataQuery.
-		OrderBy(pg.OrderKey + " " + pg.Order).
-		Limit(uint64(pg.Limit)).
-		Offset(uint64(pg.Page-1) * uint64(pg.Limit))
-}
+// func (pg *Paginator) Filters(dataQuery sq.SelectBuilder) sq.SelectBuilder {
+// 	// fmt.Printf("{order: %s, limit: %d, page: %d, OrderKey: %s}\n", pg.Order, pg.Limit, pg.Page, pg.OrderKey)
+// 	return
+// }
 
 func generatePaginateUrl(fromUrl *url.URL, page int64, limit int64, order string) *string {
 	nextUrl := *fromUrl
@@ -66,23 +64,9 @@ func generatePaginateUrl(fromUrl *url.URL, page int64, limit int64, order string
 	return &nextLink
 }
 
-func (pg *Paginator) Load(db *sqlx.DB, baseQuery, dataQuery sq.SelectBuilder, converter func(*sqlx.Rows) (interface{}, error)) (*PaginatedResponse, error) {
-	commaCount := strings.Count(pg.Order, ",")
-	if commaCount == 1 {
-		splitted := strings.Split(pg.Order, ",")
-		pg.OrderKey = splitted[0]
-		pg.Order = splitted[1]
-	} else if commaCount > 1 {
-		return nil, &ResponseError{
-			StatusCode: http.StatusUnprocessableEntity,
-			Message:    "ordering by specific column must be column name follow by a single comma and order (asc/desc)",
-		}
-	}
-
-	count := int64(0)
-	if countQuery, args, err := baseQuery.Column("count(*)").ToSql(); err != nil {
-		return nil, err
-	} else if err := db.Get(&count, countQuery, args...); err != nil {
+func (pg *Paginator) Load(db *sqlx.DB, source PaginatorSource) (*PaginatedResponse, error) {
+	count, err := source.Count()
+	if err != nil {
 		return nil, err
 	}
 
@@ -100,23 +84,9 @@ func (pg *Paginator) Load(db *sqlx.DB, baseQuery, dataQuery sq.SelectBuilder, co
 		return nil, &ResponseError{StatusCode: http.StatusNotFound}
 	}
 
-	finalDataQuery, args, err := pg.Filters(dataQuery).ToSql()
+	results, err := source.Fetch(pg.Page, pg.Limit, pg.OrderKey, pg.Order)
 	if err != nil {
 		return nil, err
-	}
-
-	rows, err := db.Queryx(finalDataQuery, args...)
-	if err != nil {
-		return nil, &ResponseError{StatusCode: http.StatusNotFound, WError: err}
-	}
-
-	results := []interface{}{}
-	for rows.Next() {
-		gotData, err := converter(rows)
-		if err != nil {
-			return nil, err
-		}
-		results = append(results, gotData)
 	}
 
 	orderQuery := pg.OrderKey + "," + pg.Order
@@ -151,11 +121,14 @@ func pagination(pg *Paginator) func(http.Handler) http.Handler {
 			}
 
 			pg := ctx.Value("paginator").(*Paginator)
-			rawOrder := f.Value
-			splitted := strings.Split(rawOrder, ",")
+			splitted := strings.Split(f.Value, ",")
 			lastIndex := len(splitted) - 1
-
-			if splitted[lastIndex] != "desc" && splitted[lastIndex] != "asc" {
+			if len(splitted) > 2 {
+				return &ResponseError{
+					StatusCode: http.StatusUnprocessableEntity,
+					Message:    "ordering by specific column must be column name follow by a single comma and order (asc/desc)",
+				}
+			} else if splitted[lastIndex] != "desc" && splitted[lastIndex] != "asc" {
 				return &ResponseError{
 					StatusCode: http.StatusBadRequest,
 					Message:    "order invalid value",
@@ -164,7 +137,7 @@ func pagination(pg *Paginator) func(http.Handler) http.Handler {
 				pg.OrderKey = splitted[0]
 				pg.Order = splitted[1]
 			} else {
-				pg.Order = rawOrder
+				pg.Order = f.Value
 			}
 			return nil
 		},
@@ -210,4 +183,103 @@ func pagination(pg *Paginator) func(http.Handler) http.Handler {
 			filterMiddleware(next).ServeHTTP(rw, r.WithContext(ctx))
 		})
 	}
+}
+
+type PaginatorSource interface {
+	Count() (int64, error)
+	Fetch(page, limit int64, orderKey, order string) ([]interface{}, error)
+}
+
+type DatabasePaginatorSource struct {
+	BaseQuery sq.SelectBuilder
+	DataQuery sq.SelectBuilder
+	DB        *sqlx.DB
+	Converter func(*sqlx.Rows) (interface{}, error)
+}
+
+func (src *DatabasePaginatorSource) Count() (int64, error) {
+	count := int64(0)
+	if countQuery, args, err := src.BaseQuery.Column("count(*)").ToSql(); err != nil {
+		return 0, err
+	} else if err := src.DB.Get(&count, countQuery, args...); err != nil {
+		return 0, err
+	}
+	return count, nil
+}
+
+func (src *DatabasePaginatorSource) Fetch(page, limit int64, orderKey, order string) ([]interface{}, error) {
+	finalDataQuery, args, err := src.DataQuery.
+		OrderBy(orderKey + " " + order).
+		Limit(uint64(limit)).
+		Offset(uint64(page-1) * uint64(limit)).ToSql()
+	if err != nil {
+		return nil, err
+	}
+
+	rows, err := src.DB.Queryx(finalDataQuery, args...)
+	if err != nil {
+		return nil, &ResponseError{StatusCode: http.StatusNotFound, WError: err}
+	}
+
+	results := []interface{}{}
+	for rows.Next() {
+		gotData, err := src.Converter(rows)
+		if err != nil {
+			return nil, err
+		}
+		results = append(results, gotData)
+	}
+	return results, nil
+}
+
+type BlevePaginatorSource struct {
+	Index         bleve.Index
+	SearchRequest *bleve.SearchRequest
+}
+
+func (src *BlevePaginatorSource) Count() (int64, error) {
+	resp, err := src.Index.Search(src.SearchRequest)
+	if err != nil {
+		return 0, err
+	}
+	return int64(resp.Total), nil
+}
+
+func (src *BlevePaginatorSource) Fetch(page, limit int64, orderKey, order string) ([]interface{}, error) {
+	finalOrder := orderKey
+	if order == "desc" {
+		finalOrder = "-" + finalOrder
+	}
+
+	src.SearchRequest.Size = int(limit)
+	src.SearchRequest.From = int((page - 1) * limit)
+	src.SearchRequest.Explain = false
+	src.SearchRequest.SortBy([]string{finalOrder, "-_score", "_id"})
+	resp, err := src.Index.Search(src.SearchRequest)
+	if err != nil {
+		return nil, err
+	}
+
+	results := make([]interface{}, len(resp.Hits))
+	for i, result := range resp.Hits {
+		results[i] = result
+	}
+	return results, nil
+}
+
+type PipePaginatorSource struct {
+	Source   PaginatorSource
+	PipeFunc func([]interface{}) ([]interface{}, error)
+}
+
+func (src *PipePaginatorSource) Count() (int64, error) {
+	return src.Source.Count()
+}
+
+func (src *PipePaginatorSource) Fetch(page, limit int64, orderKey, order string) ([]interface{}, error) {
+	initialResults, err := src.Source.Fetch(page, limit, orderKey, order)
+	if err != nil {
+		return nil, err
+	}
+	return src.PipeFunc(initialResults)
 }

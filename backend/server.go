@@ -14,6 +14,9 @@ import (
 	"text/template"
 	"time"
 
+	"github.com/blevesearch/bleve"
+	"github.com/blevesearch/bleve/search"
+	"github.com/blevesearch/bleve/search/query"
 	"github.com/chromedp/chromedp"
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
@@ -35,7 +38,7 @@ import (
 	poTypes "github.com/nedpals/valentine-wall/postal_office/types"
 )
 
-var messagesPaginator = Paginator{
+var messagesPaginator = &Paginator{
 	OrderKey: "id",
 }
 
@@ -82,7 +85,7 @@ type Message struct {
 	RecipientID string `db:"recipient_id" json:"recipient_id" validate:"required,min=6,max=12,numeric"`
 	Content     string `db:"content" json:"content" validate:"required,max=240"`
 	HasReplied  bool   `db:"has_replied" json:"has_replied"`
-	GiftIDs     []int  `json:"gift_ids" validate:"omitempty,max=3"`
+	GiftIDs     []int  `json:"gift_ids,omitempty" validate:"omitempty,max=3"`
 
 	CreatedAt time.Time `db:"created_at" json:"created_at"`
 	UpdatedAt time.Time `db:"updated_at" json:"updated_at"`
@@ -114,6 +117,54 @@ func (re *ResponseError) Error() string {
 	} else {
 		return re.Message
 	}
+}
+
+func setupMessagesSearchIndex() (bleve.Index, error) {
+	idxMapping := bleve.NewIndexMapping()
+	idxMapping.DefaultAnalyzer = "en"
+	mapping := bleve.NewDocumentMapping()
+
+	mapping.AddFieldMappingsAt("id", bleve.NewTextFieldMapping())
+	mapping.AddFieldMappingsAt("recipient_id", bleve.NewTextFieldMapping())
+	mapping.AddFieldMappingsAt("has_gifts", bleve.NewBooleanFieldMapping())
+	mapping.AddFieldMappingsAt("created_at", bleve.NewDateTimeFieldMapping())
+	mapping.AddFieldMappingsAt("updated_at", bleve.NewDateTimeFieldMapping())
+	idxMapping.AddDocumentMapping("message", mapping)
+
+	return NewSearch("messages", idxMapping)
+}
+
+func importExistingMessages(db *sqlx.DB, index bleve.Index) error {
+	batch := index.NewBatch()
+	sqlQuery, _, err := sq.Select("id", "recipient_id", "created_at", "updated_at", "iif(gift_id is not null, 1, 0) has_gifts").
+		From("messages").LeftJoin("(select message_id, gift_id from message_gifts group by message_id) gm on gm.message_id = messages.id").
+		ToSql()
+	if err != nil {
+		return err
+	}
+
+	rows, err := db.Queryx(sqlQuery)
+	if err != nil {
+		return err
+	}
+
+	for rows.Next() {
+		var result struct {
+			MessageID   string    `db:"id" json:"-"`
+			RecipientID string    `db:"recipient_id" json:"recipient_id"`
+			CreatedAt   time.Time `db:"created_at" json:"created_at"`
+			UpdatedAt   time.Time `db:"updated_at" json:"updated_at"`
+			HasGifts    bool      `db:"has_gifts" json:"has_gifts"`
+		}
+
+		if err := rows.StructScan(&result); err != nil {
+			return err
+		} else if err := batch.Index(result.MessageID, result); err != nil {
+			return err
+		}
+	}
+
+	return index.Batch(batch)
 }
 
 func main() {
@@ -183,6 +234,15 @@ func main() {
 	log.Println("initializing database...")
 	db := initializeDb()
 	defer db.Close()
+
+	// search engine
+	log.Println("indexing existing messages to search database...")
+	messagesSearchIndex, err := setupMessagesSearchIndex()
+	if err != nil {
+		log.Fatalln(err)
+	} else if err := importExistingMessages(db, messagesSearchIndex); err != nil {
+		log.Fatalln(err)
+	}
 
 	// middlewares
 	jsonOnly := middleware.AllowContentType("application/json")
@@ -285,38 +345,63 @@ func main() {
 	getMessagesHandler := wrapHandler(func(rw http.ResponseWriter, rr *http.Request) error {
 		recipientId := chi.URLParam(rr, "recipientId")
 		pg := rr.Context().Value("paginator").(*Paginator)
-		queryPtr, okQuery := rr.Context().Value("selectQuery").(*sq.SelectBuilder)
-		baseQuery := sq.Select().From("messages")
-		if okQuery {
-			baseQuery = (*queryPtr).From("messages")
-		}
-
+		searchRequest := rr.Context().Value("searchRequest").(*bleve.SearchRequest)
 		if len(recipientId) != 0 {
-			baseQuery = baseQuery.Where(sq.Eq{"recipient_id": recipientId})
+			matchRecipientQuery := bleve.NewTermQuery(recipientId)
+			matchRecipientQuery.SetField("recipient_id")
+			searchRequest.Query.(*query.ConjunctionQuery).AddQuery(matchRecipientQuery)
+		} else if conjQ, isConjQuery := searchRequest.Query.(*query.ConjunctionQuery); isConjQuery && len(conjQ.Conjuncts) == 0 {
+			searchRequest.Query = bleve.NewMatchAllQuery()
 		}
-
-		dataQuery := baseQuery.Columns("id", "recipient_id", "content", "has_replied", "created_at", "updated_at")
-		resp, err := pg.Load(db, baseQuery, dataQuery, func(r *sqlx.Rows) (interface{}, error) {
-			msg := Message{}
-			if err := r.StructScan(&msg); err != nil {
-				return nil, err
-			}
-			return msg, nil
+		resp, err := pg.Load(db, &PipePaginatorSource{
+			Source: &BlevePaginatorSource{
+				Index:         messagesSearchIndex,
+				SearchRequest: searchRequest,
+			},
+			PipeFunc: func(inputs []interface{}) ([]interface{}, error) {
+				ids := sq.Or{}
+				for _, res := range inputs {
+					docMatch, ok := res.(*search.DocumentMatch)
+					if !ok {
+						return nil, fmt.Errorf("not a document match")
+					}
+					ids = append(ids, sq.Eq{"id": docMatch.ID})
+				}
+				querySql, queryArgs, err := sq.Select("id", "recipient_id", "content", "has_replied", "created_at", "updated_at").
+					From("messages").Where(ids).ToSql()
+				if err != nil {
+					return nil, err
+				}
+				rows, err := db.Queryx(querySql, queryArgs...)
+				if err != nil {
+					return nil, err
+				}
+				results := []interface{}{}
+				for rows.Next() {
+					msg := Message{}
+					if err := rows.StructScan(&msg); err != nil {
+						return nil, err
+					}
+					results = append(results, msg)
+				}
+				return results, nil
+			},
 		})
-
 		if err != nil {
 			return err
 		} else if resp.Page > resp.PageCount && len(resp.Data) == 0 {
 			r.NotFoundHandler().ServeHTTP(rw, rr)
 			return nil
 		}
-
 		return jsonEncode(rw, resp)
 	})
 
 	customMsgQueryFilters := customFilters(map[string]FilterFunc{
 		"has_gift": func(r *http.Request, ctx context.Context, filter Filter) error {
-			sb := ctx.Value("selectQuery").(*sq.SelectBuilder)
+			searchReq := ctx.Value("searchRequest").(*bleve.SearchRequest)
+			hasGiftQuery := bleve.NewBoolFieldQuery(false)
+			hasGiftQuery.SetField("has_gifts")
+
 			// TODO: disable_restricted_access_to_gift_messages
 			// token, _, err := getAuthToken(r, firebaseApp)
 			switch filter.Value {
@@ -330,11 +415,12 @@ func main() {
 				// recipientId := chi.URLParam(r, "recipientId")
 				// if associatedUser, err := getAssociatedUserBy(db, sq.Eq{"user_id": token.UID}); err == nil && associatedUser.AssociatedID == recipientId {
 				if filter.Value == "1" {
-					(*sb) = (*sb).Distinct().InnerJoin("message_gifts on message_gifts.message_id = messages.id")
+					hasGiftQuery.Bool = true
 				} else if filter.Value == "2" {
 					// leave as is
+					return nil
 				}
-				return nil
+				// return nil
 				// }
 				// if err != nil {
 				// 	log.Println(err)
@@ -342,14 +428,14 @@ func main() {
 				// return &ResponseError{
 				// 	StatusCode: http.StatusForbidden,
 				// }
-			default:
-				(*sb) = (*sb).LeftJoin("message_gifts on message_gifts.message_id = messages.id").Where("message_gifts.gift_id IS NULL")
 			}
+
+			searchReq.Query.(*query.ConjunctionQuery).AddQuery(hasGiftQuery)
 			return nil
 		},
 	})
 
-	messageListMiddlewares := []func(http.Handler) http.Handler{injectSelectQuery, customMsgQueryFilters, pagination(messagesPaginator)}
+	messageListMiddlewares := []func(http.Handler) http.Handler{injectSearchQuery, customMsgQueryFilters, pagination(messagesPaginator)}
 	r.With(messageListMiddlewares...).Get("/messages", getMessagesHandler)
 	r.With(messageListMiddlewares...).Get("/messages/{recipientId}", getMessagesHandler)
 	r.Get("/messages/{recipientId}/stats", wrapHandler(func(rw http.ResponseWriter, r *http.Request) error {
@@ -442,6 +528,23 @@ func main() {
 
 			if err := tx.Commit(); err != nil {
 				return err
+			}
+
+			// save to search engine
+			if err := UpsertEntry(messagesSearchIndex, submittedMsg.ID, struct {
+				MessageID   string    `db:"id" json:"-"`
+				RecipientID string    `db:"recipient_id" json:"recipient_id"`
+				CreatedAt   time.Time `db:"created_at" json:"created_at"`
+				UpdatedAt   time.Time `db:"updated_at" json:"updated_at"`
+				HasGifts    bool      `db:"has_gifts" json:"has_gifts"`
+			}{
+				MessageID:   submittedMsg.ID,
+				RecipientID: submittedMsg.RecipientID,
+				CreatedAt:   submittedMsg.CreatedAt,
+				UpdatedAt:   submittedMsg.UpdatedAt,
+				HasGifts:    len(submittedMsg.GiftIDs) != 0,
+			}); err != nil {
+				log.Println(err)
 			}
 
 			// send email to recipient if available
@@ -565,6 +668,10 @@ func main() {
 
 		// cancel send job if possible
 		if err := postalOfficeClient.CancelJobByUID(message.ID); err != nil {
+			log.Println(err)
+		}
+
+		if err := DeleteEntry(messagesSearchIndex, message.ID); err != nil {
 			log.Println(err)
 		}
 
