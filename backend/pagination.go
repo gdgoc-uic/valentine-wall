@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"net/http"
 	"net/url"
+	"reflect"
 	"strconv"
 	"strings"
 
@@ -278,10 +279,36 @@ func (src *PipePaginatorSource) Count() (int64, error) {
 	return src.Source.Count()
 }
 
-func (src *PipePaginatorSource) Fetch(page, limit int64, orderKey, order string) ([]interface{}, error) {
-	initialResults, err := src.Source.Fetch(page, limit, orderKey, order)
+func (src *PipePaginatorSource) Fetch(page, limit int64, orderKey, order string) (interface{}, int, error) {
+	initialResults, _, err := src.Source.Fetch(page, limit, orderKey, order)
 	if err != nil {
-		return nil, err
+		return nil, 0, err
 	}
-	return src.PipeFunc(initialResults)
+	finalResults, err := src.PipeFunc(initialResults.([]interface{}))
+	if err != nil {
+		return nil, 0, err
+	}
+	return finalResults, len(finalResults), nil
+}
+
+type ArrayPaginatorSource struct {
+	Arr interface{}
+}
+
+func (src *ArrayPaginatorSource) Count() (int64, error) {
+	v := reflect.ValueOf(src.Arr)
+	return int64(v.Len()), nil
+}
+
+func (src *ArrayPaginatorSource) Fetch(page, limit int64, orderKey, order string) (interface{}, int, error) {
+	arr := reflect.ValueOf(src.Arr)
+	if arr.Kind() != reflect.Slice {
+		return nil, 0, fmt.Errorf("not a slice")
+	}
+	slice := reflect.MakeSlice(arr.Type(), 0, int(limit))
+	for i := int(page-1) * int(limit); i < arr.Len(); i++ {
+		slice = reflect.Append(slice, arr.Index(i))
+	}
+	fmt.Printf("%+v %d\n", slice, slice.Len())
+	return slice.Interface(), slice.Len(), nil
 }

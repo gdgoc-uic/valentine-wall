@@ -26,23 +26,31 @@
   </main>
 </template>
 
-<script>
+<script lang="ts">
 import client from '../client'
 import { catchAndNotifyError } from '../notify';
 export default {
   mounted() {
-    this.loadRankings();
+    this.loadRankings({});
   },
   data() {
     return {
-      rankings: []
+      links: { first: null, last: null, next: null, previous: null },
+      page: 1,
+      perPage: 10,
+      pageCount: 1,
+      rankings: [],
     }
   },
   methods: {
-    async loadRankings() {
+    async loadRankings({ url, merge = false }: { url?: string|null, merge?: boolean }): Promise<void> {
       try {
-        const { data: json } = await client.get('/rankings');
-        this.rankings = json;
+        const { data: json } = await client.get(url ?? '/rankings');
+        this.links = json['links'];
+        this.page = json['page'];
+        this.perPage = json['per_page'];
+        this.pageCount = json['page_count'];
+        this.rankings = merge ? this.rankings.concat(...json['data']) : json['data'];
       } catch (e) {
         catchAndNotifyError(this, e);
       }

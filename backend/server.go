@@ -10,7 +10,7 @@ import (
 	"log"
 	"net/http"
 	"regexp"
-	"strconv"
+	"sort"
 	"text/template"
 	"time"
 
@@ -56,9 +56,116 @@ type Gift struct {
 }
 
 type RecipientStats struct {
-	RecipientID  string `json:"recipient_id"`
-	Messages     int    `json:"messages"`
-	GiftMessages int    `json:"gift_messages"`
+	RecipientID       string `db:"recipient_id" json:"recipient_id"`
+	Department        string `db:"department" json:"department,omitempty"`
+	Gender            string `db:"gender" json:"gender,omitempty"`
+	MessagesCount     int    `db:"messages_count" json:"messages_count"`
+	GiftMessagesCount int    `db:"gift_messages_count" json:"gift_messages_count"`
+}
+
+type Recipients []*RecipientStats
+
+func (a Recipients) Len() int      { return len(a) }
+func (a Recipients) Swap(i, j int) { a[i], a[j] = a[j], a[i] }
+func (a Recipients) Less(i, j int) bool {
+	// TODO: fix sorting
+	if a[i].MessagesCount > a[j].MessagesCount {
+		return true
+	} else if a[i].GiftMessagesCount > a[j].GiftMessagesCount {
+		return true
+	}
+	return false
+}
+
+func fetchRecipientRankings(db *sqlx.DB) (Recipients, error) {
+	baseQuery := func(queryName string) sq.SelectBuilder {
+		return sq.Select("recipient_id", "count(*) "+queryName).From("messages").GroupBy("recipient_id")
+	}
+
+	// distinct joins
+	distinctGiftIdsQuery := "SELECT DISTINCT message_id FROM message_gifts"
+	distinctJoinCriteria := "mg ON mg.message_id = messages.id"
+	distinctGiftsJoin := fmt.Sprintf("(%s) %s", distinctGiftIdsQuery, distinctJoinCriteria)
+
+	recipientsMap := map[string]*RecipientStats{}
+
+	// get number of gift message for each recipient
+	giftMessagesCountQuerySQL, _, _ := baseQuery("gift_messages_count").InnerJoin(distinctGiftsJoin).ToSql()
+	recipientsWithGiftsRows, err := db.Query(giftMessagesCountQuerySQL)
+	if err != nil {
+		return nil, err
+	}
+
+	for recipientsWithGiftsRows.Next() {
+		var recipientId string
+		var giftMessagesCount int
+		recipientsWithGiftsRows.Scan(&recipientId, &giftMessagesCount)
+		if len(recipientId) == 0 {
+			continue
+		} else if _, exists := recipientsMap[recipientId]; !exists {
+			recipientsMap[recipientId] = &RecipientStats{
+				RecipientID: recipientId,
+				Gender:      "unknown",
+				Department:  "Unknown",
+			}
+		}
+		recipientsMap[recipientId].GiftMessagesCount = giftMessagesCount
+	}
+
+	// get number of ordinary messages for each recipient
+	nongiftMessagesCountQuerySQL, _, _ := baseQuery("messages_count").LeftJoin(distinctGiftsJoin).Where("mg.message_id IS NULL").ToSql()
+	recipientsWithoutGiftsRows, err := db.Query(nongiftMessagesCountQuerySQL)
+	if err != nil {
+		return nil, err
+	}
+
+	for recipientsWithoutGiftsRows.Next() {
+		var recipientId string
+		var messagesCount int
+		recipientsWithoutGiftsRows.Scan(&recipientId, &messagesCount)
+		if len(recipientId) == 0 {
+			continue
+		} else if _, exists := recipientsMap[recipientId]; !exists {
+			recipientsMap[recipientId] = &RecipientStats{
+				RecipientID: recipientId,
+				Gender:      "unknown",
+				Department:  "Unknown",
+			}
+		}
+		recipientsMap[recipientId].MessagesCount = messagesCount
+	}
+
+	// get all associated_users data
+	associatedUsersSQL := "SELECT associated_id, department, gender FROM associated_ids"
+	rows, err := db.Query(associatedUsersSQL)
+	if err != nil {
+		return nil, err
+	}
+
+	for rows.Next() {
+		var recipientId string
+		var collegeDepartment string
+		var gender string
+		rows.Scan(&recipientId, &collegeDepartment, &gender)
+		if len(recipientId) == 0 {
+			continue
+		} else if _, exists := recipientsMap[recipientId]; !exists {
+			recipientsMap[recipientId] = &RecipientStats{
+				RecipientID: recipientId,
+			}
+		}
+		recipientsMap[recipientId].Department = collegeDepartment
+		recipientsMap[recipientId].Gender = gender
+	}
+
+	// sort and get results
+	results := make(Recipients, 0, len(recipientsMap))
+	for _, val := range recipientsMap {
+		results = append(results, val)
+	}
+
+	sort.Sort(results)
+	return results, nil
 }
 
 type AssociatedUser struct {
@@ -295,57 +402,33 @@ func main() {
 		return jsonEncode(rw, giftList)
 	}))
 
-	r.Get("/rankings", wrapHandler(func(rw http.ResponseWriter, r *http.Request) error {
-		limit := 0
-		if gotLimit, exists := r.URL.Query()["limit"]; exists || len(gotLimit) != 0 {
-			var err error
-			if limit, err = strconv.Atoi(gotLimit[0]); err != nil {
+	rankingPaginator := &Paginator{}
+	r.With(pagination(rankingPaginator)).Get("/rankings", wrapHandler(func(rw http.ResponseWriter, r *http.Request) error {
+		pg := r.Context().Value("paginator").(*Paginator)
+		cachedRankings, hasRankingsCached := cacher.Get("rankings")
+		var results Recipients
+		if !hasRankingsCached {
+			results, err = fetchRecipientRankings(db)
+			if err != nil {
 				return err
-			} else if limit < 5 {
-				return &ResponseError{
-					StatusCode: http.StatusBadRequest,
-					Message:    "invalid limit value", // TODO
-				}
 			}
+
+			timeToCache := 30 * time.Minute
+			if targetEnv == "development" {
+				timeToCache = 30 * time.Second
+			}
+
+			cacher.Set("rankings", results, timeToCache)
+		} else if recs, ok := cachedRankings.(Recipients); ok {
+			results = recs
 		}
 
-		// TODO: cache results
-		// get number of gift message for each recipient
-		giftInnerJoinSubquery := sq.Select("id", "recipient_id").Distinct().From("messages").InnerJoin("message_gifts on message_gifts.message_id = messages.id")
-		giftMessagesCountSubquerySQL, gSqArgs, err := sq.Select("recipient_id", "count(*) gift_messages_count").FromSelect(giftInnerJoinSubquery, "msg").GroupBy("recipient_id").ToSql()
+		resp, err := pg.Load(&ArrayPaginatorSource{results})
 		if err != nil {
 			return err
 		}
 
-		// get number of ordinary messages for each recipient
-		messagesCountSubQuery := sq.Select("messages.recipient_id", "count(*) messages_count", "gift_messages_rankings.gift_messages_count").
-			From("messages").LeftJoin(fmt.Sprintf("(%s) gift_messages_rankings on gift_messages_rankings.recipient_id = messages.recipient_id", giftMessagesCountSubquerySQL), gSqArgs...).
-			GroupBy("messages.recipient_id")
-
-		// get all
-		rankingsResults := []struct {
-			RecipientID       string `db:"recipient_id" json:"recipient_id"`
-			Department        string `db:"department" json:"department"`
-			GiftMessagesCount string `db:"gift_messages_count" json:"gift_messages_count"`
-			MessagesCount     string `db:"messages_count" json:"messages_count"`
-		}{}
-
-		rankingsQuery := sq.Select("recipient_id", "associated_ids.department", "ifnull(rankings.gift_messages_count, 0) gift_messages_count", "ifnull(rankings.messages_count, 0) messages_count").
-			FromSelect(messagesCountSubQuery, "rankings").InnerJoin("associated_ids on associated_ids.associated_id = rankings.recipient_id").
-			OrderBy("rankings.gift_messages_count desc", "rankings.messages_count desc")
-
-		if limit != 0 {
-			rankingsQuery = rankingsQuery.Limit(uint64(limit))
-		}
-
-		rankingsQuerySQL, rqArgs, err := rankingsQuery.ToSql()
-		if err != nil {
-			return err
-		} else if err := db.Select(&rankingsResults, rankingsQuerySQL, rqArgs...); err != nil {
-			return err
-		}
-
-		return jsonEncode(rw, rankingsResults)
+		return jsonEncode(rw, resp)
 	}))
 
 	getMessagesHandler := wrapHandler(func(rw http.ResponseWriter, rr *http.Request) error {

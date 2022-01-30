@@ -5,7 +5,7 @@
         <template v-if="$route.params.recipientId">
           <p class="text-2xl mb-2 text-gray-500">Messages for </p>
           <h2 class="text-5xl font-bold">{{ $route.params.recipientId }}</h2>
-          <p>{{ stats.messages }} Messages, {{ stats.gift_messages }} Gift Messages</p>
+          <p>{{ stats.messages_count }} Messages, {{ stats.gift_messages_count }} Gift Messages</p>
 
           <div v-if="$store.getters.isLoggedIn && $store.state.user.associatedId === $route.params.recipientId" class="btn-group mt-8">
             <button @click="hasGift = false" :class="toggleBtnStyling(hasGift == false)" class="btn btn-md px-8">Messages</button> 

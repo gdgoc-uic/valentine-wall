@@ -227,7 +227,7 @@ func getAssociatedUserBy(db *sqlx.DB, pred Predicate) (*AssociatedUser, error) {
 }
 
 func getRecipientStatsBySID(index bleve.Index, sid string) (*RecipientStats, error) {
-	stats := &RecipientStats{}
+	stats := &RecipientStats{RecipientID: sid}
 	filter := bleve.NewTermQuery(sid)
 	filter.SetField("recipient_id")
 
@@ -241,9 +241,9 @@ func getRecipientStatsBySID(index bleve.Index, sid string) (*RecipientStats, err
 			return nil, err
 		}
 		if i == 0 {
-			stats.GiftMessages = int(res.Total)
+			stats.GiftMessagesCount = int(res.Total)
 		} else {
-			stats.Messages = int(res.Total)
+			stats.MessagesCount = int(res.Total)
 		}
 	}
 
