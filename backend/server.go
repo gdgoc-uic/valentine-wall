@@ -55,9 +55,10 @@ type Gift struct {
 	Label string `json:"label"`
 }
 
-type MessageStats struct {
-	Messages     int `json:"messages"`
-	GiftMessages int `json:"gift_messages"`
+type RecipientStats struct {
+	RecipientID  string `json:"recipient_id"`
+	Messages     int    `json:"messages"`
+	GiftMessages int    `json:"gift_messages"`
 }
 
 type AssociatedUser struct {
@@ -445,7 +446,7 @@ func main() {
 	r.With(messageListMiddlewares...).Get("/messages/{recipientId}", getMessagesHandler)
 	r.Get("/messages/{recipientId}/stats", wrapHandler(func(rw http.ResponseWriter, r *http.Request) error {
 		recipientId := chi.URLParam(r, "recipientId")
-		stats, err := getMessageStatsBySID(messagesSearchIndex, recipientId)
+		stats, err := getRecipientStatsBySID(messagesSearchIndex, recipientId)
 		if err != nil {
 			return err
 		}
@@ -913,14 +914,14 @@ func main() {
 					log.Println(err)
 				}
 
-				stats, err := getMessageStatsBySID(messagesSearchIndex, associatedUser.AssociatedID)
+				stats, err := getRecipientStatsBySID(messagesSearchIndex, associatedUser.AssociatedID)
 				if err != nil {
 					log.Println(err)
 				}
 
 				sender := emailTemplates["welcome"].With(struct {
 					Email string
-					Stats *MessageStats
+					Stats *RecipientStats
 				}{
 					Email: userEmail,
 					Stats: stats,

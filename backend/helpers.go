@@ -226,8 +226,8 @@ func getAssociatedUserBy(db *sqlx.DB, pred Predicate) (*AssociatedUser, error) {
 	return associatedData, nil
 }
 
-func getMessageStatsBySID(index bleve.Index, sid string) (*MessageStats, error) {
-	stats := &MessageStats{}
+func getRecipientStatsBySID(index bleve.Index, sid string) (*RecipientStats, error) {
+	stats := &RecipientStats{}
 	filter := bleve.NewTermQuery(sid)
 	filter.SetField("recipient_id")
 
