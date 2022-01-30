@@ -11,7 +11,7 @@
       <div class="flex flex-col mt-4 -mx-2 justify-center items-center">
         <p>Select gift</p>
         <fieldset class="gift-list-checkboxes">
-          <div class="gift-item" :key="'gift_' + gift.uid" v-for="(gift, i) in $store.state.giftList">
+          <div class="gift-item" :key="'gift_' + gift.uid" v-for="gift in $store.state.giftList">
             <div class="gift-item-btn-wrapper">
               <input class="absolute appearance-none top-0 left-0" type="checkbox" :name="'gift_ids['+gift.id+']'" :id="gift.uid">
               <label class="btn btn-checkbox p-1 flex flex-col text-center h-full w-full" :for="gift.uid">
