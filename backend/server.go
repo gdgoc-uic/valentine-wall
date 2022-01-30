@@ -558,14 +558,19 @@ func main() {
 			if err != nil {
 				log.Println(err)
 			} else {
+				notifier := &EmailNotifier{
+					Client:   postalOfficeClient,
+					Template: emailTemplates["message"],
+					Context: &MailSenderContext{
+						Email:       recipientUser.Email,
+						RecipientID: submittedMsg.RecipientID,
+						MessageID:   submittedMsg.ID,
+						FrontendURL: frontendUrl,
+					},
+				}
+
 				// send the mail within n minutes.
-				sender := emailTemplates["message"].With(&MailSenderContext{
-					Email:       recipientUser.Email,
-					RecipientID: submittedMsg.RecipientID,
-					MessageID:   submittedMsg.ID,
-					FrontendURL: frontendUrl,
-				})
-				if _, err := newSendJob(postalOfficeClient, sender, recipientUser.Email, submittedMsg.ID); err != nil {
+				if err := notifier.Notify(); err != nil {
 					log.Println(err)
 				}
 			}
@@ -757,15 +762,14 @@ func main() {
 				}
 
 				notifier = &EmailNotifier{
-					PostalOfficeClient: postalOfficeClient,
-					Template: emailTemplates["reply"].With(&MailSenderContext{
+					Client:   postalOfficeClient,
+					Template: emailTemplates["reply"],
+					Context: &MailSenderContext{
 						Email:       senderEmail,
 						RecipientID: message.RecipientID,
 						MessageID:   message.ID,
 						FrontendURL: frontendUrl,
-					}),
-					RecipientEmail: senderEmail,
-					MessageID:      reply.MessageID,
+					},
 				}
 			} else {
 				// just to be sure

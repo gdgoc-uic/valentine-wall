@@ -112,14 +112,17 @@ func (tw *TwitterNotifier) Notify() error {
 }
 
 type EmailNotifier struct {
-	PostalOfficeClient *poClient.Client
-	Template           *TemplatedMailSender
-	RecipientEmail     string
-	MessageID          string
+	Client   *poClient.Client
+	Template *TemplatedMailSender
+	Context  *MailSenderContext
 }
 
 func (em *EmailNotifier) Notify() error {
-	// TODO: send reply later (?)
-	_, err := newSendJob(em.PostalOfficeClient, em.Template, em.RecipientEmail, em.MessageID)
+	_, err := newSendJob(
+		em.Client,
+		em.Template.With(em.Context),
+		em.Context.Email,
+		em.Context.MessageID,
+	)
 	return err
 }
