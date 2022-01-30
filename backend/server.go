@@ -359,7 +359,7 @@ func main() {
 		} else if conjQ, isConjQuery := searchRequest.Query.(*query.ConjunctionQuery); isConjQuery && len(conjQ.Conjuncts) == 0 {
 			searchRequest.Query = bleve.NewMatchAllQuery()
 		}
-		resp, err := pg.Load(db, &PipePaginatorSource{
+		resp, err := pg.Load(&PipePaginatorSource{
 			Source: &BlevePaginatorSource{
 				Index:         messagesSearchIndex,
 				SearchRequest: searchRequest,
@@ -395,7 +395,7 @@ func main() {
 		})
 		if err != nil {
 			return err
-		} else if resp.Page > resp.PageCount && len(resp.Data) == 0 {
+		} else if resp.Page > resp.PageCount && resp.Len == 0 {
 			r.NotFoundHandler().ServeHTTP(rw, rr)
 			return nil
 		}

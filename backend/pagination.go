@@ -26,7 +26,8 @@ type PaginatedResponse struct {
 	PerPage    int64          `json:"per_page"`
 	PageCount  int64          `json:"page_count"`
 	TotalCount int64          `json:"total_count"`
-	Data       []interface{}  `json:"data"`
+	Data       interface{}    `json:"data"`
+	Len        int            `json:"-"`
 }
 
 type Paginator struct {
@@ -64,7 +65,7 @@ func generatePaginateUrl(fromUrl *url.URL, page int64, limit int64, order string
 	return &nextLink
 }
 
-func (pg *Paginator) Load(db *sqlx.DB, source PaginatorSource) (*PaginatedResponse, error) {
+func (pg *Paginator) Load(source PaginatorSource) (*PaginatedResponse, error) {
 	count, err := source.Count()
 	if err != nil {
 		return nil, err
@@ -84,7 +85,7 @@ func (pg *Paginator) Load(db *sqlx.DB, source PaginatorSource) (*PaginatedRespon
 		return nil, &ResponseError{StatusCode: http.StatusNotFound}
 	}
 
-	results, err := source.Fetch(pg.Page, pg.Limit, pg.OrderKey, pg.Order)
+	results, resultsLen, err := source.Fetch(pg.Page, pg.Limit, pg.OrderKey, pg.Order)
 	if err != nil {
 		return nil, err
 	}
@@ -100,6 +101,7 @@ func (pg *Paginator) Load(db *sqlx.DB, source PaginatorSource) (*PaginatedRespon
 		PerPage:    pg.Limit,
 		PageCount:  lastPageNumber,
 		Data:       results,
+		Len:        resultsLen,
 	}
 
 	if currentPageNumber+1 <= lastPageNumber {
@@ -187,7 +189,7 @@ func pagination(pg *Paginator) func(http.Handler) http.Handler {
 
 type PaginatorSource interface {
 	Count() (int64, error)
-	Fetch(page, limit int64, orderKey, order string) ([]interface{}, error)
+	Fetch(page, limit int64, orderKey, order string) (interface{}, int, error)
 }
 
 type DatabasePaginatorSource struct {
@@ -245,7 +247,7 @@ func (src *BlevePaginatorSource) Count() (int64, error) {
 	return int64(resp.Total), nil
 }
 
-func (src *BlevePaginatorSource) Fetch(page, limit int64, orderKey, order string) ([]interface{}, error) {
+func (src *BlevePaginatorSource) Fetch(page, limit int64, orderKey, order string) (interface{}, int, error) {
 	finalOrder := orderKey
 	if order == "desc" {
 		finalOrder = "-" + finalOrder
@@ -257,14 +259,14 @@ func (src *BlevePaginatorSource) Fetch(page, limit int64, orderKey, order string
 	src.SearchRequest.SortBy([]string{finalOrder, "-_score", "_id"})
 	resp, err := src.Index.Search(src.SearchRequest)
 	if err != nil {
-		return nil, err
+		return nil, 0, err
 	}
 
 	results := make([]interface{}, len(resp.Hits))
 	for i, result := range resp.Hits {
 		results[i] = result
 	}
-	return results, nil
+	return results, len(results), nil
 }
 
 type PipePaginatorSource struct {
