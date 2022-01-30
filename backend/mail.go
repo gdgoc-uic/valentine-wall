@@ -6,7 +6,6 @@ import (
 	"time"
 
 	poClient "github.com/nedpals/valentine-wall/postal_office/client"
-	"github.com/nedpals/valentine-wall/postal_office/types"
 	poTypes "github.com/nedpals/valentine-wall/postal_office/types"
 )
 
@@ -37,7 +36,7 @@ func newSendJob(cl *poClient.Client, ms EmailSender, toRecipient string, uids ..
 }
 
 type EmailSender interface {
-	Message(toRecipientEmail string) (*types.MailMessage, error)
+	Message(toRecipientEmail string) (*poTypes.MailMessage, error)
 	TimeToSend() time.Duration
 }
 
@@ -60,7 +59,7 @@ func newTemplatedMailSender(tmpl *template.Template, emailName, subject string, 
 	}
 }
 
-func (t *TemplatedMailSender) Message(toRecipientEmail string) (*types.MailMessage, error) {
+func (t *TemplatedMailSender) Message(toRecipientEmail string) (*poTypes.MailMessage, error) {
 	if !t.hasSubjectTemplateCompiled {
 		var err error
 		t.subjectTemplate, err = template.New("subject").Parse(t.subject)
@@ -78,7 +77,7 @@ func (t *TemplatedMailSender) Message(toRecipientEmail string) (*types.MailMessa
 		return nil, err
 	}
 
-	return &types.MailMessage{
+	return &poTypes.MailMessage{
 		Name:    t.emailName,
 		ToEmail: toRecipientEmail,
 		Subject: subjectBuf.String(),

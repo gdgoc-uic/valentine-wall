@@ -34,8 +34,6 @@ const (
 	imageTypeTwitter  ImageType = 1
 )
 
-var latoBold *truetype.Font
-var latoRegular *truetype.Font
 var latoLight *truetype.Font
 var nanumPenScript *truetype.Font
 
@@ -58,8 +56,6 @@ func init() {
 	nanumPenScript = loadFont("./fonts/nanum-pen-script/NanumPenScript-Regular.ttf")
 }
 
-// TODO: add support for emojis
-// TODO: render images using chrome with chromedp/puppeteer/playwright
 func generateImagePNG(wr io.Writer, itype ImageType, message Message) error {
 	margin := float64(50)
 	doubleMargin := 2.0 * margin
@@ -121,8 +117,6 @@ func generateImagePNG(wr io.Writer, itype ImageType, message Message) error {
 }
 
 func generateImagePNGChrome(wr io.Writer, parentChromeCtx context.Context, tmpl *template.Template, message Message) error {
-	// TODO: cache rendering
-
 	// compile template first
 	output := &bytes.Buffer{}
 	if err := tmpl.Execute(output, message); err != nil {

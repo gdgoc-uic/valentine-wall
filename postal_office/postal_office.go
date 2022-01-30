@@ -268,7 +268,7 @@ func savePendingJobs(po *PostalOffice) error {
 	tx := db.MustBegin()
 	po.mappedPendingJobs.Range(func(key, value interface{}) bool {
 		pj := value.(*types.PendingJob)
-		timeDiff := time.Now().Sub(pj.UpdatedAt)
+		timeDiff := time.Since(pj.UpdatedAt)
 		pj.Payload.TimeToSend = pj.Payload.TimeToSend - timeDiff
 		if _, err := tx.NamedExec("INSERT INTO pending_jobs (id, unique_id, payload, updated_at) VALUES (:id, :unique_id, :payload, :updated_at)", pj); err != nil {
 			log.Println(err)

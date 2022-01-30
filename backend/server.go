@@ -602,7 +602,6 @@ func main() {
 
 			newCtx := context.WithValue(rr.Context(), "gotMessage", message)
 			next.ServeHTTP(rw, rr.WithContext(newCtx))
-			return
 		})
 	}
 
@@ -648,7 +647,7 @@ func main() {
 			}
 
 			timeToSend := emailTemplates["message"].TimeToSend()
-			if token.UID == message.UID && time.Now().Sub(message.CreatedAt) < timeToSend {
+			if token.UID == message.UID && time.Since(message.CreatedAt) < timeToSend {
 				isDeletable = true
 			}
 		} else if tErr != nil {
@@ -683,7 +682,7 @@ func main() {
 		message := r.Context().Value("gotMessage").(RawMessage)
 		timeToSend := emailTemplates["message"].TimeToSend()
 
-		if message.UID != token.UID || time.Now().Sub(message.CreatedAt) >= timeToSend {
+		if message.UID != token.UID || time.Since(message.CreatedAt) >= timeToSend {
 			return &ResponseError{
 				StatusCode: http.StatusForbidden,
 			}
