@@ -1,7 +1,7 @@
 import { setUserId, setUserProperties } from 'firebase/analytics';
 import { GoogleAuthProvider, signInWithPopup, User } from 'firebase/auth';
 import { createStore } from 'vuex';
-import client from './client';
+import client, { APIResponseError } from './client';
 import { analytics, auth } from './firebase';
 
 // NOTE: snake_case because JSON response is in snake_case
@@ -103,20 +103,24 @@ export default createStore<State>({
         throw e;
       }
     },
-    async onReceiveUser({ commit, dispatch }, user: User | null): Promise<void> {
-      if (!user) {
-        commit('SET_AUTH_LOADING', false);
-        return;
-      }
-
+    async onReceiveUser({ commit, dispatch }, user: User | null): Promise<void> {  
       try {
+        if (!user) {
+          return;
+        }
+
         commit('SET_USER_ID', user.uid);
         commit('SET_USER_EMAIL', user.email ?? '<unknown e-mail>');
         commit('SET_USER_ACCESS_TOKEN', await user.getIdToken(false));
-        const idResp = await client.post('/user/login_callback', { credentials: 'include' });
-        const { associated_id, user_connections }: { associated_id: string, user_connections: UserConnection[] } = await idResp.json();
+        const { 
+          data: { associated_id, user_connections } 
+        }: { 
+          data: { 
+            associated_id: string, 
+            user_connections: UserConnection[] 
+          } 
+        } = await client.post('/user/login_callback', { credentials: 'include' });
         commit('SET_USER_CONNECTIONS', user_connections);
-
         if (associated_id.length == 0) {
           commit('SET_SETUP_MODAL_OPEN', true);
         } else {
@@ -133,23 +137,22 @@ export default createStore<State>({
       }
     },
     async logout({ commit }) {
-      const logoutResp = await client.post('/user/logout_callback');
-      if (logoutResp.status != 200) {
-        throw Error('Unable to logout user.');
+      try {
+        await client.post('/user/logout_callback');
+        await auth.signOut();
+        commit('SET_USER_ID', '');
+        commit('SET_USER_EMAIL', '');
+        commit('SET_USER_ACCESS_TOKEN', '');
+        commit('SET_USER_ASSOCIATED_ID', '');
+      } catch (e) {
+        if (e instanceof APIResponseError) {
+          throw Error('Unable to logout user.');
+        }
+        throw e;
       }
-
-      await auth.signOut();
-      commit('SET_USER_ID', '');
-      commit('SET_USER_EMAIL', '');
-      commit('SET_USER_ACCESS_TOKEN', '');
-      commit('SET_USER_ASSOCIATED_ID', '');
     },
     async getGiftList({ commit }) {
-      const resp = await client.get('/gifts');
-      const json = await resp.json();
-      if (resp.status < 200 || resp.status > 299) {
-        throw new Error(json['error_message']);
-      }
+      const { data: json } = await client.get('/gifts');
       commit('SET_GIFT_LIST', json);
     }
   }

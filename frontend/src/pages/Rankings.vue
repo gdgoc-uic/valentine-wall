@@ -41,18 +41,7 @@ export default {
   methods: {
     async loadRankings() {
       try {
-        const resp = await client.get('/rankings');
-        const json = await resp.json();
-        if (resp.status < 200 || resp.status > 299) {
-          if ('message' in json) {
-            throw new Error(json['message']);
-          } else if ('json_message' in json) {
-            throw new Error(json['error_message']);
-          } else {
-            throw new Error('Something went wrong.');
-          }
-        }
-
+        const { data: json } = await client.get('/rankings');
         this.rankings = json;
       } catch (e) {
         catchAndNotifyError(this, e);

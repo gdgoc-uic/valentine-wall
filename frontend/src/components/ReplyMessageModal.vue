@@ -58,7 +58,7 @@ import ContentCounter from '../components/ContentCounter.vue';
 import { logEvent } from '@firebase/analytics';
 import { analytics } from '../firebase';
 import { catchAndNotifyError, notify } from '../notify';
-import client from '../client';
+import client, { expandAPIEndpoint } from '../client';
 
 export default {
   components: { 
@@ -125,7 +125,7 @@ export default {
       return newWindow;
     },
     openTwitterLogin() {
-      const connectUrl = import.meta.env.VITE_BACKEND_URL + '/user/connect_twitter';
+      const connectUrl = expandAPIEndpoint('/user/connect_twitter');
       const loginWindow = this.popupCenter({ url: connectUrl, title: 'twitter_login_window', w: 800, h: 500});
       if (!loginWindow) {
         logEvent(analytics, 'connect_twitter', { success: false });
@@ -151,12 +151,7 @@ export default {
     },
     async skipLogin() {
       try {
-        const resp = await client.get('/user/connect_email');
-        const json = await resp.json();
-        if (resp.status < 200 || resp.status > 299) {
-          throw new Error(json['error_message']);
-        }
-
+        const { data: json } = await client.get('/user/connect_email');
         logEvent(analytics, 'connect_email', { success: true });
         this.$store.commit('SET_USER_CONNECTIONS', json['user_connections']);
       } catch (e) {
@@ -167,20 +162,9 @@ export default {
     async submitReply() {
       try {
         this.isSending = true;
-        const resp = await client.postJson(`/messages/${this.message.recipient_id}/${this.message.id}/reply`, {
+        const { data: json } = await client.postJson(`/messages/${this.message.recipient_id}/${this.message.id}/reply`, {
           'content': this.content
         });
-
-        const json = await resp.json();
-        if (resp.status < 200 || resp.status > 299) {
-          if ('error_message' in json) {
-            throw new Error(json['error_message']);
-          } else if ('message' in json) {
-            throw new Error(json['message']);
-          } else {
-            throw new Error('Something went wrong.');
-          }
-        }
 
         notify(this, { type: 'success', text: json['message'] });
         this.$emit('update:open', false);

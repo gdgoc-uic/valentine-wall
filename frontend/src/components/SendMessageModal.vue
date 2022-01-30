@@ -110,25 +110,18 @@ export default {
           throw new Error('Maximum of 3 gifts is allowed.');
         }
 
-        const resp = await client.postJson('/messages', {
+        const { data: json } = await client.postJson('/messages', {
           recipient_id: formData.get('recipient_id'),
           content: formData.get('content'),
           gift_ids: giftIds,
           uid: this.$store.state.user.id
         });
 
-        const json = await resp.json();
-        if (resp.status >= 200 && resp.status <= 299) {
-          logEvent(analytics, 'post-message');
-          notify(this, { type: 'success', text: json['message'] });
-          e.target.reset();
-          this.$emit('update:open', false);
-          this.$router.push(json['route']);
-        } else if ('error_message' in json) {
-          throw new Error(json['error_message']);
-        } else {
-          throw new Error('There are errors in your submission.');
-        }
+        logEvent(analytics, 'post-message');
+        notify(this, { type: 'success', text: json['message'] });
+        e.target.reset();
+        this.$emit('update:open', false);
+        this.$router.push(json['route']);
       } catch(e) {
         catchAndNotifyError(this, e);
       } finally {

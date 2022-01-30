@@ -101,8 +101,7 @@ export default {
       try {
         if (!this.$route.params.recipientId) return;
         const recipientId = this.$route.params.recipientId ?? '';
-        const resp = await client.get(`/messages/${recipientId}/stats`);
-        const json = await resp.json();
+        const { data: json } = await client.get(`/messages/${recipientId}/stats`);
         this.stats = json;
       } catch(e) {
         catchAndNotifyError(this, e);
@@ -112,21 +111,12 @@ export default {
       try {
         const recipientId = this.$route.params.recipientId ?? '';
         const endpoint = url ?? `/messages/${recipientId}?order=created_at,desc&limit=6&${hasGift == null ? 'has_gift=2' : hasGift ? 'has_gift=1' : 'has_gift=0'}`;
-        const resp = await client.get(endpoint);
-        const json = await resp.json();
-
-        if (resp.status >= 200 && resp.status <= 299) {
-          this.links = json['links'];
-          this.page = json['page'];
-          this.perPage = json['per_page'];
-          this.pageCount = json['page_count'];
-          this.messages = merge ? this.messages.concat(...json['data']) : json['data'];
-        } else if ('error_message' in json) {
-          throw new Error(json['error_message']);
-        } else {
-          throw new Error('Something went wrong.');
-        }
-
+        const { data: json, rawResponse: resp } = await client.get(endpoint);
+        this.links = json['links'];
+        this.page = json['page'];
+        this.perPage = json['per_page'];
+        this.pageCount = json['page_count'];
+        this.messages = merge ? this.messages.concat(...json['data']) : json['data'];
         logEvent(analytics, 'search_messages', { recipient_id: recipientId, status_code: resp.status });
       } catch(e) {
         catchAndNotifyError(this, e);

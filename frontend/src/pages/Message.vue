@@ -101,7 +101,7 @@ import dayjs from 'dayjs';
 import relativeTime from 'dayjs/plugin/relativeTime';
 import { logEvent } from '@firebase/analytics';
 import { analytics } from '../firebase';
-import client from '../client';
+import client, { APIResponseError } from '../client';
 import { catchAndNotifyError } from '../notify';
 import { Gift } from '../store';
 import { WatchStopHandle } from '@vue/runtime-core';
@@ -152,41 +152,33 @@ export default {
   methods: {
     async deleteMessage() {
       try {
-        const resp = await client.delete(`/messages/${this.$route.params.recipientId}/${this.$route.params.messageId}`);
-        const json = await resp.json();
-
-        if (resp.status >= 200 && resp.status <= 299) {
-          this.$notify({ type: 'success', text: json['message'] });
-          this.$router.replace({ name: 'home-page' });
-        } else if ('json_message' in json) {
-          throw new Error(json['json_message']);
-        } else {
-          throw new Error('Something went wrong.');
-        }
+        const { data: json } = await client.delete(`/messages/${this.$route.params.recipientId}/${this.$route.params.messageId}`);
+        this.$notify({ type: 'success', text: json['message'] });
+        this.$router.replace({ name: 'home-page' });
       } catch(e) {
         catchAndNotifyError(this, e);
       }
     },
     async loadMessage() {
       try {
-        const resp = await client.get(`/messages/${this.$route.params.recipientId}/${this.$route.params.messageId}`);
-        const json = await resp.json();
-        if (resp.status == 200) {
-          this.isDeletable = json['is_deletable'] ?? false;
-          this.message = json['message'];
-          this.reply = json['reply'];
-
-          if (!this.hasGifts) {
-            this.revealContent = true;
-          }
-        } else if (resp.status == 404) {
-          this.notFound = true;
-        } else {
-          logEvent(analytics, 'retrieve_message', { status_code: resp.status });
-          throw new Error(json['error_message']);
+        const { rawResponse: resp, data: json } = await client.get(`/messages/${this.$route.params.recipientId}/${this.$route.params.messageId}`);
+        this.isDeletable = json['is_deletable'] ?? false;
+        this.message = json['message'];
+        this.reply = json['reply'];
+        if (!this.hasGifts) {
+          this.revealContent = true;
         }
+
         logEvent(analytics, 'retrieve_message', { status_code: resp.status });
       } catch(e) {
+        if (e instanceof APIResponseError) {
+          if (e.rawResponse.status == 404) {
+            this.notFound = true;
+            return;
+          } else {
+            logEvent(analytics, 'retrieve_message', { status_code: e.rawResponse.status });
+          }
+        }
         catchAndNotifyError(this, e);
       } finally {
         this.isLoading = false;

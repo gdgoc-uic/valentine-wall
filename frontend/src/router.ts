@@ -1,5 +1,6 @@
 import { logEvent, setCurrentScreen } from 'firebase/analytics';
 import { createRouter, createWebHistory, RouteLocationNormalizedLoaded } from 'vue-router';
+import { expandAPIEndpoint } from './client';
 import { analytics } from './firebase';
 
 export function getPageTitle(route: RouteLocationNormalizedLoaded, pageSuffix: string): string {
@@ -41,7 +42,7 @@ const router = createRouter({
         metaTags: (route: RouteLocationNormalizedLoaded) => [
           {
             name: 'og:image',
-            content: `${import.meta.env.VITE_BACKEND_URL}/messages/${route.params.recipientId}/${route.params.messageId}?image`
+            content: expandAPIEndpoint(`/messages/${route.params.recipientId}/${route.params.messageId}?image`)
           },
           {
             name: 'og:image:width',

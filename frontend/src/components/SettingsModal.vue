@@ -72,25 +72,17 @@ export default {
         return;
       }
 
-      if (!e.target || !(e.target instanceof HTMLFormElement)) return;
-      const formData = new FormData(e.target);
-      
       try {
-        const resp = await client.postJson('/messages', {
+        if (!e.target || !(e.target instanceof HTMLFormElement)) return;
+        const formData = new FormData(e.target);
+        const { data: json } = await client.postJson('/messages', {
           input_sid: formData.get('recipient_id'),
           input_uid: this.$store.state.user.id
         });
 
-        const json = await resp.json();
-        if (resp.status >= 200 && resp.status <= 299) {
-          notify(this, { type: 'success', text: json['message'] });
-          this.$router.replace({ name: 'home-page' });
-          await this.$store.dispatch('logout');
-        } else if ('error_message' in json) {
-          throw new Error(json['error_message']);
-        } else {
-          throw new Error('There are errors in your submission');
-        }
+        notify(this, { type: 'success', text: json['message'] });
+        this.$router.replace({ name: 'home-page' });
+        await this.$store.dispatch('logout');
       } catch(e) {
         catchAndNotifyError(this, e);
       } finally {

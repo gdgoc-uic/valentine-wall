@@ -58,7 +58,7 @@
 </template>
 
 <script lang="ts">
-import client from '../client';
+import client, { APIResponseError } from '../client';
 import { catchAndNotifyError, notify } from '../notify';
 import Modal from './Modal.vue';
 
@@ -107,9 +107,8 @@ export default {
 
     async loadDepartments() {
       try {
-        const resp = await client.get('/departments');
-        const json = await resp.json();
-        this.departments = json;
+        const { data } = await client.get('/departments');
+        this.departments = data;
       } catch(e) {
         catchAndNotifyError(this, e);
       }
@@ -145,30 +144,28 @@ export default {
 
     async submitSetupForm(e: SubmitEvent) {
       if (!e.target || !(e.target instanceof HTMLFormElement)) return;
+      const assocIdForm = this.$refs.assocIdForm as HTMLFormElement;
+      if (!assocIdForm || !(assocIdForm instanceof HTMLFormElement)) return;
+      const formData = new FormData(assocIdForm);
 
       try {
-        const assocIdForm = this.$refs.assocIdForm as HTMLFormElement;
-        if (!assocIdForm || !(assocIdForm instanceof HTMLFormElement)) return;
-        const formData = new FormData(assocIdForm);
-        const resp = await client.postJson('/user/setup', {
-          associated_id: formData.get('associated_id')?.toString(),
-          department: formData.get('department')?.toString(),
-          gender: formData.get('gender')?.toString(),
-          terms_agreed: this.termsAgreed
-        });
+        try {
+          const { data: json } = await client.postJson('/user/setup', {
+            associated_id: formData.get('associated_id')?.toString(),
+            department: formData.get('department')?.toString(),
+            gender: formData.get('gender')?.toString(),
+            terms_agreed: this.termsAgreed
+          });
 
-        const json = await resp.json();
-        if (resp.status >= 200 && resp.status <= 299) {
           notify(this, { type: 'success', text: json['message'] });
           this.$store.commit('SET_USER_ASSOCIATED_ID', json['associated_id']);
           this.$store.commit('SET_SETUP_MODAL_OPEN', false);
-        } else if ('error_message' in json) {
-          if (resp.status == 403 && json['error_message'] == 'Access to the service is denied.') {
+        } catch (e) {
+          if (e instanceof APIResponseError && e.rawResponse.status == 403 && e.message == 'Access to the service is denied.') {
             await this.$store.dispatch('logout');
+            return;
           }
-          throw new Error(json['error_message']);
-        } else {
-          throw new Error('There are errors in your submission');
+          throw e;
         }
       } catch(e) {
         catchAndNotifyError(this, e);
