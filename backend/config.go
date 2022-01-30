@@ -6,6 +6,7 @@ import (
 	"io/ioutil"
 	"log"
 	"os"
+	"path/filepath"
 	"strconv"
 
 	goaway "github.com/TwiN/go-away"
@@ -37,6 +38,7 @@ var sessionName = "vw-session"
 var frontendUrl = "http://localhost:3000"
 var targetEnv = "development"
 var postalOfficeAddress = "localhost:3350"
+var dataDirPath = filepath.Join(".", "_data")
 
 var validator = goValidator.New()
 var giftList = []Gift{

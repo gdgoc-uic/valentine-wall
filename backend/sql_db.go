@@ -3,9 +3,12 @@ package main
 import (
 	"context"
 	"database/sql"
+	"errors"
 	"fmt"
 	"log"
 	"net/http"
+	"os"
+	"path/filepath"
 
 	sq "github.com/Masterminds/squirrel"
 	"github.com/jmoiron/sqlx"
@@ -16,7 +19,7 @@ import (
 func configureDatabasePath(env string) string {
 	switch env {
 	case "development", "production", "staging":
-		return fmt.Sprintf("./_data/%s_%s.db", databasePrefix, env)
+		return filepath.Join(dataDirPath, fmt.Sprintf("%s_%s.db", databasePrefix, env))
 	default:
 		log.Fatalf("invalid environment '%s'\n", env)
 		return ""
@@ -38,6 +41,14 @@ func runMigration(db *sqlx.DB) error {
 }
 
 func initializeDb() *sqlx.DB {
+	if _, err := os.Stat(dataDirPath); errors.Is(err, os.ErrNotExist) {
+		log.Printf("data directory not found. creating one...")
+		if err := os.Mkdir(dataDirPath, 0777); err != nil {
+			log.Fatalln(err)
+		}
+	}
+
+	log.Printf("connecting to %s...\n", databasePath)
 	db, err := sqlx.Open("sqlite3", databasePath)
 	if err != nil {
 		log.Fatalln(err)
