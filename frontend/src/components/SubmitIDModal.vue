@@ -5,7 +5,7 @@
         <label class="label">
           <span class="label-text">Enter your student ID</span>
         </label>
-        <input class="input input-bordered" type="text" name="associated_id" ref="associatedIdField" pattern="[0-9]{6,12}" placeholder="12-digit student ID">
+        <input class="input input-bordered" type="text" name="associated_id" id="associated_id_field" pattern="[0-9]{6,12}" placeholder="12-digit student ID">
       </div>
       <div class="form-control">
         <label class="label">
@@ -74,12 +74,16 @@ export default {
     };
   },
   mounted() {
-    this.loadDepartments();
-    const associatedIdField = this.$refs.associatedIdField;
-    if (associatedIdField && associatedIdField instanceof HTMLInputElement) {
-      const extractedId = this.getIdFromEmail(this.$store.state.user.email);
-      associatedIdField.value = extractedId;
-    }
+    this.loadDepartments()
+      .finally(() => {
+        setTimeout(() => {
+          const associatedIdField = document.getElementById('associated_id_field');
+          if (associatedIdField && associatedIdField instanceof HTMLInputElement) {
+            const extractedId = this.getIdFromEmail(this.$store.state.user.email);
+            associatedIdField.value = extractedId;
+          }
+        }, 300)
+      })
   },
   computed: {
     genderList() {
