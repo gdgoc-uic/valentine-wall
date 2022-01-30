@@ -18,8 +18,9 @@ type PendingJob struct {
 
 type Client struct {
 	sync.Mutex
-	rpcClient *rpc.Client
-	address   string
+	rpcClient      *rpc.Client
+	address        string
+	isReconnecting bool
 	// pendingJobs is used when the server is down.
 	// all the pending jobs are then cleared when the server
 	// has already been reconnected.
@@ -104,11 +105,16 @@ func (cl *Client) reconnect() error {
 	if cl.rpcClient, newRpcError = rpc.DialHTTP("tcp", cl.address); newRpcError != nil {
 		return newRpcError
 	}
+	cl.isReconnecting = false
 	cl.resendJobs()
 	return nil
 }
 
 func (cl *Client) BeginReconnect(rpcError error) {
+	if cl.isReconnecting {
+		return
+	}
+	cl.isReconnecting = true
 	newRpcError := rpcError
 	for newRpcError == nil || cl.rpcClient == nil {
 		if cl.rpcClient == nil {
