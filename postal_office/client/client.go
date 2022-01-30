@@ -8,20 +8,33 @@ import (
 	"sync"
 
 	"github.com/nedpals/valentine-wall/postal_office/types"
+	"github.com/oleiade/lane"
 )
+
+type PendingJob struct {
+	job  string
+	args interface{}
+}
 
 type Client struct {
 	sync.Mutex
 	rpcClient *rpc.Client
 	address   string
+	// pendingJobs is used when the server is down.
+	// all the pending jobs are then cleared when the server
+	// has already been reconnected.
+	pendingJobs *lane.Queue
 }
 
 func (cl *Client) Call(proc string, args interface{}, reply interface{}) error {
 	if err := cl.checkClient(); err != nil {
 		return err
+	} else if err := cl.rpcClient.Call(proc, args, reply); err != nil {
+		go cl.BeginReconnect(err)
+		cl.pendingJobs.Enqueue(&PendingJob{proc, args})
+		return err
 	}
-
-	return cl.rpcClient.Call(proc, args, reply)
+	return nil
 }
 
 func (cl *Client) checkClient() error {
@@ -65,21 +78,49 @@ func (cl *Client) CancelJobByUID(uid string) error {
 	return cl.CancelJob(receivedJobId)
 }
 
+func (cl *Client) resendJobs() {
+	wg := sync.WaitGroup{}
+	success := 0
+	for cl.pendingJobs.Head() != nil {
+		j := cl.pendingJobs.Dequeue().(*PendingJob)
+		wg.Add(1)
+		go func(j *PendingJob) {
+			if err := cl.Call(j.job, j.args, nil); err != nil {
+				log.Printf("job error: %s\n", err)
+			} else {
+				success++
+			}
+			wg.Done()
+		}(j)
+	}
+	wg.Wait()
+	log.Printf("%d jobs have been successfully sent\n", success)
+}
+
+func (cl *Client) reconnect() error {
+	cl.Lock()
+	defer cl.Unlock()
+	var newRpcError error
+	if cl.rpcClient, newRpcError = rpc.DialHTTP("tcp", cl.address); newRpcError != nil {
+		return newRpcError
+	}
+	cl.resendJobs()
+	return nil
+}
+
 func (cl *Client) BeginReconnect(rpcError error) {
 	newRpcError := rpcError
 	for newRpcError == nil || cl.rpcClient == nil {
 		if cl.rpcClient == nil {
 			log.Println("Restarting RPC Connection due to nil connection")
-			if cl.rpcClient, newRpcError = rpc.DialHTTP("tcp", cl.address); newRpcError != nil {
+			if newRpcError = cl.reconnect(); newRpcError != nil {
 				log.Println(newRpcError)
 			}
 		} else if rpcError == rpc.ErrShutdown || reflect.TypeOf(rpcError) == reflect.TypeOf((*rpc.ServerError)(nil)).Elem() {
 			log.Println("Restarting RPC Connection due to error")
-			cl.Lock()
-			if cl.rpcClient, newRpcError = rpc.DialHTTP("tcp", cl.address); newRpcError != nil {
+			if newRpcError = cl.reconnect(); newRpcError != nil {
 				log.Println(newRpcError)
 			}
-			cl.Unlock()
 		} else {
 			log.Println(newRpcError)
 			return
@@ -89,7 +130,7 @@ func (cl *Client) BeginReconnect(rpcError error) {
 
 func DialHTTP(address string) (*Client, error) {
 	var err error
-	connection := &Client{address: address}
+	connection := &Client{address: address, pendingJobs: lane.NewQueue()}
 	connection.rpcClient, err = rpc.DialHTTP("tcp", address)
 	if err != nil {
 		return nil, err

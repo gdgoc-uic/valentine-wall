@@ -84,6 +84,7 @@ require (
 	github.com/mailgun/mailgun-go/v4 v4.6.0
 	github.com/matoous/go-nanoid/v2 v2.0.0
 	github.com/mattn/go-sqlite3 v1.14.10
+	github.com/oleiade/lane v1.0.1
 	github.com/patrickmn/go-cache v2.1.0+incompatible
 	github.com/rubenv/sql-migrate v1.0.0
 	golang.org/x/crypto v0.0.0-20210711020723-a769d52b0f97 // indirect
