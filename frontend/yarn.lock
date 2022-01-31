@@ -2864,11 +2864,6 @@ vue@^3.2.25:
     "@vue/server-renderer" "3.2.26"
     "@vue/shared" "3.2.26"
 
-vuex-router-sync@^6.0.0.rc1:
-  version "6.0.0-rc.1"
-  resolved "https://registry.yarnpkg.com/vuex-router-sync/-/vuex-router-sync-6.0.0-rc.1.tgz#d8d003bca3067194808e16fd145eefc46ac5ac10"
-  integrity sha512-pzVrX/rmQsDjJiKPAjgKxpkxWdiBBQmxATFA6eFyS2Tmo6jauq8iDk9BWxkw41/OA+pbq4wkONRC0aeErDw8GQ==
-
 vuex@^4.0.2:
   version "4.0.2"
   resolved "https://registry.yarnpkg.com/vuex/-/vuex-4.0.2.tgz#f896dbd5bf2a0e963f00c67e9b610de749ccacc9"

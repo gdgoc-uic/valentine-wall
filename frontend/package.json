@@ -29,7 +29,6 @@
     "vue-head": "MKGaru/vue-head#vue3",
     "vue-router": "^4.0.12",
     "vuex": "^4.0.2",
-    "vuex-router-sync": "^6.0.0.rc1",
     "windicss": "^3.4.2"
   },
   "devDependencies": {
