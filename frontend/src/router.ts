@@ -1,16 +1,17 @@
 import { createRouter as createVueRouter, createWebHistory, createMemoryHistory, RouteLocationNormalizedLoaded, RouteRecordRaw } from 'vue-router';
 import { expandAPIEndpoint } from './client';
 
-const pageSuffix = ' | UIC Valentine Wall';
+const pageSuffix = 'UIC Valentine Wall';
+const pageSeparator = ' | ';
 
 export function getPageTitle(route: RouteLocationNormalizedLoaded): string {
   const pageTitle = route.meta.pageTitle;
   if (!pageTitle) return pageSuffix;
 
   if (pageTitle instanceof Function) {
-    return `${pageTitle(route)}${pageSuffix}`
+    return `${pageTitle(route)}${pageSeparator}${pageSuffix}`
   }
-  return `${pageTitle}${pageSuffix}`;
+  return `${pageTitle}${pageSeparator}${pageSuffix}`;
 }
 
 const routes: RouteRecordRaw[] = [
