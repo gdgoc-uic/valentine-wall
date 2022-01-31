@@ -67,20 +67,20 @@
         </div>
       </template>
     </div>
-  </div>
 
-  <teleport to="body">
-    <share-modal v-model:open="openShareModal" :recipient-id="$route.params.recipientId" :message-id="$route.params.messageId" :permalink="permalink" />
-    <reply-message-modal @update:hasReplied="message.has_replied ?? false" v-model:open="openReplyModal" :message="message" />
-    <modal v-model:open="openDeleteModal">
-      <p>Are you sure you want to delete this?</p>
-      
-      <template #actions>
-        <button class="btn" @click="openDeleteModal = false">Cancel</button>
-        <button class="btn btn-error" @click="deleteMessage">Delete</button>
-      </template>
-    </modal>
-  </teleport>
+    <portal>
+      <share-modal v-model:open="openShareModal" :recipient-id="$route.params.recipientId" :message-id="$route.params.messageId" :permalink="permalink" />
+      <reply-message-modal @update:hasReplied="message.has_replied ?? false" v-model:open="openReplyModal" :message="message" />
+      <modal v-model:open="openDeleteModal">
+        <p>Are you sure you want to delete this?</p>
+    
+        <template #actions>
+          <button class="btn" @click="openDeleteModal = false">Cancel</button>
+          <button class="btn btn-error" @click="deleteMessage">Delete</button>
+        </template>
+      </modal>
+    </portal>
+  </div>
 </template>
 
 <script lang="ts">
@@ -101,10 +101,11 @@ import dayjs from 'dayjs';
 import relativeTime from 'dayjs/plugin/relativeTime';
 import { logEvent } from '@firebase/analytics';
 import { analytics } from '../firebase';
-import client, { APIResponseError } from '../client';
+import { APIResponseError } from '../client';
 import { catchAndNotifyError } from '../notify';
 import { Gift } from '../store';
 import { WatchStopHandle } from '@vue/runtime-core';
+import Portal from '../components/Portal.vue';
 
 dayjs.extend(relativeTime);
 
@@ -121,15 +122,19 @@ export default {
     ShareModal,
     GiftIcon,
     Modal,
+    Portal,
+  },
+  serverPrefetch(): Promise<void> {
+    return this.loadMessage();
   },
   mounted() {
     if (this.$route.query.from) {
-      logEvent(analytics, "traffic_source", { from: this.$route.query.from });
+      logEvent(analytics!, "traffic_source", { from: this.$route.query.from });
     }
 
     // workaround in order to load gift messages
     this.authLoadingWatcher = this.$watch('$store.state.isAuthLoading', (newVal: boolean) => {
-      if (!newVal) {
+      if (!newVal && !this.message) {
         this.loadMessage()
           .finally(this.authLoadingWatcher);
       }
@@ -152,7 +157,7 @@ export default {
   methods: {
     async deleteMessage() {
       try {
-        const { data: json } = await client.delete(`/messages/${this.$route.params.recipientId}/${this.$route.params.messageId}`);
+        const { data: json } = await this.$client.delete(`/messages/${this.$route.params.recipientId}/${this.$route.params.messageId}`);
         this.$notify({ type: 'success', text: json['message'] });
         this.$router.replace({ name: 'home-page' });
       } catch(e) {
@@ -161,7 +166,7 @@ export default {
     },
     async loadMessage() {
       try {
-        const { rawResponse: resp, data: json } = await client.get(`/messages/${this.$route.params.recipientId}/${this.$route.params.messageId}`);
+        const { rawResponse: resp, data: json } = await this.$client.get(`/messages/${this.$route.params.recipientId}/${this.$route.params.messageId}`);
         this.isDeletable = json['is_deletable'] ?? false;
         this.message = json['message'];
         this.reply = json['reply'];
@@ -169,14 +174,14 @@ export default {
           this.revealContent = true;
         }
 
-        logEvent(analytics, 'retrieve_message', { status_code: resp.status });
+        logEvent(analytics!, 'retrieve_message', { status_code: resp.status });
       } catch(e) {
         if (e instanceof APIResponseError) {
           if (e.rawResponse.status == 404) {
             this.notFound = true;
             return;
           } else {
-            logEvent(analytics, 'retrieve_message', { status_code: e.rawResponse.status });
+            logEvent(analytics!, 'retrieve_message', { status_code: e.rawResponse.status });
           }
         }
         catchAndNotifyError(this, e);
@@ -218,8 +223,11 @@ export default {
       }
     },
     permalink(): string {
-      // return import.meta.env.BASE_URL + this.$route.fullPath;
-      return window.location.href;
+      if (import.meta.env.SSR) {
+        return import.meta.env.BASE_URL + this.$route.fullPath;
+      } else {
+        return window.location.href;
+      }
     }
   },
 }

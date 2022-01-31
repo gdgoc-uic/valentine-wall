@@ -91,7 +91,7 @@ export default {
       const permalinkTextbox = this.$refs.permalinkTextBox as HTMLInputElement;
       this.hasLinkCopied = true;
       navigator.clipboard.writeText(permalinkTextbox.value);
-      logEvent(analytics, 'share', { method: 'copy-url', item_id: this.messageId });
+      logEvent(analytics!, 'share', { method: 'copy-url', item_id: this.messageId });
       setTimeout(() => {
         this.hasLinkCopied = false;
       }, 1500);

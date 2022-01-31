@@ -1,12 +1,6 @@
 <template>
   <modal title="Settings" :open="open" @update:open="$emit('update:open', $event)" with-closing-button>
-    <!-- TODO: -->
     <div class="flex flex-col">
-      <!-- Info -->
-
-      <!-- Posting method -->
-
-      <!-- Delete account -->
       <form @submit.prevent="proceedDelete" class="flex flex-col p-4 border border-red-500 rounded-md">
         <div class="mb-8">
           <h2 class="text-red-500 text-xl font-bold mb-2">Delete Account</h2>
@@ -38,7 +32,6 @@
 </template>
 
 <script lang="ts">
-import client from '../client';
 import { catchAndNotifyError, notify } from '../notify';
 import Modal from './Modal.vue';
 export default {
@@ -75,7 +68,7 @@ export default {
       try {
         if (!e.target || !(e.target instanceof HTMLFormElement)) return;
         const formData = new FormData(e.target);
-        const { data: json } = await client.postJson('/messages', {
+        const { data: json } = await this.$client.postJson('/messages', {
           input_sid: formData.get('recipient_id'),
           input_uid: this.$store.state.user.id
         });

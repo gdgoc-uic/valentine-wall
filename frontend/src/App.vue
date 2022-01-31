@@ -1,35 +1,41 @@
 <template>
   <!-- Notifications -->
-  <notification-group>
-    <div style="z-index: 9999;" class="fixed inset-0 flex flex-col items-center px-4 py-6 pointer-events-none">
-      <div class="w-full max-w-2xl">
-        <notification 
-          v-slot="{ notifications }"
-          enter="transform ease-out duration-300 transition"
-          enter-from="translate-y-3 opacity-0 sm:translate-y-0 sm:translate-x-4"
-          enter-to="translate-y-0 opacity-100 sm:translate-x-0"
-          leave="transition ease-in duration-500"
-          leave-from="opacity-100"
-          leave-to="opacity-0"
-          move="transition duration-500"
-          move-delay="delay-300">
-          <basic-alert 
-            class="shadow my-3"
-            v-for="notification in notifications"
-            :key="notification.id"
-            :type="notification.type"
-            :message="notification.text" />
-        </notification>
+  <client-only>
+    <notification-group>
+      <div style="z-index: 9999;" class="fixed inset-0 flex flex-col items-center px-4 py-6 pointer-events-none">
+        <div class="w-full max-w-2xl">
+          <notification 
+            v-slot="{ notifications }"
+            enter="transform ease-out duration-300 transition"
+            enter-from="translate-y-3 opacity-0 sm:translate-y-0 sm:translate-x-4"
+            enter-to="translate-y-0 opacity-100 sm:translate-x-0"
+            leave="transition ease-in duration-500"
+            leave-from="opacity-100"
+            leave-to="opacity-0"
+            move="transition duration-500"
+            move-delay="delay-300">
+            <basic-alert 
+              class="shadow my-3"
+              v-for="notification in notifications"
+              :key="notification.id"
+              :type="notification.type"
+              :message="notification.text" />
+          </notification>
+        </div>
       </div>
-    </div>
-  </notification-group>
+    </notification-group>
+  </client-only>
 
   <!-- ID Modal -->
-  <teleport to="body">
+  <portal>
     <submit-id-modal v-if="!$store.state.user.associatedId && $store.getters.isLoggedIn" />
-  </teleport>
+  </portal>
 
-  <router-view></router-view>
+  <router-view v-slot="{ Component }">
+    <suspense>
+      <component :is="Component" />
+    </suspense>
+  </router-view>
 </template>
 
 <script lang="ts">
@@ -41,18 +47,35 @@ import BasicAlert from "./components/BasicAlert.vue";
 import SubmitIDModal from "./components/SubmitIDModal.vue";
 import { useRoute } from "vue-router";
 import { getPageTitle } from "./router";
+import ClientOnly from "./components/ClientOnly.vue";
+import Portal from "./components/Portal.vue";
 
 export default defineComponent({
-  components: { BasicAlert, SubmitIdModal: SubmitIDModal },
+  components: { 
+    BasicAlert, 
+    SubmitIdModal: SubmitIDModal, 
+    ClientOnly,
+    Portal 
+  },
   setup() {
     const route = useRoute();
     useHead({
-      title: computed(() => getPageTitle(route, 'UIC Valentine Wall')),
+      htmlAttrs: {
+        lang: 'en'
+      },
+      link: [
+        { rel: 'icon', href: '/favicon.ico' }
+      ],
+      title: computed(() => getPageTitle(route)),
       meta: computed(() => {
         if (route.meta.metaTags && route.meta.metaTags instanceof Function) {
           return route.meta.metaTags(route);
         }
-        return route.meta.metaTags as HeadAttrs[] ?? [];
+        return [
+          { charset: 'UTF-8' },
+          { name: 'viewport', content: 'width=device-width, initial-scale=1.0' },
+          ...(route.meta.metaTags as HeadAttrs[] ?? [])
+        ];
       }),
     });
   },
@@ -64,6 +87,8 @@ export default defineComponent({
   },
 })
 </script>
+
+<style src="./assets/index.css"></style>
 
 <style lang="postcss">
 body {

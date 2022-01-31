@@ -58,7 +58,7 @@
 </template>
 
 <script lang="ts">
-import client, { APIResponseError } from '../client';
+import { APIResponseError } from '../client';
 import { catchAndNotifyError, notify } from '../notify';
 import Modal from './Modal.vue';
 
@@ -107,7 +107,7 @@ export default {
 
     async loadDepartments() {
       try {
-        const { data } = await client.get('/departments');
+        const { data } = await this.$client.get('/departments');
         this.departments = data;
       } catch(e) {
         catchAndNotifyError(this, e);
@@ -150,7 +150,7 @@ export default {
 
       try {
         try {
-          const { data: json } = await client.postJson('/user/setup', {
+          const { data: json } = await this.$client.postJson('/user/setup', {
             associated_id: formData.get('associated_id')?.toString(),
             department: formData.get('department')?.toString(),
             gender: formData.get('gender')?.toString(),

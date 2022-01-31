@@ -7,11 +7,14 @@
           <h2 class="text-5xl font-bold">{{ $route.params.recipientId }}</h2>
           <p>{{ stats.messages_count }} Messages, {{ stats.gift_messages_count }} Gift Messages</p>
 
-          <div v-if="$store.getters.isLoggedIn && $store.state.user.associatedId === $route.params.recipientId" class="btn-group mt-8">
-            <button @click="hasGift = false" :class="toggleBtnStyling(hasGift == false)" class="btn btn-md px-8">Messages</button> 
-            <button @click="hasGift = true" :class="toggleBtnStyling(hasGift == true)" class="btn btn-md px-8">Gifts</button>
-            <button @click="hasGift = null" :class="toggleBtnStyling(hasGift == null)" class="btn btn-md px-8">All</button>
-          </div>
+          <!-- TODO: -->
+          <client-only>
+            <div v-if="$store.getters.isLoggedIn && $store.state.user.associatedId === $route.params.recipientId" class="btn-group mt-8">
+              <button @click="hasGift = false" :class="toggleBtnStyling(hasGift == false)" class="btn btn-md px-8">Messages</button> 
+              <button @click="hasGift = true" :class="toggleBtnStyling(hasGift == true)" class="btn btn-md px-8">Gifts</button>
+              <button @click="hasGift = null" :class="toggleBtnStyling(hasGift == null)" class="btn btn-md px-8">All</button>
+            </div>
+          </client-only>
         </template>
         <template v-else>
           <h2 class="text-5xl font-bold">Recent Wall</h2>
@@ -38,6 +41,7 @@
 
         <button v-if="links.next" @click="loadMessages({ url: links.next, merge: true, hasGift })" class="mt-8 btn text-gray-900 px-12 self-center bg-white hover:bg-gray-100 border-gray-300 hover:border-gray-500">Load More</button>
       </div>
+
       <div v-else class="text-center">
         <p>No messages found</p>
       </div>
@@ -51,31 +55,42 @@ import relativeTime from 'dayjs/plugin/relativeTime';
 import IconReply from '~icons/uil/comment-heart';
 import { analytics } from '../firebase';
 import { logEvent } from '@firebase/analytics';
-import client from '../client';
 import { catchAndNotifyError } from '../notify';
+import ClientOnly from '../components/ClientOnly.vue';
+import { defineComponent } from '@vue/runtime-core';
 
 dayjs.extend(relativeTime);
 
-export default {
+export default defineComponent({
   components: {
-    IconReply
+    IconReply,
+    ClientOnly
+  },
+  async serverPrefetch(): Promise<void> {
+    await this.loadData();
   },
   mounted() {
-    this.loadMessages({})
-      .then(this.loadStats);
+    if (!this.messages.length) {
+      this.loadData();
+    }
   },
   data() {
     return {
       stats: { messages: 0, gift_messages: 0 },
-      links: { first: null, last: null, next: null, previous: null },
+      links: { 
+        first: null as string | null, 
+        last: null as string | null, 
+        next: null as string | null, 
+        previous: null as string | null
+      },
       page: 1,
       perPage: 10,
       pageCount: 1,
-      messages: [],
+      messages: [] as any[],
       // TODO: disable_restricted_access_to_gift_messages
       // hasGift: false
-      hasGift: null
-    }
+      hasGift: null as boolean | null
+    };
   },
   watch: {
     hasGift(newVal: boolean, oldVal: boolean) {
@@ -85,8 +100,7 @@ export default {
     '$route'() {
       this.messages = [];
       this.stats = { messages: 0, gift_messages: 0 };
-      this.loadMessages({})
-        .then(this.loadStats);
+      this.loadData();
     }
   },
   methods: {
@@ -97,27 +111,33 @@ export default {
           : 'text-gray-900 border-gray-300 bg-white hover:bg-rose-50 hover:border-rose-400'
       ]
     },
-    async loadStats() {
+    loadData(): Promise<[any, any]> {
+      return Promise.all([
+        this.loadMessages({ hasGift: this.hasGift }),
+        this.loadStats()
+      ]);
+    },
+    async loadStats(): Promise<void> {
       try {
         if (!this.$route.params.recipientId) return;
         const recipientId = this.$route.params.recipientId ?? '';
-        const { data: json } = await client.get(`/messages/${recipientId}/stats`);
+        const { data: json } = await this.$client.get(`/messages/${recipientId}/stats`);
         this.stats = json;
       } catch(e) {
         catchAndNotifyError(this, e);
       }
     },
-    async loadMessages({ hasGift = false, url, merge = false }: { hasGift?: boolean, url?: string | null, merge?: boolean }): Promise<void> {
+    async loadMessages({ hasGift = false, url, merge = false }: { hasGift?: boolean | null, url?: string | null, merge?: boolean }): Promise<void> {
       try {
         const recipientId = this.$route.params.recipientId ?? '';
         const endpoint = url ?? `/messages/${recipientId}?order=created_at,desc&limit=6&${hasGift == null ? 'has_gift=2' : hasGift ? 'has_gift=1' : 'has_gift=0'}`;
-        const { data: json, rawResponse: resp } = await client.get(endpoint);
+        const { data: json, rawResponse: resp } = await this.$client.get(endpoint);
         this.links = json['links'];
         this.page = json['page'];
         this.perPage = json['per_page'];
         this.pageCount = json['page_count'];
         this.messages = merge ? this.messages.concat(...json['data']) : json['data'];
-        logEvent(analytics, 'search_messages', { recipient_id: recipientId, status_code: resp.status });
+        logEvent(analytics!, 'search_messages', { recipient_id: recipientId, status_code: resp.status });
       } catch(e) {
         catchAndNotifyError(this, e);
       }
@@ -126,5 +146,5 @@ export default {
       return dayjs(date).toNow(true);
     }
   }
-}
+})
 </script>

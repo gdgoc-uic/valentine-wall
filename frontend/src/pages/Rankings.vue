@@ -27,7 +27,6 @@
 </template>
 
 <script lang="ts">
-import client from '../client'
 import { catchAndNotifyError } from '../notify';
 export default {
   mounted() {
@@ -45,7 +44,7 @@ export default {
   methods: {
     async loadRankings({ url, merge = false }: { url?: string|null, merge?: boolean }): Promise<void> {
       try {
-        const { data: json } = await client.get(url ?? '/rankings');
+        const { data: json } = await this.$client.get(url ?? '/rankings');
         this.links = json['links'];
         this.page = json['page'];
         this.perPage = json['per_page'];

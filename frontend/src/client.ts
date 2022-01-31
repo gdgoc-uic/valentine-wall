@@ -1,4 +1,6 @@
-import store from './store';
+import { Plugin } from "vue";
+import { Store } from "vuex";
+import { State } from "./store";
 
 const backendUrl = import.meta.env.VITE_BACKEND_URL;
 
@@ -39,54 +41,73 @@ export function expandAPIEndpoint(endpoint: string): string {
   return backendUrl + finalEndpoint;
 }
 
-export async function baseClient(endpoint: string, opts?: RequestInit): Promise<APIResponse> {
-  const resp = await fetch(expandAPIEndpoint(endpoint), {
-    ...opts,
-    headers: {
-      ...opts?.headers,
-      ...store.getters.headers
-    }
-  });
-
-  const contentType = resp.headers.get('Content-Type');
-  if (contentType && contentType == 'application/json') {
-    const json = await resp.json();
-    if (!resp.ok) {
-      throw APIResponseError.fromResponseWithJson(resp, json);
-    }
-
-    return {
-      rawResponse: resp,
-      data: json
-    }
-  }
-
-  const data = await resp.text();
+export function createAPIClient(defaultHeaders?: Record<string, any>) {
   return {
-    rawResponse: resp,
-    data
+    async request(endpoint: string, opts?: RequestInit): Promise<APIResponse> {
+      const resp = await fetch(expandAPIEndpoint(endpoint), {
+        ...opts,
+        headers: {
+          ...opts?.headers,
+          ...defaultHeaders
+        }
+      });
+    
+      const contentType = resp.headers.get('Content-Type');
+      if (contentType && contentType == 'application/json') {
+        const json = await resp.json();
+        if (!resp.ok) {
+          throw APIResponseError.fromResponseWithJson(resp, json);
+        }
+    
+        return {
+          rawResponse: resp,
+          data: json
+        }
+      }
+    
+      const data = await resp.text();
+      return {
+        rawResponse: resp,
+        data
+      };
+    },
+    get(endpoint: string, opts?: RequestInit) {
+      return this.request(endpoint, { method: 'GET', ...opts });
+    },
+    post(endpoint: string, opts?: RequestInit) {
+      return this.request(endpoint, { method: 'POST', ...opts });
+    },
+    postJson(endpoint: string, payload: any, opts?: RequestInit) {
+      return this.post(endpoint, {
+        ...opts,
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(payload)
+      });
+    },
+    delete(endpoint: string, opts?: RequestInit) {
+      return this.request(endpoint, { method: 'DELETE', ...opts });
+    }
   };
+};
+
+export interface APIClient {
+  request(endpoint: string, opts?: RequestInit): Promise<APIResponse>
+  get(endpoint: string, opts?: RequestInit): Promise<APIResponse>
+  post(endpoint: string, opts?: RequestInit): Promise<APIResponse>
+  postJson(endpoint: string, payload: any, opts?: RequestInit): Promise<APIResponse>
+  delete(endpoint: string, opts?: RequestInit): Promise<APIResponse>
 }
 
-const client = {
-  get(endpoint: string, opts?: RequestInit) {
-    return baseClient(endpoint, { method: 'GET', ...opts });
-  },
-  post(endpoint: string, opts?: RequestInit) {
-    return baseClient(endpoint, { method: 'POST', ...opts });
-  },
-  postJson(endpoint: string, payload: any, opts?: RequestInit) {
-    return this.post(endpoint, {
-      ...opts,
-      headers: {
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify(payload)
-    });
-  },
-  delete(endpoint: string, opts?: RequestInit) {
-    return baseClient(endpoint, { method: 'DELETE', ...opts });
+export interface APIClientPlugin {
+  $client: APIClient
+}
+
+export function installClient(client: APIClient): Plugin {
+  return {
+    install(app) {
+      app.config.globalProperties.$client = client;
+    }
   }
 }
-
-export default client;

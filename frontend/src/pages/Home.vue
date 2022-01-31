@@ -1,9 +1,12 @@
 <template>
   <main class="h-screen w-screen flex">
     <div style="min-height: 70vh" class="relative bg-white shadow-2xl shadow-pink-400 max-w-5xl w-full mx-auto lg:mt-20 self-start p-12 lg:p-14 rounded-lg flex flex-col">
-      <div v-if="$store.state.isAuthLoading" class="rounded-lg z-30 absolute inset-0 bg-white bg-opacity-75 flex flex-col justify-center items-center h-full">
-        <p>Loading...</p>
-      </div>
+      <!-- TODO: use suspense -->
+      <client-only>
+        <div v-if="$store.state.isAuthLoading" class="rounded-lg z-30 absolute inset-0 bg-white bg-opacity-75 flex flex-col justify-center items-center h-full">
+          <p>Loading...</p>
+        </div>
+      </client-only>
       
       <div class="flex-1 flex flex-col h-full">
         <div class="flex flex-col justify-center text-center items-center mb-8">
@@ -30,36 +33,39 @@
               <h3 class="text-rose-500 text-2xl font-bold">Post a message</h3>
               <p class="text-gray-500">Lorem ipsum dolor sit amet consectetur adipisicing elit.</p>
             </div>
-            <div v-if="!$store.getters.isLoggedIn" class="lg:w-2/3 flex flex-col items-center">
-              <button @click="login" class="btn btn-lg w-full border-none rounded-full bg-rose-500 hover:bg-rose-700">Login</button>
-              <span class="mt-4 text-gray-500 text-sm">Using UIC Google Account</span>
-            </div>
-            <div v-else class="flex flex-col items-center w-full mt-auto">
-              <button @click="isFormOpen = true" class="btn btn-lg w-full border-none rounded-full bg-rose-500 hover:bg-rose-700">Write Message</button>
-              <span class="mt-4 text-gray-500 text-sm">Maximum of 240 characters. 10 minutes per post</span>
-              <teleport to="body">
-                <submit-message-modal v-model:open="isFormOpen" />
-              </teleport>
-            </div>
+            <client-only>
+              <div v-if="!$store.getters.isLoggedIn" class="lg:w-2/3 flex flex-col items-center">
+                <button @click="login" class="btn btn-lg w-full border-none rounded-full bg-rose-500 hover:bg-rose-700">Login</button>
+                <span class="mt-4 text-gray-500 text-sm">Using UIC Google Account</span>
+              </div>
+              <div v-else class="flex flex-col items-center w-full mt-auto">
+                <button @click="isFormOpen = true" class="btn btn-lg w-full border-none rounded-full bg-rose-500 hover:bg-rose-700">Write Message</button>
+                <span class="mt-4 text-gray-500 text-sm">Maximum of 240 characters. 10 minutes per post</span>
+                <portal>
+                  <submit-message-modal v-model:open="isFormOpen" />
+                </portal>
+              </div>
+            </client-only>
           </div>
         </div>
 
-        <div v-if="$store.getters.isLoggedIn" class="bg-gray-200 px-4 py-2 rounded-lg flex flex-wrap justify-center self-center mt-8 text-center space-x-2">
-          <span>Signed in as {{ $store.state.user.email }}</span>
-          <span
-            class="cursor-pointer font-bold hover:underline lg:ml-2"
-            @click="$store.dispatch('logout')">Log out</span>
-          <span class="cursor-pointer font-bold hover:underline lg:ml-2" @click="openSettingsModal = true">
-            Settings
-          </span>
-        </div>
+        <client-only>
+          <div v-if="$store.getters.isLoggedIn" class="bg-gray-200 px-4 py-2 rounded-lg flex flex-wrap justify-center self-center mt-8 text-center space-x-2">
+            <span>Signed in as {{ $store.state.user.email }}</span>
+            <span
+              class="cursor-pointer font-bold hover:underline lg:ml-2"
+              @click="$store.dispatch('logout')">Log out</span>
+            <span class="cursor-pointer font-bold hover:underline lg:ml-2" @click="openSettingsModal = true">
+              Settings
+            </span>
+          </div>
+        </client-only>
       </div>
     </div>
+    <portal>
+      <settings-modal v-model:open="openSettingsModal" />
+    </portal>
   </main>
-
-  <teleport to="body">
-    <settings-modal v-model:open="openSettingsModal" />
-  </teleport>
 </template>
 
 <script lang="ts">
@@ -68,9 +74,11 @@ import SubmitMessageModal from '../components/SendMessageModal.vue';
 import { analytics } from '../firebase';
 import { catchAndNotifyError } from '../notify';
 import SettingsModal from '../components/SettingsModal.vue';
+import ClientOnly from '../components/ClientOnly.vue';
+import Portal from '../components/Portal.vue';
 
 export default {
-  components: { SubmitMessageModal, SettingsModal },
+  components: { SubmitMessageModal, SettingsModal, ClientOnly, Portal },
   data() {
     return {
       isFormOpen: false,
@@ -82,9 +90,9 @@ export default {
       try {
         await this.$store.dispatch('login');
         if (this.$store.state.isSetupModalOpen) {
-          logEvent(analytics, 'sign_up');
+          logEvent(analytics!, 'sign_up');
         } else {
-          logEvent(analytics, 'login');
+          logEvent(analytics!, 'login');
         }
       } catch (e) {
         catchAndNotifyError(this, e);
@@ -102,8 +110,12 @@ export default {
           this.$notify({ type: 'error', text: 'Invalid search query input.' });
           return;
         }
-        this.$router.push({ name: 'message-wall-page', params: { recipientId: studentId } });
-        target.reset();
+
+        // FIXME: vue won't navigate to wall page due to issues when unmounting the component
+        if (!import.meta.env.SSR) {
+          this.$router.push({ name: 'message-wall-page', params: { recipientId: studentId } });
+          target.reset();
+        }
       }
     },
   },

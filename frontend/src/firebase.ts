@@ -14,9 +14,9 @@ export const app = initializeApp({
 
 export const auth = getAuth(app);
 
-export const analytics = getAnalytics(app);
+export const analytics = import.meta.env.SSR ? undefined : getAnalytics(app);
 
 // disable analytics on dev
-if (!import.meta.env.PROD) {
-  setAnalyticsCollectionEnabled(analytics, false);
+if (!import.meta.env.PROD && !import.meta.env.SSR) {
+  setAnalyticsCollectionEnabled(analytics!, false);
 }

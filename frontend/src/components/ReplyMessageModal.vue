@@ -58,7 +58,7 @@ import ContentCounter from '../components/ContentCounter.vue';
 import { logEvent } from '@firebase/analytics';
 import { analytics } from '../firebase';
 import { catchAndNotifyError, notify } from '../notify';
-import client, { expandAPIEndpoint } from '../client';
+import { expandAPIEndpoint } from '../client';
 
 export default {
   components: { 
@@ -128,7 +128,7 @@ export default {
       const connectUrl = expandAPIEndpoint('/user/connect_twitter');
       const loginWindow = this.popupCenter({ url: connectUrl, title: 'twitter_login_window', w: 800, h: 500});
       if (!loginWindow) {
-        logEvent(analytics, 'connect_twitter', { success: false });
+        logEvent(analytics!, 'connect_twitter', { success: false });
         this.$notify({ type: 'error', text: 'Failed to open window.' });
         return;
       }
@@ -138,10 +138,10 @@ export default {
         if (typeof e.data === 'object' && 'message' in e.data) {
           const data = e.data;
           if (data['message'] !== 'twitter connect success') {
-            logEvent(analytics, 'connect_twitter', { success: false });
+            logEvent(analytics!, 'connect_twitter', { success: false });
             return;
           }
-          logEvent(analytics, 'connect_twitter', { success: true });
+          logEvent(analytics!, 'connect_twitter', { success: true });
           vm.$store.commit('SET_USER_CONNECTIONS', data['user_connections']);
           window.removeEventListener('message', handleFn);
           loginWindow.close();
@@ -151,25 +151,25 @@ export default {
     },
     async skipLogin() {
       try {
-        const { data: json } = await client.get('/user/connect_email');
-        logEvent(analytics, 'connect_email', { success: true });
+        const { data: json } = await this.$client.get('/user/connect_email');
+        logEvent(analytics!, 'connect_email', { success: true });
         this.$store.commit('SET_USER_CONNECTIONS', json['user_connections']);
       } catch (e) {
-        logEvent(analytics, 'connect_email', { success: false });
+        logEvent(analytics!, 'connect_email', { success: false });
         catchAndNotifyError(this, e); 
       }
     },
     async submitReply() {
       try {
         this.isSending = true;
-        const { data: json } = await client.postJson(`/messages/${this.message.recipient_id}/${this.message.id}/reply`, {
+        const { data: json } = await this.$client.postJson(`/messages/${this.message.recipient_id}/${this.message.id}/reply`, {
           'content': this.content
         });
 
         notify(this, { type: 'success', text: json['message'] });
         this.$emit('update:open', false);
         this.$emit('update:hasReplied', true);
-        logEvent(analytics, 'reply-message', { id: this.message.id });
+        logEvent(analytics!, 'reply-message', { id: this.message.id });
       } catch (e) {
         this.isSending = false;
         catchAndNotifyError(this, e);

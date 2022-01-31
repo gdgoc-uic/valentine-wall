@@ -1,18 +1,19 @@
-import { createApp } from 'vue'
-//@ts-ignore
-import Notifications from 'notiwind'
+import { createSSRApp } from 'vue'
 import { createHead } from '@vueuse/head'
 
 import App from './App.vue'
-import router from './router'
-import store from './store'
-import './assets/index.css'
+import { createRouter } from './router'
+import { createStore, storeKey } from './store'
+import { createAPIClient, installClient } from './client'
 
-const head = createHead()
-
-createApp(App)
-  .use(Notifications)
-  .use(head)
-  .use(router)
-  .use(store)
-  .mount('#app')
+export function createApp() {
+    const app = createSSRApp(App);
+    const head = createHead();
+    const router = createRouter();
+    const store = createStore();
+    app.use(head);
+    app.use(router);
+    app.use(store, storeKey);
+    app.use(installClient(store.getters.apiClient));
+    return { app, router, head, store };
+}

@@ -12,7 +12,7 @@
     "lib": ["esnext", "dom"],
     "types": [
       "unplugin-icons/types/vue",
-      "@types/facebook-js-sdk"
+      "@types/facebook-js-sdk",
     ]
   },
   "include": ["src/**/*.ts", "src/**/*.d.ts", "src/**/*.tsx", "src/**/*.vue"]

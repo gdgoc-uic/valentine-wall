@@ -52,7 +52,6 @@ import GiftIcon from './GiftIcon.vue';
 import { logEvent } from '@firebase/analytics';
 import { analytics } from '../firebase';
 import { catchAndNotifyError, notify } from '../notify';
-import client from '../client';
 
 export default {
   components: { 
@@ -110,14 +109,14 @@ export default {
           throw new Error('Maximum of 3 gifts is allowed.');
         }
 
-        const { data: json } = await client.postJson('/messages', {
+        const { data: json } = await this.$client.postJson('/messages', {
           recipient_id: formData.get('recipient_id'),
           content: formData.get('content'),
           gift_ids: giftIds,
           uid: this.$store.state.user.id
         });
 
-        logEvent(analytics, 'post-message');
+        logEvent(analytics!, 'post-message');
         notify(this, { type: 'success', text: json['message'] });
         e.target.reset();
         this.$emit('update:open', false);

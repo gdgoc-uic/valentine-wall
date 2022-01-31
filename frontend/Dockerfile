@@ -26,8 +26,5 @@ RUN npm install
 ENV NODE_ENV=${env}
 RUN npm run build
 
-FROM caddy:2.4.6
-COPY --from=base-node /app/dist .
-COPY --from=base-node /app/Caddyfile .
 EXPOSE 3000
-ENTRYPOINT ["caddy", "run"]
+ENTRYPOINT ["npm", "run", "serve"]
