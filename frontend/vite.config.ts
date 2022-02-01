@@ -17,11 +17,11 @@ export default defineConfig({
     markdown({
       mode: [Mode.HTML, Mode.VUE]
     }),
-    compress({
-      exclude: [
-        'ssr-manifest.json',
-        'index.html'
-      ]
-    })
+    // compress({
+    //   exclude: [
+    //     'ssr-manifest.json',
+    //     'index.html'
+    //   ]
+    // })
   ]
 })
