@@ -11,6 +11,7 @@ import IconMoney from '~icons/twemoji/money-with-wings';
 import IconHeart from '~icons/twemoji/heart-with-ribbon';
 import IconChocolate from '~icons/twemoji/chocolate-bar';
 import IconPizza from '~icons/twemoji/pizza';
+import IconBubbleTea from '~icons/twemoji/bubble-tea';
 
 const emojis = {
   'sunflower': IconSunflower,
@@ -22,6 +23,7 @@ const emojis = {
   'heart': IconHeart,
   'chocolate': IconChocolate,
   'pizza': IconPizza,
+  'milk-tea': IconBubbleTea
 };
 
 export default {

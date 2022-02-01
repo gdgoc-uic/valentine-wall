@@ -13,6 +13,7 @@
     "types": [
       "unplugin-icons/types/vue",
       "@types/facebook-js-sdk",
+      "@types/masonry-layout"
     ]
   },
   "include": ["src/**/*.ts", "src/**/*.d.ts", "src/**/*.tsx", "src/**/*.vue"]

@@ -4,7 +4,7 @@ import { createHead } from '@vueuse/head'
 import App from './App.vue'
 import { createRouter } from './router'
 import { createStore, storeKey } from './store'
-import { createAPIClient, installClient } from './client'
+import { installClient } from './client'
 
 export function createApp() {
     const app = createSSRApp(App);

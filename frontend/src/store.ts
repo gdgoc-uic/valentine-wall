@@ -1,4 +1,4 @@
-import { setUserId, setUserProperties } from 'firebase/analytics';
+import { logEvent, setUserId, setUserProperties } from 'firebase/analytics';
 import { GoogleAuthProvider, signInWithPopup, User } from 'firebase/auth';
 import { createStore as createVuexStore, Store } from 'vuex';
 import { InjectionKey } from 'vue';
@@ -25,6 +25,7 @@ export interface State {
     connections: UserConnection[]
   },
   isAuthLoading: boolean,
+  isSendMessageModalOpen: boolean,
   isSetupModalOpen: boolean,
   giftList: Gift[]
 }
@@ -43,6 +44,7 @@ export function createStore() {
           connections: []
         },
         isAuthLoading: true,
+        isSendMessageModalOpen: false,
         isSetupModalOpen: false,
         giftList: []
       }
@@ -72,6 +74,9 @@ export function createStore() {
       },
       SET_GIFT_LIST(state, payload: Gift[]) {
         state.giftList = payload;
+      },
+      SET_SEND_MESSAGE_MODAL_OPEN(state, payload: boolean) {
+        state.isSendMessageModalOpen = payload;
       }
     },
   
@@ -93,7 +98,7 @@ export function createStore() {
     },
   
     actions: {
-      async login({ commit }) {
+      async login({ commit, state }) {
         const provider = new GoogleAuthProvider();
         provider.addScope('email');
         provider.addScope('profile');
@@ -104,10 +109,15 @@ export function createStore() {
         try {
           commit('SET_AUTH_LOADING', true);
           await signInWithPopup(auth, provider);
-          commit('SET_AUTH_LOADING', false);
+          if (state.isSetupModalOpen) {
+            logEvent(analytics!, 'sign_up');
+          } else {
+            logEvent(analytics!, 'login');
+          }
         } catch (e) {
-          commit('SET_AUTH_LOADING', false);
           throw e;
+        } finally {
+          commit('SET_AUTH_LOADING', false);
         }
       },
       async onReceiveUser({ commit, dispatch, getters }, user: User | null): Promise<void> {  

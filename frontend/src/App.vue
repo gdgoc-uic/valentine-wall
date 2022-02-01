@@ -29,11 +29,16 @@
   <!-- ID Modal -->
   <portal>
     <submit-id-modal v-if="!$store.state.user.associatedId && $store.getters.isLoggedIn" />
+    <submit-message-modal 
+      :open="$store.state.isSendMessageModalOpen" 
+      @update:open="$store.commit('SET_SEND_MESSAGE_MODAL_OPEN', $event)" />
   </portal>
+
+  <navbar :is-home="$route.name === 'home-page'" class="sticky top-0 z-50" />
 
   <router-view v-slot="{ Component }">
     <suspense>
-      <component :is="Component" />
+      <component :is="Component" class="relative" />
     </suspense>
   </router-view>
 </template>
@@ -49,13 +54,17 @@ import { useRoute } from "vue-router";
 import { getPageTitle } from "./router";
 import ClientOnly from "./components/ClientOnly.vue";
 import Portal from "./components/Portal.vue";
+import Navbar from "./components/Navbar.vue";
+import SubmitMessageModal from './components/SendMessageModal.vue';
 
 export default defineComponent({
   components: { 
     BasicAlert, 
+    SubmitMessageModal,
     SubmitIdModal: SubmitIDModal, 
     ClientOnly,
-    Portal 
+    Portal,
+    Navbar 
   },
   setup() {
     const route = useRoute();
@@ -64,7 +73,10 @@ export default defineComponent({
         lang: 'en'
       },
       link: [
-        { rel: 'icon', href: '/favicon.ico' }
+        { rel: 'icon', href: '/favicon.ico' },
+        { rel: 'preconnect', href: 'https://fonts.googleapis.com' },
+        { rel: 'preconnect', href: 'https://fonts.gstatic.com' },
+        { rel: 'stylesheet', href: 'https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700&display=swap' }
       ],
       title: computed(() => getPageTitle(route)),
       meta: computed(() => {
@@ -91,7 +103,17 @@ export default defineComponent({
 <style src="./assets/index.css"></style>
 
 <style lang="postcss">
+/* TODO: Customize Daisy CSS based on color palette. Remove "patched" stylings to inline classes as much as possible. */
+
+html {
+  height: 100%;
+}
+
 body {
-  @apply bg-pink-200;
+  background-image: url(./assets/images/background.png);
+  background-size: cover;
+  background-repeat: no-repeat;
+  background-position: top center;
+  min-height: 100%;
 }
 </style>

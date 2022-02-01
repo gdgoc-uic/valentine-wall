@@ -61,6 +61,42 @@ const routes: RouteRecordRaw[] = [
     meta: {
       pageTitle: 'Rankings'
     }
+  },
+  {
+    name: 'about-page',
+    path: '/about',
+    component: () => import('./pages/About.vue'),
+  },
+  {
+    name: 'settings-page',
+    path: '/settings',
+    component: () => import('./pages/Settings.vue'),
+    redirect: {
+      name: 'settings-basic-info-section'
+    },
+    meta: {
+      pageTitle: 'Settings'
+    },
+    children: [
+      {
+        name: 'settings-basic-info-section',
+        path: 'info',
+        component: () => import('./pages/settings/BasicInformation.vue'),
+        meta: {
+          pageTitle: 'Basic Information | Settings',
+          label: 'Basic Information'
+        }
+      },
+      {
+        name: 'settings-delete-account-section',
+        path: 'delete-account',
+        component: () => import('./pages/settings/DeleteAccount.vue'),
+        meta: {
+          pageTitle: 'Delete Account | Settings',
+          label: 'Delete Account'
+        }
+      }
+    ]
   }
 ];
 

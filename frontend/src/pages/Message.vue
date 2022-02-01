@@ -1,10 +1,6 @@
 <template>
-  <div class="min-h-screen flex">
-    <div class="max-w-3xl w-full mx-auto pt-4 flex flex-col space-y-4 self-start">
-      <div class="text-center">
-        <router-link :to="{ name: 'home-page' }" class="text-6xl py-4 text-white font-bold">Valentine Wall</router-link>
-      </div>
-
+  <main>
+    <div class="max-w-3xl w-full mx-auto pt-4 flex flex-col space-y-4 self-start shadow-lg">
       <div v-if="isLoading" class="w-full bg-white rounded-lg p-8">
         <p class="text-center">Loading...</p>
       </div>
@@ -80,7 +76,7 @@
         </template>
       </modal>
     </portal>
-  </div>
+  </main>
 </template>
 
 <script lang="ts">

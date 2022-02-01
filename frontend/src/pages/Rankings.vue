@@ -1,27 +1,37 @@
 <template>
-  <main class="min-h-screen flex">
+  <main class="flex">
     <!-- Polish UI -->
-    <div class="bg-white max-w-4xl w-full mx-auto self-start mt-4 p-12 rounded-lg">
-      <h1 class="text-center text-7xl font-bold mb-8">Rankings</h1>
+    <!-- TODO: add empty state -->
+    <div class="bg-white max-w-7xl shadow-lg w-full flex flex-col mx-auto self-start mt-4 p-12 rounded-lg">
+      <div class="flex flex-row justify-between items-center mb-8">
+        <h1 class="text-center text-3xl font-bold">Valentine Ranking Board</h1>
 
-      <table class="table w-full ">
+        <div class="tabs tabs-boxed">
+          <button @click="rankingsGender = 'male'" :class="{ 'tab-active': rankingsGender == 'male' }" class="tab tab-lg">Male</button>
+          <button @click="rankingsGender = 'female'" :class="{ 'tab-active': rankingsGender == 'female' }" class="tab tab-lg">Female</button>
+        </div>
+      </div>
+
+      <table class="table w-full">
         <thead>
           <tr>
-            <th></th>
-            <th>Student ID</th>
-            <th>Messages</th>
-            <th>Gift Messages</th>
+            <th class="w-1/4 text-lg normal-case text-red-400">Ranking</th>
+            <th class="w-2/4 text-lg normal-case text-red-400">Department</th>
+            <th class="w-1/4 text-lg text-center normal-case text-red-400">Messages</th>
+            <th class="w-1/4 text-lg text-center normal-case text-red-400">Gift Messages</th>
           </tr>
         </thead>
         <tbody>
-          <tr :key="r.recipient_id" v-for="(r, i) in rankings">
-            <td>{{ i + 1 }}</td>
-            <td>{{ r.recipient_id }}</td>
-            <td>{{ r.messages_count }}</td>
-            <td>{{ r.gift_messages_count }}</td>
+          <tr :key="r.recipient_id" v-for="(r, i) in rankings" :class="{'border-b-2': i < rankings.length - 1}">
+            <td class="text-xl font-bold text-gray-700">#{{ i + 1 }}</td>
+            <td class="text-xl font-semibold text-gray-500">{{ r.department }}</td>
+            <td class="text-xl text-gray-500 text-center">{{ r.messages_count }}</td>
+            <td class="text-xl text-gray-500 text-center">{{ r.gift_messages_count }}</td>
           </tr>
         </tbody>
       </table>
+
+      <button v-if="links.next" @click="loadRankings({ url: links.next, merge: true })" class="mt-8 btn text-gray-900 px-12 self-center bg-white hover:bg-gray-100 border-gray-300 hover:border-gray-500">Load More</button>
     </div>
   </main>
 </template>
@@ -39,12 +49,21 @@ export default {
       perPage: 10,
       pageCount: 1,
       rankings: [],
+      rankingsGender: 'male',
+    }
+  },
+  watch: {
+    rankingsGender(newVal, oldVal) {
+      if (newVal == oldVal) return;
+      this.loadRankings({});
     }
   },
   methods: {
     async loadRankings({ url, merge = false }: { url?: string|null, merge?: boolean }): Promise<void> {
       try {
-        const { data: json } = await this.$client.get(url ?? '/rankings');
+        // const rankingsGender = this.rankingsGender;
+        const rankingsGender = 'unknown';
+        const { data: json } = await this.$client.get(url ?? '/rankings?limit=2');
         this.links = json['links'];
         this.page = json['page'];
         this.perPage = json['per_page'];

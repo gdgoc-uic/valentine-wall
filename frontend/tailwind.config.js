@@ -32,9 +32,13 @@ module.exports = {
         }
       }
     },
+    fontFamily: {
+      'sans': ['"Outfit"', 'system-ui', 'sans-serif'],
+    }
   },
   daisyui: {
-    themes: false
+    themes: false,
+    logs: false
   },
   plugins: [
     require('daisyui')
