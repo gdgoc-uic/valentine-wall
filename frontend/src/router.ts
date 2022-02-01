@@ -75,7 +75,8 @@ const routes: RouteRecordRaw[] = [
       name: 'settings-basic-info-section'
     },
     meta: {
-      pageTitle: 'Settings'
+      pageTitle: 'Settings',
+      requiresAuth: true
     },
     children: [
       {

@@ -8,6 +8,11 @@ export async function render(url, manifest) {
   const { app, router, head, store } = createApp();
   app.use(notiwindSSRShim());
   await router.push(url);
+  const to = router.currentRoute.value;
+  const requiresAuth = to.matched.some(record => record.meta.requiresAuth);
+  if (requiresAuth) {
+    await router.replace('/');
+  }
   await router.isReady();
   const ctx = {};
   const appHtml = await renderToString(app, ctx);
