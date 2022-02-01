@@ -19,7 +19,8 @@ export default defineConfig({
     }),
     compress({
       exclude: [
-        'ssr-manifest.json'
+        'ssr-manifest.json',
+        'index.html'
       ]
     })
   ]
