@@ -91,7 +91,11 @@ func (pg *Paginator) Load(source PaginatorSource) (*PaginatedResponse, error) {
 		return nil, err
 	}
 
-	orderQuery := pg.OrderKey + "," + pg.Order
+	orderQuery := pg.Order
+	if len(pg.OrderKey) != 0 {
+		orderQuery = pg.OrderKey + "," + orderQuery
+	}
+
 	resp := &PaginatedResponse{
 		Links: PaginatedLinks{
 			First: *generatePaginateUrl(pg.Path, 1, pg.Limit, orderQuery),
