@@ -8,11 +8,6 @@ const { createServer: createViteServer } = require('vite');
 const isTest = process.env.NODE_ENV === 'test' || !!process.env.VITE_TEST_BUILD;
 const resolve = (/** @type {string} */ p) => path.resolve(__dirname, p);
 
-console.log(process.env.NODE_ENV);
-
-const compression = require('compression')();
-const sirv = require('sirv/build');
-
 async function createServer(
   root = process.cwd(),
   isProd = process.env.NODE_ENV === 'production'
@@ -47,9 +42,13 @@ async function createServer(
 
     app.use(vite.middlewares);
   } else {
+    const compression = require('compression')();
+    const sirv = require('sirv/build');
+    const morgan = require('morgan');
     const assets = sirv(resolve('dist/client'));
     app.use(compression);
     app.use(assets);
+    app.use(morgan('common'));
   }
 
   app.get('*', async (req, res) => {
