@@ -50,11 +50,6 @@ func (pg *Paginator) Copy(path *url.URL, page int64, limit int64, order string) 
 	}
 }
 
-// func (pg *Paginator) Filters(dataQuery sq.SelectBuilder) sq.SelectBuilder {
-// 	// fmt.Printf("{order: %s, limit: %d, page: %d, OrderKey: %s}\n", pg.Order, pg.Limit, pg.Page, pg.OrderKey)
-// 	return
-// }
-
 func generatePaginateUrl(fromUrl *url.URL, page int64, limit int64, order string) *string {
 	nextUrl := *fromUrl
 	queries := nextUrl.Query()
@@ -86,6 +81,7 @@ func (pg *Paginator) Load(source PaginatorSource) (*PaginatedResponse, error) {
 		return nil, &ResponseError{StatusCode: http.StatusNotFound}
 	}
 
+	// fmt.Printf("{order: %s, limit: %d, page: %d, OrderKey: %s}\n", pg.Order, pg.Limit, pg.Page, pg.OrderKey)
 	results, resultsLen, err := source.Fetch(pg.Page, pg.Limit, pg.OrderKey, pg.Order)
 	if err != nil {
 		return nil, err
@@ -310,9 +306,13 @@ func (src *ArrayPaginatorSource) Fetch(page, limit int64, orderKey, order string
 		return nil, 0, fmt.Errorf("not a slice")
 	}
 	slice := reflect.MakeSlice(arr.Type(), 0, int(limit))
+	j := 0
 	for i := int(page-1) * int(limit); i < arr.Len(); i++ {
+		if j >= int(limit) {
+			break
+		}
 		slice = reflect.Append(slice, arr.Index(i))
+		j++
 	}
-	fmt.Printf("%+v %d\n", slice, slice.Len())
 	return slice.Interface(), slice.Len(), nil
 }
