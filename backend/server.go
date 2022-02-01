@@ -89,6 +89,29 @@ func fetchRecipientRankings(db *sqlx.DB) (Recipients, error) {
 
 	recipientsMap := map[string]*RecipientStats{}
 
+	// get all associated_users data
+	associatedUsersSQL := "SELECT associated_id, department, gender FROM associated_ids"
+	rows, err := db.Query(associatedUsersSQL)
+	if err != nil {
+		return nil, err
+	}
+
+	for rows.Next() {
+		var associatedId string
+		var collegeDepartment string
+		var gender string
+		rows.Scan(&associatedId, &collegeDepartment, &gender)
+		if len(associatedId) == 0 {
+			continue
+		} else if _, exists := recipientsMap[associatedId]; !exists {
+			recipientsMap[associatedId] = &RecipientStats{
+				RecipientID: associatedId,
+			}
+		}
+		recipientsMap[associatedId].Department = collegeDepartment
+		recipientsMap[associatedId].Gender = gender
+	}
+
 	// get number of gift message for each recipient
 	giftMessagesCountQuerySQL, _, _ := baseQuery("gift_messages_count").InnerJoin(distinctGiftsJoin).ToSql()
 	recipientsWithGiftsRows, err := db.Query(giftMessagesCountQuerySQL)
@@ -133,29 +156,6 @@ func fetchRecipientRankings(db *sqlx.DB) (Recipients, error) {
 			}
 		}
 		recipientsMap[recipientId].MessagesCount = messagesCount
-	}
-
-	// get all associated_users data
-	associatedUsersSQL := "SELECT associated_id, department, gender FROM associated_ids"
-	rows, err := db.Query(associatedUsersSQL)
-	if err != nil {
-		return nil, err
-	}
-
-	for rows.Next() {
-		var recipientId string
-		var collegeDepartment string
-		var gender string
-		rows.Scan(&recipientId, &collegeDepartment, &gender)
-		if len(recipientId) == 0 {
-			continue
-		} else if _, exists := recipientsMap[recipientId]; !exists {
-			recipientsMap[recipientId] = &RecipientStats{
-				RecipientID: recipientId,
-			}
-		}
-		recipientsMap[recipientId].Department = collegeDepartment
-		recipientsMap[recipientId].Gender = gender
 	}
 
 	// sort and get results
