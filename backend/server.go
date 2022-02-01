@@ -77,6 +77,19 @@ func (a Recipients) Less(i, j int) bool {
 	return false
 }
 
+func (a Recipients) ByGender(gender string) Recipients {
+	if len(gender) == 0 || gender == "all" {
+		return a
+	}
+	res := make(Recipients, 0, len(a))
+	for _, v := range res {
+		if v.Gender == gender {
+			res = append(res, v)
+		}
+	}
+	return res
+}
+
 func fetchRecipientRankings(db *sqlx.DB) (Recipients, error) {
 	baseQuery := func(queryName string) sq.SelectBuilder {
 		return sq.Select("recipient_id", "count(*) "+queryName).From("messages").GroupBy("recipient_id")
@@ -403,7 +416,20 @@ func main() {
 	}))
 
 	rankingPaginator := &Paginator{}
-	r.With(pagination(rankingPaginator)).Get("/rankings", wrapHandler(func(rw http.ResponseWriter, r *http.Request) error {
+	r.With(pagination(rankingPaginator), customFilters(map[string]FilterFunc{
+		"gender": func(r *http.Request, c context.Context, f Filter) error {
+			if !f.Exists {
+				return nil
+			} else if f.Value != "male" && f.Value != "female" && f.Value != "unknown" && f.Value != "all" {
+				return &ResponseError{
+					StatusCode: http.StatusUnprocessableEntity,
+					Message:    "gender query should be either male, female, unknown, or all",
+				}
+			}
+			c = context.WithValue(c, "rankingGender", f.Value)
+			return nil
+		},
+	})).Get("/rankings", wrapHandler(func(rw http.ResponseWriter, r *http.Request) error {
 		pg := r.Context().Value("paginator").(*Paginator)
 		cachedRankings, hasRankingsCached := cacher.Get("rankings")
 		var results Recipients
@@ -421,6 +447,10 @@ func main() {
 			cacher.Set("rankings", results, timeToCache)
 		} else if recs, ok := cachedRankings.(Recipients); ok {
 			results = recs
+		}
+
+		if filterByGender, hasGenderValue := r.Context().Value("rankingGender").(string); hasGenderValue {
+			results = results.ByGender(filterByGender)
 		}
 
 		resp, err := pg.Load(&ArrayPaginatorSource{results})
