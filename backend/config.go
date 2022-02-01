@@ -51,6 +51,7 @@ var giftList = []Gift{
 	{7, "heart", "Heart"},
 	{8, "chocolate", "Chocolate"},
 	{9, "pizza", "Pizza"},
+	{10, "milk-tea", "Milk Tea"},
 }
 var collegeDepartments = []CollegeDepartment{
 	{"CCS", "College of Computer Studies"},
