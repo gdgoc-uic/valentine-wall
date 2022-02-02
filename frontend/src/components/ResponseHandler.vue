@@ -52,7 +52,7 @@ export default {
     },
     data() {
         return {
-            resp: null as unknown as APIResponse,
+            resp: { data: null } as unknown as APIResponse,
             error: null as unknown
         }
     },

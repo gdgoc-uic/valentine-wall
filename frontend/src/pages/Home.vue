@@ -1,7 +1,7 @@
 <template>
   <main class="max-w-7xl mx-auto flex flex-col px-4">
     <section class="py-8 self-center flex flex-col items-center text-center">
-      <img src="../assets/images/logo.png" class="w-1/2 pb-8" alt="Valentine Wall">
+      <img src="../assets/images/logo.png" class="w-4/5 md:w-2/3 lg:w-1/2 pb-8" alt="Valentine Wall">
       <p class="text-gray-500 text-lg font-bold pb-4">Send, confess, and share your feelings anonymously!</p>
 
       <login-button v-if="!$store.getters.isLoggedIn" class="btn-lg" />
@@ -14,8 +14,8 @@
       </button>
     </section>
 
-    <section class="flex mt-8 -mx-8">
-      <div class="px-8 w-2/3">
+    <section class="flex flex-col lg:flex-row mt-8 lg:-mx-8 space-y-4 lg:space-y-0">
+      <div class="hidden md:block lg:px-8 w-full lg:w-2/3">
         <div class="bg-white p-16 space-y-8 rounded-2xl shadow-md h-full">
           <div>
             <h2 class="text-4xl font-bold mb-4">Search Message</h2>
@@ -31,7 +31,7 @@
         </div>
       </div>
 
-      <div class="px-8 w-1/3">
+      <div class="lg:px-8 w-full lg:w-1/3">
         <aside class="bg-white h-full shadow-md rounded-2xl flex flex-col">
           <div class="flex items-center space-x-4 rounded-t-2xl py-4 px-8 font-bold bg-rose-400 text-white">
             <img src="../assets/images/home/leaderboard.png">

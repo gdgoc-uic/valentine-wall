@@ -9,7 +9,7 @@
             <h2 class="text-6xl font-bold text-rose-600">{{ $route.params.recipientId }}</h2>
           </div>
         </div>
-        <h2 v-else class="text-6xl font-bold text-rose-600">Recent Wall</h2>
+        <h2 v-else class="text-5xl lg:text-6xl font-bold text-rose-600">Recent Wall</h2>
       </div>
     </div>
     <client-only>
@@ -37,7 +37,7 @@
         <div class="max-w-7xl w-full mx-auto flex flex-col">
           <masonry class="message-results -mx-2">
             <!-- TODO: make card widths and --colors-- different -->
-            <div :key="msg.id" v-for="msg in messages" class="w-1/4 message-paper-wrapper">
+            <div :key="msg.id" v-for="msg in messages" class="w-1/2 md:w-1/3 lg:w-1/4 message-paper-wrapper">
               <router-link
                 :to="{ name: 'message-page', params: { recipientId: msg.recipient_id, messageId: msg.id } }"
                 class="message-paper"

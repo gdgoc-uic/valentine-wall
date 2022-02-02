@@ -2,8 +2,8 @@
   <main class="flex">
     <!-- Polish UI -->
     <!-- TODO: add empty state -->
-    <div class="bg-white max-w-7xl shadow-lg w-full flex flex-col mx-auto self-start mt-4 p-12 rounded-lg">
-      <div class="flex flex-row justify-between items-center mb-8">
+    <div class="bg-white max-w-7xl shadow-lg w-full flex flex-col mx-auto self-start mt-4 p-6 lg:p-12 rounded-lg">
+      <div class="flex flex-col md:flex-row justify-between items-center mb-8">
         <h1 class="text-center text-3xl font-bold">Valentine Ranking Board</h1>
 
         <div class="tabs tabs-boxed">
@@ -17,10 +17,21 @@
           <table class="table w-full">
             <thead>
               <tr>
-                <th class="w-1/4 text-lg normal-case text-red-400">Ranking</th>
-                <th class="w-2/4 text-lg normal-case text-red-400">Department</th>
-                <th class="w-1/4 text-lg text-center normal-case text-red-400">Messages</th>
-                <th class="w-1/4 text-lg text-center normal-case text-red-400">Gift Messages</th>
+                <th class="w-1/4 text-lg normal-case text-red-400">
+                  <span class="hidden lg:block">Ranking</span>
+                </th>
+                <th class="w-2/4 text-lg normal-case text-red-400">
+                  <span class="block lg:hidden">Dept.</span>
+                  <span class="hidden lg:block">Department</span>
+                </th>
+                <th class="w-1/4 text-lg text-center normal-case text-red-400">
+                  <span class="block lg:hidden">Msgs.</span>
+                  <span class="hidden lg:block">Messages</span>
+                </th>
+                <th class="w-1/4 text-lg text-center normal-case text-red-400">
+                  <span class="block lg:hidden">Gifts</span>
+                  <span class="hidden lg:block">Gift Messages</span>
+                </th>
               </tr>
             </thead>
             <tbody>

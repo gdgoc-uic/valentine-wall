@@ -4,6 +4,7 @@
       <response-handler 
         @success="handleResponse"
         @error="handleResponseError"
+        disappear-on-loading
         :endpoint="`/messages/${$route.params.recipientId}/${$route.params.messageId}`">
         <template #default="{ response: { data: { message, reply } } }">
           <div class="w-full bg-white rounded-lg divide-y-2 shadow-lg">
