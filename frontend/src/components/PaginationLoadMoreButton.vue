@@ -1,8 +1,7 @@
 <template>
     <slot :is-loading="isLoading.value">
         <button
-            v-if="link"
-            :disabled="isLoading.value"
+            v-if="link && !isLoading.value"
             @click="$emit('click')"
             class="mt-8 btn text-gray-900 px-12 self-center bg-white hover:bg-gray-100 border-gray-300 hover:border-gray-500">
             Load More

@@ -2,16 +2,17 @@
   <promise-loader 
     :disappear-on-loading="disappearOnLoading"
     :promise="fetchPromise" 
-    @resolve="handleResolve" 
+    :resolve-delay="800"
     :fail-fn="failFn" 
+    @resolve="handleResolve" 
     @reject="handleReject">
     <template #default>
         <slot :response="resp"></slot>
     </template>
     <template #pending>
-        <div class="w-full h-full">
-            <!-- TODO: loading component -->
-            <p>Loading...</p>
+        <div class="py-12 w-full h-full flex-col items-center justify-center text-center">
+            <loading class="mx-auto" />
+            <p class="mt-4 font-bold text-gray-700">Loading...</p>
         </div>
     </template>
     <template #error>
@@ -25,13 +26,15 @@
 
 <script lang="ts">
 import { APIResponse, APIResponseError } from '../client';
+import Loading from './Loading.vue';
 import PromiseLoader from './PromiseLoader.vue';
 
 // TODO: read async data in SSR
 export default {
     emits: ['success', 'error'],
     components: {
-        PromiseLoader
+        PromiseLoader,
+        Loading
     },
     props: {
         disappearOnLoading: {

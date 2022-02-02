@@ -25,6 +25,10 @@ export default {
         },
         failFn: {
             type: Function
+        },
+        resolveDelay: {
+            type: Number,
+            default: 0
         }
     },
     provide() {
@@ -43,8 +47,10 @@ export default {
                 this.status = STATUS_PENDING;
                 this.promise.then(d => {
                     this.failFn?.(d);
-                    this.status = STATUS_RESOLVE;
-                    this.$emit('resolve', d);
+                    setTimeout(() => {
+                        this.status = STATUS_RESOLVE;
+                        this.$emit('resolve', d);
+                    }, this.resolveDelay);
                 }).catch(err => {
                     this.status = STATUS_REJECT;
                     this.$emit('reject', err);

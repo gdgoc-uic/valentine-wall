@@ -1,7 +1,5 @@
 <template>
   <main class="flex flex-col px-4">
-    <!-- TODO: loader -->
-
     <div class="text-center flex flex-col items-center justify-center mb-4">
       <div class="pt-8 pb-6">
         <div v-if="$route.params.recipientId">

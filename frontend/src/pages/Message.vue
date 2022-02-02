@@ -1,12 +1,12 @@
 <template>
   <main>
-    <div class="max-w-3xl w-full mx-auto pt-4 flex flex-col space-y-4 self-start shadow-lg">
+    <div class="max-w-3xl w-full mx-auto pt-4 flex flex-col space-y-4 self-start">
       <response-handler 
         @success="handleResponse"
         @error="handleResponseError"
         :endpoint="`/messages/${$route.params.recipientId}/${$route.params.messageId}`">
         <template #default="{ response: { data: { message, reply } } }">
-          <div class="w-full bg-white rounded-lg divide-y-2">
+          <div class="w-full bg-white rounded-lg divide-y-2 shadow-lg">
             <div class="p-12">
               <div class="flex flex-col items-center text-center" v-if="hasGifts">
                 <div class="flex flex-row space-x-2 items-center justify-center">
