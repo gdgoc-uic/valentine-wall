@@ -60,6 +60,8 @@
           <icon-send />
           <span>Send a Message</span>
         </button>
+
+        <login-button v-if="!isHome && !$store.getters.isLoggedIn" />
       </client-only>
     </div>
   </div>

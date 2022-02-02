@@ -4,10 +4,7 @@
       <img src="../assets/images/logo.png" class="w-1/2 pb-8" alt="Valentine Wall">
       <p class="text-gray-500 text-lg font-bold pb-4">Send, confess, and share your feelings to the person you admire the most anonymously!</p>
 
-      <button v-if="!$store.getters.isLoggedIn" @click="login" class="btn btn-lg text-gray-500 bg-white hover:bg-gray-100 hover:text-gray-500 normal-case border-0 shadow-md space-x-3">
-        <google-icon />
-        <span>Sign in with UIC Google</span>
-      </button>
+      <login-button v-if="!$store.getters.isLoggedIn" class="btn-lg" />
       <button 
         v-else 
         @click="$store.commit('SET_SEND_MESSAGE_MODAL_OPEN', true)" 
@@ -135,23 +132,6 @@ export default {
         }
         return i + "th";
     },
-    async login() {
-      try {
-        await this.$store.dispatch('login');
-      } catch (e) {
-        catchAndNotifyError(this, e);
-      }
-    },
-    async loadRankings(): Promise<void> {
-      try {
-        // const rankingGender = this.rankingGender;
-        const rankingGender = 'unknown';
-        const { data: json } = await this.$client.get(`/rankings?limit=3&gender=${rankingGender}`);
-        this.rankings = json['data'];
-      } catch (e) {
-        catchAndNotifyError(this, e);
-      }
-    }
   },
 }
 </script>
