@@ -6,7 +6,7 @@
           <p class="text-3xl mb-2 text-gray-500">Messages for </p>
           <div class="indicator">
             <div v-if="totalCount != 0" class="indicator-item badge">{{ totalCount }}</div>
-            <h2 class="text-6xl font-bold text-rose-600">{{ $route.params.recipientId }}</h2>
+            <h2 class="text-5xl lg:text-6xl font-bold text-rose-600">{{ $route.params.recipientId }}</h2>
           </div>
         </div>
         <h2 v-else class="text-5xl lg:text-6xl font-bold text-rose-600">Recent Wall</h2>

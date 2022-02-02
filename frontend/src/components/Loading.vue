@@ -34,7 +34,7 @@ export default {
 .loading-wrapper {
     display: flex;
     flex-direction: column;
-    justify-content: end;
+    justify-content: flex-end;
 }
 
 .loading {

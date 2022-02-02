@@ -7,7 +7,7 @@
           <icon-menu class="h-6 w-6 inline-block" />
         </button>
       </div>
-      <router-link v-if="!isHome" :to="{ name: 'home-page' }" class="flex-none flex-nowrap mr-2 lg:mr-8 lg:flex space-x-2">
+      <router-link :class="{'md:hidden': isHome}" :to="{ name: 'home-page' }" class="flex-none flex-nowrap mr-2 lg:mr-8 lg:flex space-x-2">
         <img src="../assets/images/icon.png" class="h-full w-14 md:w-20" alt="Icon" />
         <span class="flex-1 text-lg hidden md:hidden lg:block"> Valentine<span class="font-bold">Wall</span> </span>
       </router-link>
@@ -70,7 +70,7 @@
       @click.self="menuOpen = false" 
       :class="[menuOpen ? 'block' : 'hidden']" 
       class="bg-[#FFEFEF] bg-opacity-50 h-screen fixed inset-x-0 bottom-0">
-      <div class="bg-[#FFEFEF] flex  h-full lg:hidden p-8 flex-col w-[65vh] drop-shadow-xl">
+      <div class="bg-[#FFEFEF] flex  h-full lg:hidden p-8 flex-col w-[85vw] drop-shadow-xl">
         <button
           @click="menuOpen = false"
           style="right: 20px; top: 20px;"
@@ -90,7 +90,7 @@
           </div>
           <div v-if="$store.getters.isLoggedIn" class="bg-white bg-opacity-60 p-4 rounded-xl mt-auto">
             <p>Signing in as</p>
-            <h3 class="text-3xl font-bold">{{ $store.state.user.email }}</h3>
+            <h3 class="text-2xl text-ellipsis overflow-hidden font-bold">{{ $store.state.user.email }}</h3>
             <ul class="space-y-4 py-4">
               <li class="text-xl"
                   @click="menuOpen = false"
