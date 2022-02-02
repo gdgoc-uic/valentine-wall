@@ -6,7 +6,6 @@
 
 <script lang="ts">
 import { computed } from '@vue/reactivity';
-import { catchAndNotifyError } from '../notify';
 
 const STATUS_REJECT = 0;
 const STATUS_RESOLVE = 1;
@@ -54,7 +53,9 @@ export default {
                 }).catch(err => {
                     this.status = STATUS_REJECT;
                     this.$emit('reject', err);
-                    catchAndNotifyError(this, err);
+                    if (!import.meta.env.PROD) {
+                        console.error(err);
+                    }
                 });
             },
             immediate: true

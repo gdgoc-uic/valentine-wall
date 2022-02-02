@@ -18,7 +18,7 @@
     <template #error>
         <slot 
             name="error" 
-            :error="err" 
+            :error="error" 
             :isResponseError="isResponseError()"></slot>
     </template>
   </promise-loader>
@@ -26,6 +26,7 @@
 
 <script lang="ts">
 import { APIResponse, APIResponseError } from '../client';
+import { catchAndNotifyError } from '../notify';
 import Loading from './Loading.vue';
 import PromiseLoader from './PromiseLoader.vue';
 
@@ -68,6 +69,9 @@ export default {
         handleReject(err: unknown) {
             this.error = err;
             this.$emit('error', err);
+            if (err instanceof APIResponseError && err.rawResponse.status !== 404) {
+                catchAndNotifyError(this, err);
+            }
         },
         isResponseError(): boolean {
             return this.error instanceof APIResponseError;

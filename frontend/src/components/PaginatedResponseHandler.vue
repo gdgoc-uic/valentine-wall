@@ -1,5 +1,6 @@
 <template>
   <response-handler 
+    :fail-fn="failFn"
     :disappear-on-loading="false"
     :endpoint="endpoint"
     @success="handleSuccessResponse" 
@@ -7,8 +8,10 @@
     <template #default>
         <slot :data="data" :links="links" :goto="goto"></slot>
     </template>
-    <template #error="{ error }">
-        <slot name="error" :error="error"></slot>
+    <template #error="{ error, isResponseError }">
+        <slot name="error" 
+            :error="error" 
+            :isResponseError="isResponseError"></slot>
     </template>
   </response-handler>
 </template>
@@ -25,6 +28,9 @@ export default {
         originEndpoint: {
             type: String,
             required: true
+        },
+        failFn: {
+            type: Function
         }
     },
     created() {
