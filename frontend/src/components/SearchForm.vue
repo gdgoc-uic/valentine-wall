@@ -7,6 +7,8 @@
 <script lang="ts">
 import { defineComponent } from "@vue/runtime-core";
 
+const idRegex = /^[0-9]{6,12}$/;
+
 export default defineComponent({
   methods: {
     async searchMessageForm(e: SubmitEvent) {
@@ -19,6 +21,11 @@ export default defineComponent({
           recipientId.length == 0
         ) {
           this.$notify({ type: "error", text: "Invalid search query input." });
+          return;
+        }
+
+        if (!idRegex.test(recipientId)) {
+          this.$notify({ type: "error", text: "ID must be numeric and should be 6-12 characters long." });
           return;
         }
 
