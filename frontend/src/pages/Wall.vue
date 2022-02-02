@@ -5,7 +5,7 @@
         <div v-if="$route.params.recipientId">
           <p class="text-3xl mb-2 text-gray-500">Messages for </p>
           <div class="indicator">
-            <div class="indicator-item badge">{{ totalCount }}</div>
+            <div v-if="totalCount != 0" class="indicator-item badge">{{ totalCount }}</div>
             <h2 class="text-6xl font-bold text-rose-600">{{ $route.params.recipientId }}</h2>
           </div>
         </div>
@@ -32,9 +32,8 @@
       </div>
     </client-only>
 
-    <paginated-response-handler :origin-endpoint="endpoint">
+    <paginated-response-handler :origin-endpoint="endpoint" :fail-fn="checkMessagesLength">
       <template #default="{ data: messages, links, goto }">
-        <!-- v-if="messages.length != 0"  -->
         <div class="flex flex-col -mx-2">
           <masonry>
             <!-- TODO: make card widths and colors different -->
@@ -60,9 +59,17 @@
 
       <template #error="{ error, isResponseError }">
         <div 
-          v-if="(isResponseError && error.rawResponse.status == 404) || error.message == 'No messages found'" 
-          class="text-center">
-          <p>No messages found</p>
+          class="text-center w-full h-full flex flex-col items-center">
+          <template 
+            v-if="
+              (isResponseError && error.rawResponse.status == 404) || 
+              (error.message && error.message == 'No messages found.')
+            ">
+            <p class="text-4xl">Nothing to see here!</p>
+          </template> 
+          <template v-else-if="error.message">
+            <p class="text-4xl">Something went wrong.</p>
+          </template>
         </div>
       </template>
     </paginated-response-handler>
@@ -131,11 +138,11 @@ export default defineComponent({
       return this.loadStats();
     },
     checkMessagesLength({ data }: APIResponse) {
-        if (Array.isArray(data['data']) && data['data'].length == 0) {
-            throw new Error('No messages found.');
-        } else {
-            throw new Error('Data not an array.');
-        }
+      if (Array.isArray(data['data']) && data['data'].length == 0) {
+          throw new Error('No messages found.');
+      } else {
+          throw new Error('Data not an array.');
+      }
     },
     async loadStats(): Promise<void> {
       try {
