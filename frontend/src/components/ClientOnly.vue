@@ -11,11 +11,9 @@ export default defineComponent({
   props: ["fallback", "placeholder", "placeholderTag", "fallbackTag"],
   setup(_, { slots }) {
     const mounted = ref(false);
-    if (!import.meta.env.SSR) {
-      onMounted(() => {
-        mounted.value = true;
-      });
-    }
+    onMounted(() => {
+      mounted.value = true;
+    });
     return (props: any) => {
       if (mounted.value) {
         return slots.default?.();
