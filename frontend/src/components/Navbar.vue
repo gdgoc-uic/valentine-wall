@@ -40,6 +40,7 @@
       </search-form>
     </template>
     <div :class="[isHome ? 'mx-auto' : 'ml-auto mr-8']" class="flex-none flex space-x-8">
+      <router-link :to="{ name: 'message-wall-page' }" class="text-gray-600 hover:text-gray-800">Recent</router-link>
       <router-link :to="{ name: 'rankings-page' }" class="text-gray-600 hover:text-gray-800">Rankings</router-link>
       <router-link :to="{ name: 'about-page' }" class="text-gray-600 hover:text-gray-800">About</router-link>
     </div>
