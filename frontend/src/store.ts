@@ -88,7 +88,7 @@ export function createStore() {
         return state.user.accessToken.length != 0 && state.user.id.length != 0;
       },
       hasConnections(state) {
-        return state.user.connections.length != 0;
+        return typeof state.user.connections != 'undefined' && state.user.connections.length != 0;
       },
       headers(state, getters) {
         return getters.isLoggedIn ? {
