@@ -29,6 +29,9 @@ export default {
             type: String,
             required: true
         },
+        processFn: {
+            type: Function
+        },
         failFn: {
             type: Function
         }
@@ -66,7 +69,8 @@ export default {
             this.page = json['page'];
             this.perPage = json['per_page'];
             this.pageCount = json['page_count'];
-            this.data = this.merge ? this.data.concat(...json['data']) : json['data'];
+            const processedData = this.processFn?.(json['data']) ?? json['data'];
+            this.data = this.merge ? this.data.concat(...processedData) : processedData;
             this.$emit('success', r);
         },
         goto(endpoint: string, merge: boolean = false) {

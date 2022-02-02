@@ -32,20 +32,20 @@
       </div>
     </client-only>
 
-    <paginated-response-handler :origin-endpoint="endpoint" :fail-fn="checkMessagesLength">
+    <paginated-response-handler :origin-endpoint="endpoint" :process-fn="processResults" :fail-fn="checkMessagesLength">
       <template #default="{ data: messages, links, goto }">
-        <div class="flex flex-col -mx-2">
-          <masonry>
-            <!-- TODO: make card widths and colors different -->
-            <div :key="msg.id" v-for="msg in messages" class="w-1/5 p-2 min-h-16 block">
+        <div class="max-w-7xl w-full mx-auto flex flex-col">
+          <masonry class="message-results -mx-2">
+            <!-- TODO: make card widths and --colors-- different -->
+            <div :key="msg.id" v-for="msg in messages" class="w-1/4 message-paper-wrapper">
               <router-link
                 :to="{ name: 'message-page', params: { recipientId: msg.recipient_id, messageId: msg.id } }"
-                style="background: linear-gradient(to bottom,rgb(254, 243, 199) 21px,#00b0d7 1px); background-size: 100% 22px;"
-                class="rounded-lg flex flex-col justify-between border shadow-lg h-64 hover:scale-110 transition-transform">
+                class="message-paper"
+                :class="[`paper-variant-${msg.paperColor}`]">
                   <div class="px-6 pt-6">
                     <p>{{ msg.content }}</p>
                   </div>
-                  <div class="bg-amber-100  px-6 pb-6 flex justify-between items-center mt-4">
+                  <div class="message-meta-info">
                     <p class="text-gray-500 text-sm">{{ humanizeTime(msg.created_at) }} ago</p>
                     <icon-reply v-if="msg.has_replied" class="text-pink-500" />
                   </div>
@@ -134,6 +134,46 @@ export default defineComponent({
     }
   },
   methods: {
+    processResults(data: any[]): any[] {
+      const availablePaperColorId = [1,2,3,4];
+      const quo = data.length / availablePaperColorId.length;
+      let paperColorIds: number[] = [];
+      let j = 0;
+      let times = Math.floor(quo);
+      if (times < 1) times = Math.ceil(quo);
+      for (let i = 0; i < data.length; i++) {
+        paperColorIds.push(availablePaperColorId[j]);
+        if (i != 0 && i % times == 0) {
+          j++;
+        }
+      }
+
+      // add a check to avoid repetitions
+      for (let i = 0; i < times; i++) {
+        paperColorIds = this.shuffle(paperColorIds);
+      }
+
+      return data.map((d, i) => {
+        const paperColor = paperColorIds[i];
+        return {
+          ...d, 
+          paperColor
+        }
+      });
+    },
+    shuffle(array: any[]) {
+        var i = array.length,
+            j = 0,
+            temp;
+        while (i--) {
+            j = Math.floor(Math.random() * (i+1));
+            // swap randomly chosen element with current element
+            temp = array[i];
+            array[i] = array[j];
+            array[j] = temp;
+        }
+        return array;
+    },
     loadData(): Promise<any> {
       return this.loadStats();
     },
@@ -162,3 +202,51 @@ export default defineComponent({
   }
 })
 </script>
+
+<style lang="postcss">
+.message-results > .message-paper-wrapper {
+  @apply p-2 min-h-16;
+}
+
+.message-paper-wrapper > .message-paper {
+  @apply rounded-lg flex flex-col justify-between shadow-lg h-64 hover:scale-110 transition-transform;
+  background-image: linear-gradient(to bottom,rgb(254, 243, 199) 21px,#00b0d7 1px); 
+  background-size: 100% 22px;
+}
+
+.message-paper .message-meta-info {
+  @apply  px-6 pb-6 flex justify-between items-center mt-4 rounded-b-lg;
+}
+
+.message-paper.paper-variant-1 {
+  background-image: linear-gradient(to bottom,rgb(254, 243, 199) 21px,#00b0d7 1px); 
+}
+
+.message-paper.paper-variant-1 .message-meta-info {
+  background-color: rgb(254, 243, 199);
+}
+
+.message-paper.paper-variant-2 {
+  background-image: linear-gradient(to bottom,rgb(152, 221, 255) 21px,#213381 1px); 
+}
+
+.message-paper.paper-variant-2 .message-meta-info {
+  background-color: rgb(152, 221, 255);
+}
+
+.message-paper.paper-variant-3 {
+  background-image: linear-gradient(to bottom,rgb(155, 255, 183) 21px,#00b0d7 1px); 
+}
+
+.message-paper.paper-variant-3 .message-meta-info {
+  background-color: rgb(155, 255, 183);
+}
+
+.message-paper.paper-variant-4 {
+  background-image: linear-gradient(to bottom,rgb(255, 194, 175) 21px,#213381 1px); 
+}
+
+.message-paper.paper-variant-4 .message-meta-info {
+  background-color: rgb(255, 194, 175);
+}
+</style>
