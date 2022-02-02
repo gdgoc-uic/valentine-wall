@@ -92,10 +92,12 @@ export default defineComponent({
     });
   },
   mounted() {
-    this.$store.dispatch('getGiftList');
-    auth.onAuthStateChanged((user) => {
-      this.$store.dispatch('onReceiveUser', user);
-    });
+    if (!import.meta.env.SSR) {
+      this.$store.dispatch('getGiftList');
+      auth.onAuthStateChanged((user) => {
+        this.$store.dispatch('onReceiveUser', user);
+      });
+    }
   },
 })
 </script>
