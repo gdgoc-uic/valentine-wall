@@ -138,10 +138,8 @@ export default defineComponent({
       return this.loadStats();
     },
     checkMessagesLength({ data }: APIResponse) {
-      if (Array.isArray(data['data']) && data['data'].length == 0) {
-          throw new Error('No messages found.');
-      } else {
-          throw new Error('Data not an array.');
+      if (!Array.isArray(data['data']) || data['data'].length == 0) {
+        throw new Error('No messages found.');
       }
     },
     async loadStats(): Promise<void> {
