@@ -10,7 +10,6 @@ import { defineComponent } from "@vue/runtime-core";
 export default defineComponent({
   methods: {
     async searchMessageForm(e: SubmitEvent) {
-      console.log(e.target);
       if (e.target && e.target instanceof HTMLFormElement) {
         const formData = new FormData(e.target);
         const recipientId = formData.get("recipient_id");
@@ -23,7 +22,6 @@ export default defineComponent({
           return;
         }
 
-        // FIXME: vue won't navigate to wall page due to issues when unmounting the component
         if (!import.meta.env.SSR) {
           this.$router.push({
             name: "message-wall-page",
