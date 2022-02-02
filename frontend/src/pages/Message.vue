@@ -1,67 +1,70 @@
 <template>
   <main>
     <div class="max-w-3xl w-full mx-auto pt-4 flex flex-col space-y-4 self-start shadow-lg">
-      <div v-if="isLoading" class="w-full bg-white rounded-lg p-8">
-        <p class="text-center">Loading...</p>
-      </div>
-      <template v-else-if="!notFound && message">
-        <div class="w-full bg-white rounded-lg divide-y-2">
-          <div class="p-12">
-            <div class="flex flex-col items-center text-center" v-if="hasGifts">
-              <div class="flex flex-row space-x-2 items-center justify-center">
-                <div :key="gift.uid" v-for="gift in gifts" class="p-8 bg-white border-gray-200 border rounded-full shadow-md">
-                  <gift-icon :uid="gift.uid" class="text-4xl" />
+      <response-handler 
+        @success="handleResponse"
+        @error="handleResponseError"
+        :endpoint="`/messages/${$route.params.recipientId}/${$route.params.messageId}`">
+        <template #default="{ response: { data: { message, reply } } }">
+          <div class="w-full bg-white rounded-lg divide-y-2">
+            <div class="p-12">
+              <div class="flex flex-col items-center text-center" v-if="hasGifts">
+                <div class="flex flex-row space-x-2 items-center justify-center">
+                  <div :key="gift.uid" v-for="gift in gifts" class="p-8 bg-white border-gray-200 border rounded-full shadow-md">
+                    <gift-icon :uid="gift.uid" class="text-4xl" />
+                  </div>
                 </div>
+                <p class="mt-4 text-gray-500 text-xl mb-2">Someone gifted {{ displayName }}</p>
+                <p class="text-3xl font-bold">{{ displayedGiftLabels }}</p>
               </div>
-              <p class="mt-4 text-gray-500 text-xl mb-2">Someone gifted {{ displayName }}</p>
-              <p class="text-3xl font-bold">{{ displayedGiftLabels }}</p>
+              <p v-else class="text-gray-500 text-xl mb-2">For {{ displayName }}</p>
+              <div class="mb-8" :class="{ 'mt-8 bg-amber-100 rounded-lg text-center': hasGifts, 'px-8 py-16': revealContent && hasGifts, 'mt-2': !hasGifts }">
+                <button v-if="hasGifts && !revealContent" class="w-full p-4 hover:bg-amber-200 rounded-lg" @click="revealContent = true">Reveal note</button>
+                <p v-if="revealContent" class="font-bold text-4xl">{{ message.content }}</p>
+              </div>
+              <p class="text-gray-500" :class="{ 'text-center': hasGifts }">
+                Posted {{ relativifyDate(message.created_at) }} ({{ formatDate(message.created_at, 'MMMM D, YYYY h:mm A') }})
+              </p>
             </div>
-            <p v-else class="text-gray-500 text-xl mb-2">For {{ displayName }}</p>
-            <div class="mb-8" :class="{ 'mt-8 bg-amber-100 rounded-lg text-center': hasGifts, 'px-8 py-16': revealContent && hasGifts, 'mt-2': !hasGifts }">
-              <button v-if="hasGifts && !revealContent" class="w-full p-4 hover:bg-amber-200 rounded-lg" @click="revealContent = true">Reveal note</button>
-              <p v-if="revealContent" class="font-bold text-4xl">{{ message.content }}</p>
-            </div>
-            <p class="text-gray-500" :class="{ 'text-center': hasGifts }">
-              Posted {{ relativifyDate(message.created_at) }} ({{ formatDate(message.created_at, 'MMMM D, YYYY h:mm A') }})
-            </p>
-          </div>
 
-          <div class="flex space-x-2 px-8 py-4">
-            <template v-if="!$store.state.isAuthLoading && $store.getters.isLoggedIn">
-              <button 
-                v-if="message.has_replied || $store.state.user.associatedId == message.recipient_id" 
-                @click="openReplyModal = true" 
-                :disabled="message.has_replied"
-                class="flex-1 normal-case btn btn-md border-none space-x-2 bg-white text-gray-900 hover:bg-gray-100">
-                <icon-reply :class="[message.has_replied ? 'text-pink-500' : 'text-gray-500']" />
-                <span>{{ message.has_replied ? 'Has replied' : 'Reply' }}</span>
+            <div class="flex space-x-2 px-8 py-4">
+              <template v-if="!$store.state.isAuthLoading && $store.getters.isLoggedIn">
+                <button 
+                  v-if="message.has_replied || $store.state.user.associatedId == message.recipient_id" 
+                  @click="openReplyModal = true" 
+                  :disabled="message.has_replied"
+                  class="flex-1 normal-case btn btn-md border-none space-x-2 bg-white text-gray-900 hover:bg-gray-100">
+                  <icon-reply :class="[message.has_replied ? 'text-pink-500' : 'text-gray-500']" />
+                  <span>{{ message.has_replied ? 'Has replied' : 'Reply' }}</span>
+                </button>
+              </template>
+
+              <button @click="openShareModal = true" class="hover:bg-gray-100 flex-1 normal-case btn btn-md border-none space-x-2 bg-white text-gray-900">
+                <icon-share class="text-gray-500" />
+                <span>Share</span>
               </button>
-            </template>
 
-            <button @click="openShareModal = true" class="hover:bg-gray-100 flex-1 normal-case btn btn-md border-none space-x-2 bg-white text-gray-900">
-              <icon-share class="text-gray-500" />
-              <span>Share</span>
-            </button>
-
-            <button v-if="isDeletable" @click="openDeleteModal = true" class="hover:bg-gray-100 flex-1 normal-case btn btn-md border-none space-x-2 bg-white text-red-500">
-              <icon-trash class="text-red-500" />
-              <span>Delete</span>
-            </button>
+              <button v-if="isDeletable" @click="openDeleteModal = true" class="hover:bg-gray-100 flex-1 normal-case btn btn-md border-none space-x-2 bg-white text-red-500">
+                <icon-trash class="text-red-500" />
+                <span>Delete</span>
+              </button>
+            </div>
           </div>
-        </div>
 
-        <div v-if="message.has_replied && (reply && reply.content)" class="w-full bg-white rounded-lg p-12">
-          <p class="text-gray-500 mb-2">{{ message.recipient_id }} replied</p>
-          <p class="text-2xl">{{ reply.content }}</p>
-        </div>
-      </template>
-      <template v-else>
-        <div class="w-full bg-white p-14 rounded-lg flex flex-col items-center text-center">
-          <icon-confused class="text-gray-500 text-9xl mb-2" />
-          <h2 class="text-4xl font-bold mb-4">{{ notFound ? 'Message not found.' : 'Something went wrong.' }}</h2>
-          <p class="text-xl text-gray-500">{{ notFound ? 'Double-check if your link is correct and try again.' : 'Might be an error on our side. Please try again.' }}</p>
-        </div>
-      </template>
+          <div v-if="message.has_replied && (reply && reply.content)" class="w-full bg-white rounded-lg p-12">
+            <p class="text-gray-500 mb-2">{{ message.recipient_id }} replied</p>
+            <p class="text-2xl">{{ reply.content }}</p>
+          </div>
+        </template>
+
+        <template #error="{ error: { rawResponse: resp } }">
+          <div class="w-full bg-white p-14 rounded-lg flex flex-col items-center text-center">
+            <icon-confused class="text-gray-500 text-9xl mb-2" />
+            <h2 class="text-4xl font-bold mb-4">{{ resp.status == 404 ? 'Message not found.' : 'Something went wrong.' }}</h2>
+            <p class="text-xl text-gray-500">{{ resp.status == 404 ? 'Double-check if your link is correct and try again.' : 'Might be an error on our side. Please try again.' }}</p>
+          </div>
+        </template>
+      </response-handler>
     </div>
 
     <portal>
@@ -97,11 +100,12 @@ import dayjs from 'dayjs';
 import relativeTime from 'dayjs/plugin/relativeTime';
 import { logEvent } from '@firebase/analytics';
 import { analytics } from '../firebase';
-import { APIResponseError } from '../client';
+import { APIResponse, APIResponseError } from '../client';
 import { catchAndNotifyError } from '../notify';
 import { Gift } from '../store';
 import { WatchStopHandle } from '@vue/runtime-core';
 import Portal from '../components/Portal.vue';
+import ResponseHandler from '../components/ResponseHandler.vue';
 
 dayjs.extend(relativeTime);
 
@@ -119,9 +123,7 @@ export default {
     GiftIcon,
     Modal,
     Portal,
-  },
-  serverPrefetch(): Promise<void> {
-    return this.loadMessage();
+    ResponseHandler,
   },
   mounted() {
     if (this.$route.query.from) {
@@ -129,20 +131,17 @@ export default {
     }
 
     // workaround in order to load gift messages
-    this.authLoadingWatcher = this.$watch('$store.state.isAuthLoading', (newVal: boolean) => {
-      if (!newVal && !this.message) {
-        this.loadMessage()
-          .finally(this.authLoadingWatcher);
-      }
-    }, { immediate: true });
+    // this.authLoadingWatcher = this.$watch('$store.state.isAuthLoading', (newVal: boolean) => {
+    //   if (!newVal && !this.message) {
+    //     this.loadMessage()
+    //       .finally(this.authLoadingWatcher);
+    //   }
+    // }, { immediate: true });
   },
   data() {
     return {
-      isLoading: true,
       isDeletable: false,
       message: null as unknown as Record<string, any>,
-      reply: null as unknown as Record<string, any>,
-      notFound: false,
       openReplyModal: false,
       openDeleteModal: false,
       openShareModal: false,
@@ -160,29 +159,18 @@ export default {
         catchAndNotifyError(this, e);
       }
     },
-    async loadMessage() {
-      try {
-        const { rawResponse: resp, data: json } = await this.$client.get(`/messages/${this.$route.params.recipientId}/${this.$route.params.messageId}`);
-        this.isDeletable = json['is_deletable'] ?? false;
-        this.message = json['message'];
-        this.reply = json['reply'];
-        if (!this.hasGifts) {
-          this.revealContent = true;
-        }
-
-        logEvent(analytics!, 'retrieve_message', { status_code: resp.status });
-      } catch(e) {
-        if (e instanceof APIResponseError) {
-          if (e.rawResponse.status == 404) {
-            this.notFound = true;
-            return;
-          } else {
-            logEvent(analytics!, 'retrieve_message', { status_code: e.rawResponse.status });
-          }
-        }
-        catchAndNotifyError(this, e);
-      } finally {
-        this.isLoading = false;
+    handleResponse(r: APIResponse) {
+      const { rawResponse: resp, data: json } = r;
+      this.isDeletable = json['is_deletable'] ?? false;
+      this.message = json['message'];
+      if (!this.hasGifts) {
+        this.revealContent = true;
+      }
+      logEvent(analytics!, 'retrieve_message', { status_code: resp.status });
+    },
+    handleResponseError(e: unknown) {
+      if (e instanceof APIResponseError) {
+        logEvent(analytics!, 'retrieve_message', { status_code: e.rawResponse.status });
       }
     },
     relativifyDate(date: Date) {

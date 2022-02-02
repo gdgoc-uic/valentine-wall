@@ -2,7 +2,7 @@
   <main class="max-w-7xl mx-auto flex flex-col px-4">
     <section class="py-8 self-center flex flex-col items-center text-center">
       <img src="../assets/images/logo.png" class="w-1/2 pb-8" alt="Valentine Wall">
-      <p class="text-gray-500 text-lg font-bold pb-4">Send, confess, and share your feelings to the person you admire the most anonymously!</p>
+      <p class="text-gray-500 text-lg font-bold pb-4">Send, confess, and share your feelings anonymously!</p>
 
       <login-button v-if="!$store.getters.isLoggedIn" class="btn-lg" />
       <button 
@@ -44,27 +44,35 @@
           </div>
 
           <div class="flex-1 flex flex-col ranking-board">
-            <!-- TODO: add empty state -->
-            <div class="min-h-12 flex my-4 shadow ranking-info" :key="i" v-for="(r, i) in rankings">
-              <div class="w-2/12 bg-black text-white inline-flex items-center justify-center font-bold ranking-placement">{{ ordinalSuffixOf(i + 1) }}</div>
-              <div class="flex-1 py-2 pl-2 inline-flex items-center">
-                <img v-if="r.gender == 'female'" src="../assets/images/home/queen.png" class="w-2/12 mx-4" :alt="r.gender" />
-                <img v-else src="../assets/images/home/king.png" class="w-2/12 mx-4" :alt="r.gender" />
-                <!-- TODO: use shorthand dept name -->
-                <span class="font-bold">{{ r.department }}</span>
-              </div>
-              <div class="flex w-3/12 px-2 bg-white">
-                <div class="w-1/2 pr-1 inline-flex items-center space-x-1">
-                  <icon-envelope />
-                  <span>{{ r.messages_count }}</span>
-                </div>
+            <paginated-response-handler :origin-endpoint="rankingsEndpoint">
+              <template #default="{ data: rankings }">
+                <!-- TODO: add empty state -->
+                <div class="min-h-12 flex my-4 shadow ranking-info" :key="i" v-for="(r, i) in rankings">
+                  <div class="w-2/12 bg-black text-white inline-flex items-center justify-center font-bold ranking-placement">{{ ordinalSuffixOf(i + 1) }}</div>
+                  <div class="flex-1 py-2 pl-2 inline-flex items-center">
+                    <img v-if="r.gender == 'female'" src="../assets/images/home/queen.png" class="w-2/12 mx-4" :alt="r.gender" />
+                    <img v-else src="../assets/images/home/king.png" class="w-2/12 mx-4" :alt="r.gender" />
+                    <!-- TODO: use shorthand dept name -->
+                    <span class="font-bold">{{ r.department }}</span>
+                  </div>
+                  <div class="flex w-3/12 px-2 bg-white">
+                    <div class="w-1/2 pr-1 inline-flex items-center space-x-1">
+                      <icon-envelope />
+                      <span>{{ r.messages_count }}</span>
+                    </div>
 
-                <div class="w-1/2 pl-1 inline-flex items-center space-x-1">
-                  <icon-gift />
-                  <span>{{ r.gift_messages_count }}</span>
+                    <div class="w-1/2 pl-1 inline-flex items-center space-x-1">
+                      <icon-gift />
+                      <span>{{ r.gift_messages_count }}</span>
+                    </div>
+                  </div>
                 </div>
-              </div>
-            </div>
+              </template>
+
+              <template #error="{ error }">
+                <p>{{ error.message }}</p>
+              </template>
+            </paginated-response-handler>
           </div>
 
           <router-link 
@@ -79,45 +87,50 @@
 </template>
 
 <script lang="ts">
-import { catchAndNotifyError } from '../notify';
 import ClientOnly from '../components/ClientOnly.vue';
 import Portal from '../components/Portal.vue';
-import GoogleIcon from '~icons/logos/google-icon';
 import IconGift from '~icons/uil/gift';
 import IconEnvelope from '~icons/uil/envelope';
 import SearchForm from '../components/SearchForm.vue';
 import IconSend from '~icons/uil/message';
+import LoginButton from '../components/LoginButton.vue';
+import PaginatedResponseHandler from '../components/PaginatedResponseHandler.vue';
 
 export default {
   components: { 
     ClientOnly, 
-    Portal, 
-    GoogleIcon,
+    Portal,
     IconGift,
     IconEnvelope,
     IconSend,
-    SearchForm
+    SearchForm,
+    LoginButton,
+    PaginatedResponseHandler
   },
-  mounted() {
-    if (!this.rankings.length) {
-      this.loadRankings();
+  created() {
+    if (!this.rankingsEndpoint.length) {
+      this.rankingsEndpoint = this.getRankingsEndpoint();
     }
   },
   data() {
     return {
       isFormOpen: false,
       rankingGender: 'male',
-      rankings: []
+      rankingsEndpoint: ''
     }
   },
   watch: {
     rankingGender(newVal, oldVal) {
       if (newVal == oldVal) return;
-      this.rankings = [];
-      this.loadRankings();
+      this.rankingsEndpoint = this.getRankingsEndpoint();
     }
   },
   methods: {
+    getRankingsEndpoint(): string {
+      // const rankingGender = this.rankingGender;
+      const rankingGender = 'unknown';
+      return `/rankings?limit=3&gender=${rankingGender}`;
+    },
     ordinalSuffixOf(i: number): string {
         var j = i % 10,
             k = i % 100;
