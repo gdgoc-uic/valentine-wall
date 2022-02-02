@@ -26,7 +26,6 @@
     "notiwind": "^1.2.4",
     "polka": "^0.5.2",
     "sirv": "^2.0.2",
-    "vite-plugin-compress": "^2.1.0",
     "vite-plugin-windicss": "^1.6.2",
     "vue": "^3.2.25",
     "vue-head": "MKGaru/vue-head#vue3",
