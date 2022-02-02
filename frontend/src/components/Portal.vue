@@ -7,7 +7,7 @@ export default defineComponent({
     render() {
         return h(ClientOnly, [
             // @ts-ignore
-            h(Teleport, { to: 'body' } as TeleportProps, this.$slots.default?.())
+            h(Teleport, { to: 'body' } as TeleportProps, this.$slots)
         ]);
     }
 })
