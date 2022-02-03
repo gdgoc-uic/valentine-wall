@@ -15,7 +15,7 @@
             </div>
         </section>
 
-        <section class="px-24 py-8">
+        <section class="px-2 lg:px-24 py-8">
             <router-view></router-view>
         </section>
     </article>
