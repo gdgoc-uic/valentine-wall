@@ -5,6 +5,7 @@ import (
 	"context"
 	"database/sql"
 	"encoding/json"
+	"errors"
 	"fmt"
 	htmlTemplate "html/template"
 	"log"
@@ -1210,7 +1211,7 @@ func main() {
 		for _, tableName := range []string{"user_connections", "associated_ids"} {
 			if deleteSql, deleteArgs, err := sq.Delete(tableName).Where(sq.Eq{"user_id": token.UID}).ToSql(); err != nil {
 				return err
-			} else if res, err := tx.Exec(deleteSql, deleteArgs...); err != nil {
+			} else if res, err := tx.Exec(deleteSql, deleteArgs...); err != nil && !errors.Is(err, sql.ErrNoRows) {
 				return err
 			} else if err := wrapSqlResult(res); err != nil {
 				return err

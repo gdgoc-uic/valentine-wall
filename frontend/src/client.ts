@@ -80,7 +80,8 @@ export function createAPIClient(defaultHeaders?: Record<string, any>) {
       return this.post(endpoint, {
         ...opts,
         headers: {
-          'Content-Type': 'application/json'
+          'Content-Type': 'application/json',
+          ...opts?.headers
         },
         body: JSON.stringify(payload)
       });
