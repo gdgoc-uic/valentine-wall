@@ -145,6 +145,8 @@ export default {
           content: formData.get('content'),
           gift_ids: giftIds,
           uid: this.$store.state.user.id
+        }, {
+          headers: this.$store.getters.headers
         });
 
         logEvent(analytics!, 'post-message');

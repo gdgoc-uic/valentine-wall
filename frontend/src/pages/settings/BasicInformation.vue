@@ -47,7 +47,9 @@ export default {
   methods: {
     async disconnectUserConnection(name: string) {
       try {
-        const { data } = await this.$client.delete(`/user/connections/${name}`);
+        const { data } = await this.$client.delete(`/user/connections/${name}`, {
+          headers: this.$store.getters.headers
+        });
         this.$notify({ type: 'success', text: data['message'] });
       } catch (e) {
         catchAndNotifyError(this, e);

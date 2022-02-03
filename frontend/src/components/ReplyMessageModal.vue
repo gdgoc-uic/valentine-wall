@@ -151,7 +151,9 @@ export default {
     },
     async skipLogin() {
       try {
-        const { data: json } = await this.$client.get('/user/connect_email');
+        const { data: json } = await this.$client.get('/user/connect_email', {
+          headers: this.$store.getters.headers
+        });
         logEvent(analytics!, 'connect_email', { success: true });
         this.$store.commit('SET_USER_CONNECTIONS', json['user_connections']);
       } catch (e) {
@@ -164,6 +166,8 @@ export default {
         this.isSending = true;
         const { data: json } = await this.$client.postJson(`/messages/${this.message.recipient_id}/${this.message.id}/reply`, {
           'content': this.content
+        }, {
+          headers: this.$store.getters.headers
         });
 
         notify(this, { type: 'success', text: json['message'] });
