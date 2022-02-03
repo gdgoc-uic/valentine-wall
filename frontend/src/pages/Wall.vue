@@ -32,7 +32,7 @@
       </div>
 
       <section 
-        v-if="!$store.state.loggedIn && $route.params.recipientId" 
+        v-if="!$store.getters.loggedIn && $route.params.recipientId" 
         class="max-w-7xl space-y-8 lg:space-y-0 mx-auto mt-3 p-8 w-full border bg-[#ffeded] border-rose-500 rounded-xl shadow-lg flex flex-col lg:flex-row text-center lg:text-left items-center justify-between">
         <div class="flex flex-col">
           <h3 class="text-2xl lg:text-3xl mb-1 text-rose-400 font-semibold">Are you {{ $route.params.recipientId }}?</h3>
