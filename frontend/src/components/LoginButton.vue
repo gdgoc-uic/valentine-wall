@@ -9,6 +9,7 @@
 import GoogleIcon from '~icons/logos/google-icon';
 
 export default {
+    emits: ['click'],
     components: {
         GoogleIcon
     },
@@ -16,6 +17,7 @@ export default {
         async login() {
             try {
                 await this.$store.dispatch('login');
+                this.$emit('click');
             } catch (e) {
                 catchAndNotifyError(this, e);
             }

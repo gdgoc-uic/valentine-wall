@@ -104,13 +104,13 @@
             </ul>
             <button
               v-if="!shouldSendButtonHide"
-              @click="$store.commit('SET_SEND_MESSAGE_MODAL_OPEN', true)"
+              @click="$store.commit('SET_SEND_MESSAGE_MODAL_OPEN', true); menuOpen = false"
               class="shadow-md btn border-none w-full bg-rose-500 hover:bg-rose-600 px-8 space-x-2">
               <icon-send />
               <span>Send a Message</span>
             </button>
           </div>
-          <login-button v-else class="mt-auto" />
+          <login-button v-else @click="menuOpen = false" class="mt-auto" />
         </client-only>
       </div>
     </div>
