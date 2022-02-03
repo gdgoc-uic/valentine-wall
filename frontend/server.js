@@ -45,36 +45,39 @@ async function createServer(
     const compression = require('compression')();
     const sirv = require('sirv/build');
     const morgan = require('morgan');
-    const assets = sirv(resolve('dist/client'));
+    /** @type {import('sirv').Options}  */
+    const assetOptions = { extensions: [], ignores: ['index.html'], single: true };
+    const assets = sirv(resolve('dist/client'), assetOptions);
     app.use(compression);
     app.use(assets);
     app.use(morgan('common'));
   }
 
+  let template, render;
+  if (isProd) {
+    const mod = await import('./dist/server/main-server.js');
+    template = indexProd;
+    render = mod.render;
+  }
+
   app.get('*', async (req, res) => {
     try {
       const url = req.originalUrl;
-      let template, render;
       if (!isProd) {
         // always read fresh template in dev
         template = await vite.transformIndexHtml(url, fs.readFileSync(resolve('index.html'), 'utf-8'));
         const mod = await vite.ssrLoadModule('/src/main-server.js');
         render = mod.render;
-      } else {
-        template = indexProd;
-        const mod = require('./dist/server/main-server.js');
-        render = mod.render;
       }
 
-      const [appHtml, preloadLinks, appHead, state] = await render(url, manifest);
+      const [appHtml, preloadLinks, appHead] = await render(url, manifest);
       const { htmlAttrs, headTags, bodyAttrs } = appHead;
       const html = template
-        .replace(`><!--html-attrs-->`, `${htmlAttrs}>`)
+        .replace(`data-html-attrs=""`, htmlAttrs)
         .replace(`<!--head-tags-->`, headTags)
-        .replace(`><!--body-attrs-->`, `${bodyAttrs}>`)
+        .replace(`data-body-attrs=""`, bodyAttrs)
         .replace(`<!--preload-links-->`, preloadLinks)
-        .replace(`<!--app-html-->`, appHtml)
-        .replace(`--store-state--`, state);
+        .replace(`<!--app-html-->`, appHtml);
 
       send(res, 200, html, { 'Content-Type': 'text/html' });
     } catch (e) {
@@ -83,14 +86,13 @@ async function createServer(
       send(res, 500, e.stack);
     }
   });
-
   return { app, vite };
 }
 
 if (!isTest) {
   createServer().then(({ app }) =>
     app.listen(3000, () => {
-      console.log('http://localhost:3000');
+      console.log('Serving on: http://localhost:3000');
     })
   );
 }

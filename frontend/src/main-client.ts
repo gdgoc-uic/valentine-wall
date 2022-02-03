@@ -9,10 +9,6 @@ import { logEvent, setCurrentScreen } from 'firebase/analytics'
 const { app, router, store } = createApp();
 const clientApp = app.use(Notifications);
 
-if (window.__INITIAL_STATE__) {
-  store.replaceState(window.__INITIAL_STATE__);
-} 
-
 router.beforeEach((to, from, next) => {
   setCurrentScreen(analytics!, to.meta.pageTitle as string);
   const requiresAuth = to.matched.some(record => record.meta.requiresAuth);

@@ -5,7 +5,7 @@ import { notiwindSSRShim } from './notify';
 import { renderHeadToString } from '@vueuse/head';
 
 export async function render(url, manifest) {
-  const { app, router, head, store } = createApp();
+  const { app, router, head } = createApp();
   app.use(notiwindSSRShim());
   await router.push(url);
   const to = router.currentRoute.value;
@@ -18,8 +18,7 @@ export async function render(url, manifest) {
   const appHtml = await renderToString(app, ctx);
   const appHead = renderHeadToString(head);
   const preloadLinks = renderPreloadLinks(ctx.modules, manifest);
-  const state = JSON.stringify(store.state);
-  return [appHtml, preloadLinks, appHead, state];
+  return [appHtml, preloadLinks, appHead];
 }
 
 function renderPreloadLinks(modules, manifest) {

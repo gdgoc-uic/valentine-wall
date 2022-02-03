@@ -21,15 +21,14 @@ const routesToPrerender = fs
 ;(async () => {
   // pre-render each route...
   for (const url of routesToPrerender) {
-    const [appHtml, preloadLinks, appHead, state] = await render(url, manifest);
+    const [appHtml, preloadLinks, appHead] = await render(url, manifest);
     const { htmlAttrs, headTags, bodyAttrs } = appHead;
     const html = template
       .replace(`><!--html-attrs-->`, `${htmlAttrs}>`)
       .replace(`<!--head-tags-->`, headTags)
       .replace(`><!--body-attrs-->`, `${bodyAttrs}>`)
       .replace(`<!--preload-links-->`, preloadLinks)
-      .replace(`<!--app-html-->`, appHtml)
-      .replace(`--store-state--`, state);
+      .replace(`<!--app-html-->`, appHtml);
 
     const filePath = `dist/static${url === '/' ? '/index' : url}.html`
     fs.writeFileSync(toAbsolute(filePath), html)

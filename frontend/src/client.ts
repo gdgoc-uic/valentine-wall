@@ -1,7 +1,6 @@
 import { Plugin } from "vue";
-import { Store } from "vuex";
-import { State } from "./store";
-
+//@ts-expect-error
+import { fetch } from 'undici?server';
 const backendUrl = import.meta.env.VITE_BACKEND_URL;
 
 interface BaseResponse {
