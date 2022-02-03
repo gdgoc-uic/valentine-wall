@@ -5,7 +5,7 @@
         <label class="label">
           <span class="label-text">Enter your student ID</span>
         </label>
-        <input class="input input-bordered" type="text" name="associated_id" id="associated_id_field" pattern="[0-9]{6,12}" placeholder="12-digit student ID">
+        <input class="input input-bordered" type="text" name="associated_id" id="associated_id_field" pattern="[0-9]{6,12}" placeholder="6 to 12-digit Student ID (e.g. 200xxxxxxxxx)">
       </div>
       <div class="form-control">
         <label class="label">

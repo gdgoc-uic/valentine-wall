@@ -94,6 +94,15 @@ export function createStore() {
         return getters.isLoggedIn ? {
           'Authorization': `Bearer ${state.user.accessToken}`
         } : {};
+      },
+      username(state, getters) {
+        if (!getters.isLoggedIn) {
+          return '';
+        }
+        const emailRegex = /(^[a-z]+)_[0-9]+@uic.edu.ph$/;
+        const res = emailRegex.exec(state.user.email);
+        if (!res || res.length < 2) return '';
+        return res[1];
       }
     },
   

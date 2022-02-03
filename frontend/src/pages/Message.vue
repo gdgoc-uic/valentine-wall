@@ -1,5 +1,5 @@
 <template>
-  <main>
+  <main class="min-h-[60vh]">
     <div class="max-w-3xl w-full mx-auto pt-4 flex flex-col space-y-4 self-start">
       <response-handler 
         @success="handleResponse"

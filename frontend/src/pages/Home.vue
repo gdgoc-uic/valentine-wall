@@ -18,14 +18,14 @@
       <div class="hidden md:block lg:px-8 w-full lg:w-2/3">
         <div class="bg-white p-16 space-y-8 rounded-2xl shadow-md h-full">
           <div>
-            <h2 class="text-4xl font-bold mb-4">Search Message</h2>
-            <p class="text-xl text-gray-500">Lorem ipsum dolor sit amet consectetur adipisicing elit.</p>
+            <h2 class="text-4xl font-bold mb-4">Search Messages</h2>
+            <p class="w-full text-2xl text-gray-500">Search your messages or even other friend's messages for free through your school ID.</p>
           </div>
 
           <search-form>
             <div class="form-control space-y-4">
-              <input type="text" class="input input-bordered" name="recipient_id" placeholder="12-digit Student ID">
-              <button class="btn self-end px-16">Search</button>
+              <input type="text" class="input input-lg input-bordered" name="recipient_id" placeholder="6 to 12-digit Student ID (e.g. 200xxxxxxxxx)">
+              <button class="btn self-end bg-rose-600 hover:bg-rose-700 border-0 px-16">Search</button>
             </div>
           </search-form>
         </div>

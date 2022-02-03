@@ -1,5 +1,5 @@
 <template>
-  <main class="flex flex-col px-4">
+  <main class="min-h-[60vh] flex flex-col px-4">
     <div class="text-center flex flex-col items-center justify-center mb-4">
       <div class="pt-8 pb-6">
         <div v-if="$route.params.recipientId">
@@ -13,7 +13,7 @@
       </div>
     </div>
     <client-only>
-      <div class="bg-white rounded-xl shadow-lg flex justify-center">
+      <div class="max-w-7xl mx-auto w-full bg-white rounded-xl shadow-lg flex justify-center">
         <div 
           v-if="$route.params.recipientId && $store.getters.isLoggedIn && $store.state.user.associatedId === $route.params.recipientId" 
           class="tabs">
@@ -30,6 +30,17 @@
           </button>
         </div>
       </div>
+
+      <section 
+        v-if="!$store.state.loggedIn && $route.params.recipientId" 
+        class="max-w-7xl space-y-8 lg:space-y-0 mx-auto mt-3 p-8 w-full border bg-[#ffeded] border-rose-500 rounded-xl shadow-lg flex flex-col lg:flex text-center lg:text-left items-center justify-between">
+        <div class="flex flex-col">
+          <h3 class="text-2xl lg:text-3xl mb-1 text-rose-400 font-semibold">Are you {{ $route.params.recipientId }}?</h3>
+          <p class="text-lg lg:text-xl">Join now and get access to exclusive features!</p>
+        </div>
+
+        <login-button />
+      </section>
     </client-only>
 
     <paginated-response-handler :origin-endpoint="endpoint" :process-fn="processResults" :fail-fn="checkMessagesLength">
@@ -59,7 +70,7 @@
 
       <template #error="{ error, isResponseError }">
         <div 
-          class="text-center w-full h-full flex flex-col items-center">
+          class="text-center w-full py-16 h-full flex flex-col items-center">
           <template 
             v-if="
               (isResponseError && error.rawResponse.status == 404) || 
@@ -87,6 +98,7 @@ import Masonry from '../components/Masonry.vue';
 import { APIResponse } from '../client';
 import PaginatedResponseHandler from '../components/PaginatedResponseHandler.vue';
 import PaginationLoadMoreButton from '../components/PaginationLoadMoreButton.vue';
+import LoginButton from '../components/LoginButton.vue';
 
 dayjs.extend(relativeTime);
 
@@ -96,7 +108,8 @@ export default defineComponent({
     ClientOnly,
     Masonry,
     PaginatedResponseHandler,
-    PaginationLoadMoreButton
+    PaginationLoadMoreButton,
+    LoginButton
   },
   created() {
     this.endpoint = this.getMessagesEndpoint({ hasGift: this.hasGift });
@@ -128,7 +141,7 @@ export default defineComponent({
     }
   },
   watch: {
-    hasGift(newVal: boolean, oldVal: boolean) {
+    hasGift(newVal, oldVal) {
       if (newVal === oldVal) return;
       this.endpoint = this.getMessagesEndpoint({ hasGift: newVal });
     },

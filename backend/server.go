@@ -1144,6 +1144,30 @@ func main() {
 		return htmlEncode(rw, "<p>success</p>"+scriptJs)
 	}, htmlEncode))
 
+	r.With(appVerifyUser).Delete("/user/connections/{connectionName}", wrapHandler(func(rw http.ResponseWriter, r *http.Request) error {
+		token := r.Context().Value("authToken").(*auth.Token)
+		connectionName := chi.URLParam(r, "connectionName")
+
+		// retrieve connections
+		connections := getUserConnections(db, token.UID)
+		if _, connected := isConnectedTo(connections, connectionName); !connected {
+			return &ResponseError{
+				StatusCode: http.StatusBadRequest,
+				Message:    "not connected to provider",
+			}
+		}
+
+		if res, err := db.Exec("DELETE FROM user_connections WHERE user_id = ? AND provider = ?", token.UID, connectionName); err != nil {
+			return err
+		} else if err := wrapSqlResult(res); err != nil {
+			return err
+		}
+
+		return jsonEncode(rw, map[string]string{
+			"message": "user third-party disconnection success",
+		})
+	}))
+
 	r.With(appVerifyUser).Get("/user/delete", wrapHandler(func(rw http.ResponseWriter, r *http.Request) error {
 		authClient := r.Context().Value("authClient").(*auth.Client)
 		token := r.Context().Value("authToken").(*auth.Token)

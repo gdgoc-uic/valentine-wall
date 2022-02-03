@@ -1,5 +1,16 @@
 <template>
   <div>
+    <div class="hidden lg:block bg-[#f3b3ae] px-10 py-1">
+      <div :class="[isHome ? 'mx-auto' : 'ml-auto mr-8']" class="flex flex-none space-x-8">
+        <router-link
+          :key="'links_' + i"
+          v-for="(link, i) in navbarLinks"
+          :to="link.to"
+          class="text-white hover:text-gray-200">
+          {{ link.label }}
+        </router-link>
+      </div>
+    </div>
     <header ref="mainNavbar" :class="[isHome ? 'pt-2 lg:pt-8' : 'py-2 lg:py-8']" class="navbar mb-2 px-2 lg:px-10 items-center bg-gradient-to-b from-[#FFEFEF] via-[#ffefef7e] to-transparent']">
       <!-- TODO: mobile view -->
       <div class="flex-none flex lg:hidden">
@@ -7,11 +18,11 @@
           <icon-menu class="h-6 w-6 inline-block" />
         </button>
       </div>
-      <router-link :class="{'md:hidden': isHome}" :to="{ name: 'home-page' }" class="flex-none flex-nowrap mr-2 lg:mr-8 lg:flex space-x-2">
+      <router-link :class="[isHome ? 'md:hidden' : 'lg:flex']" :to="{ name: 'home-page' }" class="flex-none flex-nowrap mr-2 lg:mr-8 space-x-2">
         <img src="../assets/images/icon.png" class="h-full w-14 md:w-20" alt="Icon" />
-        <span class="flex-1 text-lg hidden md:hidden lg:block"> Valentine<span class="font-bold">Wall</span> </span>
+        <span class="flex-1 text-lg hidden md:hidden lg:block"> <span class="font-bold">Valentine</span>Wall </span>
       </router-link>
-      <search-form :class="{'md:hidden': isHome}" class="flex-1 lg:flex-none lg:w-1/3">
+      <search-form :class="{'md:hidden': isHome}" class="flex-1 lg:flex-none md:mr-2 lg:mr-0 lg:w-1/3">
         <div class="form-control p-1 lg:p-2 bg-white shadow-md rounded-xl w-full">
           <div class="flex space-x-2 items-center">
             <input
@@ -28,20 +39,13 @@
           </div>
         </div>
       </search-form>
-      <div :class="[isHome ? 'mx-auto' : 'ml-auto mr-8']" class="hidden lg:flex flex-none space-x-8">
-        <router-link
-          :key="'links_' + i"
-          v-for="(link, i) in navbarLinks"
-          :to="link.to"
-          class="text-gray-600 hover:text-gray-800">
-          {{ link.label }}
-        </router-link>
-      </div>
       <client-only>
-        <div class="flex-none hidden md:ml-2 lg:ml-0 md:flex">
+        <div class="flex-none hidden md:ml-auto md:flex">
           <div v-if="$store.getters.isLoggedIn" class="dropdown dropdown-end dropdown-hover -mb-2">
-            <div :class="{'rounded-r-none': !shouldSendButtonHide}" tabindex="0" class="mb-2 shadow-md btn px-8 normal-case text-black bg-white border-0 hover:bg-gray-100">
-              <span>{{ $store.state.user.email }}</span>
+            <div :class="{'rounded-r-none': !shouldSendButtonHide}" tabindex="0" class="mb-2 shadow-md btn normal-case text-black bg-white border-0 hover:bg-gray-100">
+              <span class="overflow-hidden text-ellipsis">
+                {{ $store.getters.username }}
+              </span>
               <icon-dropdown />
             </div>
             <ul tabindex="0" class="p-2 shadow-md menu dropdown-content bg-base-100 rounded-box w-52">
@@ -57,9 +61,10 @@
           <button
             v-if="!shouldSendButtonHide && $store.getters.isLoggedIn"
             @click="$store.commit('SET_SEND_MESSAGE_MODAL_OPEN', true)"
-            class="shadow-md btn border-none rounded-l-none bg-rose-500 hover:bg-rose-600 px-8 space-x-2">
+            class="shadow-md btn border-none rounded-l-none bg-rose-500 hover:bg-rose-600 lg:px-8 space-x-2">
             <icon-send />
-            <span>Send a Message</span>
+            <span class="hidden lg:block">Send a Message</span>
+            <span class="lg:hidden">Send</span>
           </button>
           <login-button v-if="!isHome && !$store.getters.isLoggedIn" />
         </div>
@@ -90,7 +95,9 @@
           </div>
           <div v-if="$store.getters.isLoggedIn" class="bg-white bg-opacity-60 p-4 rounded-xl mt-auto">
             <p>Signing in as</p>
-            <h3 class="text-2xl text-ellipsis overflow-hidden font-bold">{{ $store.state.user.email }}</h3>
+            <h3 class="text-2xl text-ellipsis overflow-hidden font-bold">
+              {{ $store.getters.username }}
+            </h3>
             <ul class="space-y-4 py-4">
               <li class="text-xl"
                   @click="menuOpen = false"
@@ -188,6 +195,7 @@ export default {
           liClass: 'text-red-500',
           tag: 'a',
           props: {
+            class: 'cursor-pointer',
             onClick: this.logout
           },
           children: 'Logout' 
@@ -196,7 +204,8 @@ export default {
     }
   },
   methods: {
-    async logout() {
+    async logout(e: Event) {
+      e.preventDefault();
       try {
         await this.$store.dispatch('logout');
         this.$router.replace('/');

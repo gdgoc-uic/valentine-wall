@@ -1,4 +1,6 @@
 <template>
+  <div class="background"></div>
+
   <!-- Notifications -->
   <client-only>
     <notification-group>
@@ -41,6 +43,8 @@
       <component :is="Component" class="relative" />
     </suspense>
   </router-view>
+  
+  <app-footer />
 </template>
 
 <script lang="ts">
@@ -56,6 +60,7 @@ import ClientOnly from "./components/ClientOnly.vue";
 import Portal from "./components/Portal.vue";
 import Navbar from "./components/Navbar.vue";
 import SubmitMessageModal from './components/SendMessageModal.vue';
+import Footer from "./components/Footer.vue";
 
 export default defineComponent({
   components: { 
@@ -64,7 +69,8 @@ export default defineComponent({
     SubmitIdModal: SubmitIDModal, 
     ClientOnly,
     Portal,
-    Navbar 
+    Navbar,
+    AppFooter: Footer
   },
   setup() {
     const route = useRoute();
@@ -112,10 +118,33 @@ html {
 }
 
 body {
+  min-height: 100%;
+}
+
+.background {
   background-image: url(./assets/images/background.png);
-  background-size: cover;
+  background-size: 250% 100%;
   background-repeat: no-repeat;
   background-position: top center;
-  min-height: 100%;
+  height: 110vh;
+  widows: 100vw;
+  z-index: -1;
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+}
+
+@media screen(md) {
+  .background {
+    background-size: 150% 100%;
+  }
+}
+
+@media screen(lg) {
+  .background {
+    background-size: 100% 100%;
+  }
 }
 </style>

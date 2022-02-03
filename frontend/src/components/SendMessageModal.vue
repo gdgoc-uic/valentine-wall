@@ -27,7 +27,7 @@
                 name="recipient_id" 
                 @input="recipientId = $event.target.value" 
                 pattern="[0-9]{6,12}" 
-                placeholder="12-digit student ID">
+                placeholder="6 to 12-digit Student ID (e.g. 200xxxxxxxxx)">
             </div>
             <div class="flex flex-col mt-4 -mx-2">
               <p class="pl-3 text-gray-900 text-sm my-2">Select gift (A maximum of 3 may be attached)</p>

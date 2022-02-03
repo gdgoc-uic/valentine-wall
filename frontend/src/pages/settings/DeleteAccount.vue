@@ -1,19 +1,18 @@
 <template>
-  <form @submit.prevent="proceedDelete" class="flex flex-col p-4 border border-red-500 rounded-md">
+  <form @submit.prevent="proceedDelete" class="flex flex-col p-8 border border-red-500 rounded-md">
     <div class="mb-8">
-      <h2 class="text-red-500 text-xl font-bold mb-2">Delete Account</h2>
-      <div class="space-y-2">
+      <div class="space-y-2 text-xl">
         <p>By deleting your account:</p>
         <ul class="list-disc pl-5">
           <li>Data such as your messages and your replies sent to others won't be removed.</li>
-          <li>Any existing social media accounts connected to this account will be removed.</li>
-          <li>You will be permanently losing access to your previous data the next time you re-register your account.</li>
+          <li>Any existing connections to third-party accounts (e.g. Twitter) will be removed.</li>
+          <li>Access to your current data will be lost upon re-registering.</li>
         </ul>
-        <p>To proceed, please enter your student ID.</p>
       </div>
     </div>
 
     <div class="form-control">
+      <p class="text-xl mb-2">To proceed, please enter your student ID.</p>
       <div class="flex space-x-2">
         <input
           @input="recipientId = $event.target.value"

@@ -57,9 +57,10 @@ export default {
     },
     watch: {
         originEndpoint(newVal, oldVal) {
-            if (newVal == oldVal) return;
+            if (newVal === oldVal) return;
             this.merge = false;
             this.data = [];
+            this.endpoint = this.originEndpoint;
         }
     },
     methods: {
