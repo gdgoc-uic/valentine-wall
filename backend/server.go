@@ -35,7 +35,6 @@ import (
 	"github.com/hako/durafmt"
 
 	poClient "github.com/nedpals/valentine-wall/postal_office/client"
-	poTypes "github.com/nedpals/valentine-wall/postal_office/types"
 
 	"github.com/patrickmn/go-cache"
 )
@@ -331,7 +330,7 @@ func main() {
 	log.Printf("%d email templates have been loaded\n", len(rawEmailTemplates.Templates()))
 	emailTemplates := map[string]*TemplatedMailSender{
 		"reply":   newTemplatedMailSender(rawEmailTemplates.Lookup("reply.txt.tpl"), "Mr. Kupido", "Your message has received a reply!", 10*time.Second),
-		"message": newTemplatedMailSender(rawEmailTemplates.Lookup("message.txt.tpl"), "Mr. Kupido", "You received a new message!", poTypes.DefaultEmailSendExp),
+		"message": newTemplatedMailSender(rawEmailTemplates.Lookup("message.txt.tpl"), "Mr. Kupido", "You received a new message!", 10*time.Second),
 		"welcome": newTemplatedMailSender(rawEmailTemplates.Lookup("welcome.txt.tpl"), "Mr. Kupido", "Welcome to UIC Valentine Wall 2021!", 10*time.Second),
 	}
 
