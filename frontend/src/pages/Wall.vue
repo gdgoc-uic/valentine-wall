@@ -101,6 +101,11 @@ export default defineComponent({
   created() {
     this.endpoint = this.getMessagesEndpoint({ hasGift: this.hasGift });
   },
+  mounted() {
+    if (this.stats.messages_count == 0) {
+      this.loadData();
+    }
+  },
   data() {
     return {
       stats: { messages_count: 0, gift_messages_count: 0 },
