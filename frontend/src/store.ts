@@ -134,7 +134,7 @@ export function createStore() {
           commit('SET_AUTH_LOADING', false);
         }
       },
-      async onReceiveUser({ commit, dispatch, getters }, user: User | null): Promise<void> {  
+      async onReceiveUser({ commit, dispatch }, user: User | null): Promise<void> {  
         try {
           if (!user) {
             return;
@@ -143,21 +143,7 @@ export function createStore() {
           commit('SET_USER_ID', user.uid);
           commit('SET_USER_EMAIL', user.email ?? '<unknown e-mail>');
           commit('SET_USER_ACCESS_TOKEN', await user.getIdToken(false));
-          const { 
-            data: { associated_id, user_connections } 
-          }: { 
-            data: { 
-              associated_id: string, 
-              user_connections: UserConnection[] 
-            } 
-          } = await getters.apiClient.post('/user/login_callback', { credentials: 'include' });
-          commit('SET_USER_CONNECTIONS', user_connections);
-          if (associated_id.length == 0) {
-            commit('SET_SETUP_MODAL_OPEN', true);
-          } else {
-            commit('SET_USER_ASSOCIATED_ID', associated_id);
-          }
-  
+          await dispatch('getUserInfo');
           setUserId(analytics!, user.uid);
           setUserProperties(analytics!, { account_type: 'student' });
         } catch (e) {
@@ -180,6 +166,22 @@ export function createStore() {
             throw Error('Unable to logout user.');
           }
           throw e;
+        }
+      },
+      async getUserInfo({ commit, getters }) {
+        const { 
+          data: { associated_id, user_connections } 
+        }: { 
+          data: { 
+            associated_id: string, 
+            user_connections: UserConnection[] 
+          } 
+        } = await getters.apiClient.post('/user/info', { credentials: 'include' });
+        commit('SET_USER_CONNECTIONS', user_connections);
+        if (associated_id.length == 0) {
+          commit('SET_SETUP_MODAL_OPEN', true);
+        } else {
+          commit('SET_USER_ASSOCIATED_ID', associated_id);
         }
       },
       async getGiftList({ commit, getters }) {

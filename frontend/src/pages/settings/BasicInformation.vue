@@ -51,6 +51,12 @@ export default {
         this.$notify({ type: 'success', text: data['message'] });
       } catch (e) {
         catchAndNotifyError(this, e);
+      } finally {
+        try {
+          await this.$store.dispatch('getUserInfo');
+        } catch (e) {
+          catchAndNotifyError(this, e);
+        }
       }
     }
   }

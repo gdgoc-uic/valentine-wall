@@ -936,7 +936,7 @@ func main() {
 		}))
 
 	r.With(appVerifyUser).
-		Post("/user/login_callback", wrapHandler(func(rw http.ResponseWriter, r *http.Request) error {
+		Post("/user/info", wrapHandler(func(rw http.ResponseWriter, r *http.Request) error {
 			token := r.Context().Value("authToken").(*auth.Token)
 			associatedData, err := getAssociatedUserBy(db, sq.Eq{"user_id": token.UID})
 			if err != nil {
