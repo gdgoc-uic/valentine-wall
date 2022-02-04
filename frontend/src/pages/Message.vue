@@ -213,7 +213,7 @@ export default {
     },
     displayedGiftLabels(): string {
       if (!this.hasGifts || !this.gifts) return '';
-      return this.gifts.map(this.generateDisplayGiftLabelString).join(this.gifts.length > 2 ? ', ' : '');
+      return this.gifts.map(this.generateDisplayGiftLabelString).join(this.gifts.length > 2 ? ', ' : this.gifts.length == 2 ? ' ' : '');
     },
     displayName(): string {
       if (this.message.recipient_id === this.$store.state.user.associatedId) {

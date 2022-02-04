@@ -52,12 +52,15 @@
               <router-link
                 :to="{ name: 'message-page', params: { recipientId: msg.recipient_id, messageId: msg.id } }"
                 class="message-paper"
-                :class="[`paper-variant-${msg.paperColor}`]">
-                  <div class="px-6 pt-6">
+                :class="[msg.has_gifts ? 'paper-variant-gift' : `paper-variant-${msg.paperColor}`]">
+                  <div v-if="!msg.has_gifts" class="px-6 pt-6">
                     <p>{{ msg.content }}</p>
                   </div>
+                  <div v-else class="flex w-full h-full items-center justify-center">
+                    <icon-gift class="text-white text-9xl" />
+                  </div>
                   <div class="message-meta-info">
-                    <p class="text-gray-500 text-sm">{{ humanizeTime(msg.created_at) }} ago</p>
+                    <p :class="[msg.has_gifts ? 'text-white' : 'text-gray-500']" class="text-sm">{{ humanizeTime(msg.created_at) }} ago</p>
                     <icon-reply v-if="msg.has_replied" class="text-pink-500" />
                   </div>
               </router-link>
@@ -99,6 +102,7 @@ import { APIResponse } from '../client';
 import PaginatedResponseHandler from '../components/PaginatedResponseHandler.vue';
 import PaginationLoadMoreButton from '../components/PaginationLoadMoreButton.vue';
 import LoginButton from '../components/LoginButton.vue';
+import IconGift from '~icons/uil/gift';
 
 dayjs.extend(relativeTime);
 
@@ -109,7 +113,8 @@ export default defineComponent({
     Masonry,
     PaginatedResponseHandler,
     PaginationLoadMoreButton,
-    LoginButton
+    LoginButton,
+    IconGift
   },
   created() {
     this.endpoint = this.getMessagesEndpoint({ hasGift: this.hasGift });
@@ -228,12 +233,15 @@ export default defineComponent({
 
 .message-paper-wrapper > .message-paper {
   @apply rounded-lg flex flex-col justify-between shadow-lg h-64 hover:scale-110 transition-transform;
-  background-image: linear-gradient(to bottom,rgb(254, 243, 199) 21px,#00b0d7 1px); 
   background-size: 100% 22px;
 }
 
 .message-paper .message-meta-info {
   @apply  px-6 pb-6 flex justify-between items-center mt-4 rounded-b-lg;
+}
+
+.message-paper.paper-variant-gift {
+  @apply bg-rose-400;
 }
 
 .message-paper.paper-variant-1 {

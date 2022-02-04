@@ -95,11 +95,6 @@ func fetchRecipientRankings(db *sqlx.DB) (Recipients, error) {
 		return sq.Select("recipient_id", "count(*) "+queryName).From("messages").GroupBy("recipient_id")
 	}
 
-	// distinct joins
-	distinctGiftIdsQuery := "SELECT DISTINCT message_id FROM message_gifts"
-	distinctJoinCriteria := "mg ON mg.message_id = messages.id"
-	distinctGiftsJoin := fmt.Sprintf("(%s) %s", distinctGiftIdsQuery, distinctJoinCriteria)
-
 	recipientsMap := map[string]*RecipientStats{}
 
 	// get all associated_users data
@@ -126,8 +121,8 @@ func fetchRecipientRankings(db *sqlx.DB) (Recipients, error) {
 	}
 
 	// get number of gift message for each recipient
-	giftMessagesCountQuerySQL, _, _ := baseQuery("gift_messages_count").InnerJoin(distinctGiftsJoin).ToSql()
-	recipientsWithGiftsRows, err := db.Query(giftMessagesCountQuerySQL)
+	giftMessagesCountQuerySQL, gargs, _ := baseQuery("gift_messages_count").Where(sq.Eq{"has_gifts": true}).ToSql()
+	recipientsWithGiftsRows, err := db.Query(giftMessagesCountQuerySQL, gargs...)
 	if err != nil {
 		return nil, err
 	}
@@ -149,8 +144,8 @@ func fetchRecipientRankings(db *sqlx.DB) (Recipients, error) {
 	}
 
 	// get number of ordinary messages for each recipient
-	nongiftMessagesCountQuerySQL, _, _ := baseQuery("messages_count").LeftJoin(distinctGiftsJoin).Where("mg.message_id IS NULL").ToSql()
-	recipientsWithoutGiftsRows, err := db.Query(nongiftMessagesCountQuerySQL)
+	nongiftMessagesCountQuerySQL, nongArgs, _ := baseQuery("messages_count").Where(sq.Eq{"has_gifts": false}).ToSql()
+	recipientsWithoutGiftsRows, err := db.Query(nongiftMessagesCountQuerySQL, nongArgs...)
 	if err != nil {
 		return nil, err
 	}
@@ -208,7 +203,7 @@ type Message struct {
 	RecipientID string `db:"recipient_id" json:"recipient_id" validate:"required,min=6,max=12,numeric"`
 	Content     string `db:"content" json:"content" validate:"required,max=240"`
 	HasReplied  bool   `db:"has_replied" json:"has_replied"`
-	GiftIDs     []int  `json:"gift_ids,omitempty" validate:"omitempty,max=3"`
+	HasGifts    bool   `db:"has_gifts" json:"has_gifts"`
 
 	CreatedAt time.Time `db:"created_at" json:"created_at"`
 	UpdatedAt time.Time `db:"updated_at" json:"updated_at"`
@@ -216,7 +211,8 @@ type Message struct {
 
 type RawMessage struct {
 	Message
-	UID string `db:"submitter_user_id" json:"uid" validate:"required"`
+	UID     string `db:"submitter_user_id" json:"uid" validate:"required"`
+	GiftIDs []int  `json:"gift_ids,omitempty" validate:"omitempty,max=3"`
 }
 
 type MessageReply struct {
@@ -259,8 +255,9 @@ func setupMessagesSearchIndex() (bleve.Index, error) {
 
 func importExistingMessages(db *sqlx.DB, index bleve.Index) error {
 	batch := index.NewBatch()
-	sqlQuery, _, err := sq.Select("id", "recipient_id", "created_at", "updated_at", "iif(gift_id is not null, 1, 0) has_gifts").
-		From("messages").LeftJoin("(select message_id, gift_id from message_gifts group by message_id) gm on gm.message_id = messages.id").
+	sqlQuery, _, err := sq.
+		Select("id", "recipient_id", "created_at", "updated_at", "has_gifts").
+		From("messages").
 		ToSql()
 	if err != nil {
 		return err
@@ -494,8 +491,9 @@ func main() {
 					}
 					ids = append(ids, sq.Eq{"id": docMatch.ID})
 				}
-				querySql, queryArgs, err := sq.Select("id", "recipient_id", "content", "has_replied", "created_at", "updated_at").
-					From("messages").Where(ids).ToSql()
+				querySql, queryArgs, err := sq.
+					Select("id", "recipient_id", "content", "has_replied", "has_gifts", "created_at", "updated_at").
+					From("messages").Where(ids).OrderBy(fmt.Sprintf("%s %s", pg.OrderKey, pg.Order)).ToSql()
 				if err != nil {
 					return nil, err
 				}
@@ -629,12 +627,16 @@ func main() {
 			}
 
 			submittedMsg.ID = id
+			if len(submittedMsg.GiftIDs) != 0 {
+				submittedMsg.HasGifts = true
+			}
+
 			tx, err := db.BeginTxx(r.Context(), &sql.TxOptions{})
 			if err != nil {
 				return err
 			}
 
-			res, err := tx.NamedExec("INSERT INTO messages (id, recipient_id, content, submitter_user_id) VALUES (:id, :recipient_id, :content, :submitter_user_id)", &submittedMsg)
+			res, err := tx.NamedExec("INSERT INTO messages (id, recipient_id, content, submitter_user_id, has_gifts) VALUES (:id, :recipient_id, :content, :submitter_user_id, :has_gifts)", &submittedMsg)
 			if err != nil {
 				log.Println(tx.Rollback())
 				return err
@@ -671,7 +673,7 @@ func main() {
 				RecipientID: submittedMsg.RecipientID,
 				CreatedAt:   submittedMsg.CreatedAt,
 				UpdatedAt:   submittedMsg.UpdatedAt,
-				HasGifts:    len(submittedMsg.GiftIDs) != 0,
+				HasGifts:    submittedMsg.HasGifts,
 			}); err != nil {
 				log.Println(err)
 			}
@@ -769,7 +771,7 @@ func main() {
 					log.Println(err)
 				}
 			}
-		} else if len(message.GiftIDs) != 0 {
+		} else if message.HasGifts {
 			// make notes with gifts limited to sender and receivers only
 			// TODO: disable_restricted_access_to_gift_messages
 			// return &ResponseError{
