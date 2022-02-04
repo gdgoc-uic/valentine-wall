@@ -140,7 +140,6 @@ export default {
         } catch (e) {
           if (e instanceof APIResponseError && e.rawResponse.status == 403 && e.message == 'Access to the service is denied.') {
             await this.$store.dispatch('logout');
-            return;
           }
           throw e;
         }
