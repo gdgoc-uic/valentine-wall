@@ -1006,16 +1006,16 @@ func main() {
 			}
 
 			submittedData.UserID = token.UID
-			res, err := db.NamedExec("INSERT INTO associated_ids (user_id, associated_id, terms_agreed) VALUES (:user_id, :associated_id, :terms_agreed)", &submittedData)
-			if err != nil {
+			if res, err := db.NamedExec(
+				"INSERT INTO associated_ids (user_id, associated_id, terms_agreed, sex, department) VALUES (:user_id, :associated_id, :terms_agreed, :sex, :department)",
+				&submittedData,
+			); err != nil {
 				return &ResponseError{
 					WError:     err,
 					StatusCode: http.StatusUnprocessableEntity,
 					Message:    "Failed to connect ID to user. Please try again.",
 				}
-			}
-
-			if err := wrapSqlResult(res, "Failed to connect ID to user. Please try again"); err != nil {
+			} else if err := wrapSqlResult(res, "Failed to connect ID to user. Please try again"); err != nil {
 				return err
 			}
 
