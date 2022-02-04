@@ -82,7 +82,7 @@ export function createStore() {
   
     getters: {
       apiClient(state, getters): APIClient {
-        return createAPIClient(getters.headers);
+        return createAPIClient(() => getters.headers);
       },
       isLoggedIn(state) {
         return state.user.accessToken.length != 0 && state.user.id.length != 0;

@@ -153,9 +153,7 @@ export default {
   methods: {
     async deleteMessage() {
       try {
-        const { data: json } = await this.$client.delete(`/messages/${this.$route.params.recipientId}/${this.$route.params.messageId}`, {
-          headers: this.$store.getters.headers
-        });
+        const { data: json } = await this.$client.delete(`/messages/${this.$route.params.recipientId}/${this.$route.params.messageId}`);
         this.$notify({ type: 'success', text: json['message'] });
         this.$router.replace({ name: 'home-page' });
       } catch(e) {

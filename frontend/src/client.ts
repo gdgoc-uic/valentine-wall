@@ -40,14 +40,16 @@ export function expandAPIEndpoint(endpoint: string): string {
   return backendUrl + finalEndpoint;
 }
 
-export function createAPIClient(defaultHeaders?: Record<string, any>) {
+export function createAPIClient(defaultHeadersFn?: () => Record<string, any>) {
   return {
+    defaultHeadersFn,
+
     async request(endpoint: string, opts?: RequestInit): Promise<APIResponse> {
       const resp = await fetch(expandAPIEndpoint(endpoint), {
         ...opts,
         headers: {
           ...opts?.headers,
-          ...defaultHeaders
+          ...this.defaultHeadersFn?.()
         }
       });
     

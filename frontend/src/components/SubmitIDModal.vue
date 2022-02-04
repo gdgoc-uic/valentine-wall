@@ -155,8 +155,6 @@ export default {
             department: formData.get('department')?.toString(),
             gender: formData.get('gender')?.toString(),
             terms_agreed: this.termsAgreed
-          }, {
-            headers: this.$store.getters.headers
           });
 
           notify(this, { type: 'success', text: json['message'] });
