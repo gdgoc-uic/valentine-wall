@@ -45,6 +45,7 @@ type TwitterNotifier struct {
 	TextContent string
 }
 
+// TODO: add hashtag
 func (tw *TwitterNotifier) Notify() error {
 	if err := assertConnectionProvider(tw.Connection, "twitter"); err != nil {
 		return err
