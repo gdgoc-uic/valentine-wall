@@ -54,7 +54,16 @@ var giftList = []Gift{
 	{10, "milk-tea", "Milk Tea"},
 }
 var collegeDepartments = []CollegeDepartment{
+	{"CABE", "College of Accounting and Business Education"},
+	{"CAH", "College of Arts and Humanities"},
 	{"CCS", "College of Computer Studies"},
+	{"CEA", "College of Engineering and Architecture"},
+	{"CHEFS", "College of Human Environmental Sciences and Food Studies"},
+	{"CMBS", "College of Medical and Biological Sciences"},
+	{"CM", "College of Music"},
+	{"CN", "College of Nursing"},
+	{"CPC", "College of Pharmacy and Chemistry"},
+	{"CTE", "College of Teacher Education"},
 }
 
 func loadCustomProfanityDetector(customDictionary *CustomProfanityDictionary) *goaway.ProfanityDetector {
