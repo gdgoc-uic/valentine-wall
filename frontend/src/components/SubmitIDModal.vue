@@ -32,6 +32,7 @@
         <terms-and-conditions-text />
         <p class="mt-4">By clicking "Agree", you have agreed to the terms and conditions of this site. Should you violate any of the text above will result to account termination.</p>
       </div>
+      <input type="hidden" name="terms_agreed" :value="termsAgreed" />
       <div class="w-full space-x-2 mt-4 flex">
         <button @click.prevent="proceedToTerms = false" class="px-6 btn mr-auto">Go back</button>
         <button @click="termsAgreed = true" class="px-6 btn bg-rose-500 hover:bg-rose-600 border-none" type="submit">Agree</button>
@@ -116,20 +117,23 @@ export default {
     },
 
     async submitSetupForm(e: SubmitEvent) {
-      if (!e.target || !(e.target instanceof HTMLFormElement)) return;
       const assocIdForm = this.$refs.assocIdForm as HTMLFormElement;
-      if (!assocIdForm || !(assocIdForm instanceof HTMLFormElement)) return;
+      if (
+        (!e.target || !(e.target instanceof HTMLFormElement)) ||
+        (!assocIdForm || !(assocIdForm instanceof HTMLFormElement))
+      ) {
+        return;
+      }
       const formData = new FormData(assocIdForm);
-
+      const agreeFormData = new FormData(e.target);
       try {
         try {
           const { data: json } = await this.$client.postJson('/user/setup', {
             associated_id: formData.get('associated_id')?.toString(),
             department: formData.get('department')?.toString(),
             sex: formData.get('sex')?.toString(),
-            terms_agreed: this.termsAgreed
+            terms_agreed: (agreeFormData.get('terms_agreed') ?? 'false') === 'true'
           });
-
           notify(this, { type: 'success', text: json['message'] });
           this.$store.commit('SET_USER_ASSOCIATED_ID', json['associated_id']);
           this.$store.commit('SET_SETUP_MODAL_OPEN', false);
