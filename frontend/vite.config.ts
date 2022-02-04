@@ -5,6 +5,7 @@ import Icons from 'unplugin-icons/vite'
 import checker from 'vite-plugin-checker'
 import { isoImport } from 'vite-plugin-iso-import'
 import markdown, { Mode } from 'vite-plugin-markdown'
+import { ViteFaviconsPlugin } from 'vite-plugin-favicon2'
 
 // https://vitejs.dev/config/
 export default defineConfig({
@@ -16,5 +17,8 @@ export default defineConfig({
     markdown({
       mode: [Mode.HTML, Mode.VUE]
     }),
+    ViteFaviconsPlugin({
+      logo: "src/assets/images/icon.png"
+    })
   ]
 })
