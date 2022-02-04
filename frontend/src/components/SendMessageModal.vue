@@ -14,8 +14,8 @@
           </button>
         </div>
 
-        <div class="flex">
-          <form ref="submitMessageForm" @submit.prevent="submitForm" class="flex flex-col w-2/3 pr-8 overflow-y-auto"  style="max-height: 80vh">
+        <div class="flex flex-col-reverse lg:flex-row max-h-[80vh] overflow-y-scroll md:overflow-y-hidden md:max-h-full">
+          <form ref="submitMessageForm" @submit.prevent="submitForm" class="flex flex-col lg:w-2/3 lg:pr-8 overflow-y-none lg:overflow-y-auto md:max-h-[80vh]">
             <div class="form-control">
               <label class="label">
                 <span class="label-text">Recipient</span>
@@ -60,7 +60,7 @@
             </div>
           </form>
 
-          <div class="bg-white w-1/3 border shadow-lg rounded-xl p-5">
+          <div class="bg-white lg:w-1/3 border shadow-lg rounded-xl p-5">
             <h2 class="text-rose-500 text-2xl font-semibold">Rules</h2>
             <rules-content />
           </div>
