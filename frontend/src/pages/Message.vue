@@ -75,8 +75,15 @@
     </div>
 
     <portal>
-      <share-modal v-model:open="openShareModal" :recipient-id="$route.params.recipientId" :message-id="$route.params.messageId" :permalink="permalink" />
-      <reply-message-modal @update:hasReplied="handleHasReplied" v-model:open="openReplyModal" :message="message" />
+      <share-modal 
+        v-model:open="openShareModal" 
+        :recipient-id="$route.params.recipientId" 
+        :message-id="$route.params.messageId" 
+        :permalink="permalink" />
+      <reply-message-modal 
+        @update:hasReplied="handleHasReplied" 
+        v-model:open="openReplyModal" 
+        :message="message" />
       <modal v-model:open="openDeleteModal">
         <p>Are you sure you want to delete this?</p>
     

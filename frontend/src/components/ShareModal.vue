@@ -15,7 +15,7 @@
           <icon-copy class="text-lg" />
           <span class="ml-2">{{ hasLinkCopied ? 'Copied!' : 'Copy Link' }}</span>
         </button>
-        <a :href="imageUrl" target="_blank" download="image.png" class="btn btn-success flex-1 space-x-2">
+        <a :href="imageUrl" target="_blank" :download="`${recipientId}-${messageId}.png`" class="btn btn-success flex-1 space-x-2">
           <icon-image-download class="text-lg" />
           <span>Download Image</span>
         </a>
