@@ -581,12 +581,14 @@ func main() {
 			var submittedMsg RawMessage
 			if err := json.NewDecoder(r.Body).Decode(&submittedMsg); err != nil {
 				return err
-			} else if err := checkProfanity(submittedMsg.Content); err != nil {
-				return err
-			} else if token.UID != submittedMsg.UID {
+			}
+
+			if token.UID != submittedMsg.UID {
 				return &ResponseError{
 					StatusCode: http.StatusBadRequest,
 				}
+			} else if err := checkProfanity(submittedMsg.Content); err != nil {
+				return err
 			}
 
 			submittedMsg.CreatedAt = time.Now()

@@ -144,6 +144,7 @@ func init() {
 			log.Fatalln(err)
 		}
 
+		log.Println("loading custom profanity detector...")
 		profanityDetector = loadCustomProfanityDetector(customDictionary)
 	} else {
 		profanityDetector = goaway.NewProfanityDetector()
