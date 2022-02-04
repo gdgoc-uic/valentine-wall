@@ -881,17 +881,28 @@ func main() {
 			}
 
 			if err := notifier.Notify(); err != nil {
-				return err
-			} else if updateRes, err := db.NamedExec("INSERT INTO message_replies (message_id, content) VALUES (:message_id, :content)", &reply); err != nil {
+				// dont let notifier errors stop the process.
+				log.Println(err)
+			}
+
+			tx := db.MustBeginTx(context.Background(), &sql.TxOptions{})
+			if updateRes, err := tx.NamedExec("INSERT INTO message_replies (message_id, content) VALUES (:message_id, :content)", &reply); err != nil {
+				defer log.Println(tx.Rollback())
 				return err
 			} else if err := wrapSqlResult(updateRes); err != nil {
+				defer log.Println(tx.Rollback())
 				return err
 			}
 
-			res, err := db.Exec("UPDATE messages SET has_replied = true WHERE id = ?", message.ID)
-			if err != nil {
+			if res, err := tx.Exec("UPDATE messages SET has_replied = true WHERE id = ?", message.ID); err != nil {
+				defer log.Println(tx.Rollback())
 				return err
 			} else if err := wrapSqlResult(res); err != nil {
+				defer log.Println(tx.Rollback())
+				return err
+			}
+
+			if err := tx.Commit(); err != nil {
 				return err
 			}
 
