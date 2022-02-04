@@ -48,6 +48,13 @@ func initializeDb() *sqlx.DB {
 		}
 	}
 
+	if _, err := os.Stat(databasePath); errors.Is(err, os.ErrNotExist) {
+		log.Printf("database not found. creating one...")
+		if _, err := os.OpenFile(databasePath, os.O_CREATE|os.O_APPEND|os.O_WRONLY, 0777); err != nil {
+			log.Fatalln(err)
+		}
+	}
+
 	log.Printf("connecting to %s...\n", databasePath)
 	db, err := sqlx.Open("sqlite3", databasePath)
 	if err != nil {
