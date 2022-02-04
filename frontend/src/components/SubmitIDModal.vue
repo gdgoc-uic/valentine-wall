@@ -13,7 +13,7 @@
         </label>
         <select name="department" class="select select-bordered">
           <option value="none" selected>None</option>
-          <option :value="dept.id" :key="dept.id" v-for="dept in departments">{{ dept.label }} ({{ dept.id }})</option>
+          <option :value="dept.id" :key="dept.id" v-for="dept in $store.state.departmentList">{{ dept.label }} ({{ dept.id }})</option>
         </select>
       </div>
       <div class="form-control">
@@ -46,7 +46,7 @@
             <p>Odit mollitia beatae dolorum. Neque aliquam dicta nihil iusto eos?</p>
           </li>
         </ul>
-        <p class="mt-4">By clicking "Accept", you have agreed to the terms and conditions of this site. Should you violate any of the text above will result to account termination.</p>
+        <p class="mt-4">By clicking "Agree", you have agreed to the terms and conditions of this site. Should you violate any of the text above will result to account termination.</p>
       </div>
       <div class="w-full space-x-2 mt-4 flex">
         <button @click.prevent="proceedToTerms = false" class="px-6 btn mr-auto">Go back</button>
