@@ -444,10 +444,11 @@ func main() {
 				return err
 			}
 
-			timeToCache := 30 * time.Minute
-			if targetEnv == "development" {
-				timeToCache = 30 * time.Second
-			}
+			// timeToCache := 30 * time.Minute
+			// if targetEnv == "development" {
+			// timeToCache := 30 * time.Second
+			timeToCache := 5 * time.Second
+			// }
 
 			cacher.Set("rankings", results, timeToCache)
 		} else if recs, ok := cachedRankings.(Recipients); ok {
@@ -528,31 +529,30 @@ func main() {
 			hasGiftQuery.SetField("has_gifts")
 
 			// TODO: disable_restricted_access_to_gift_messages
-			// token, _, err := getAuthToken(r, firebaseApp)
+			token, _, err := getAuthToken(r, firebaseApp)
 			switch filter.Value {
 			case "1", "2":
-				// if token == nil {
-				// 	return &ResponseError{
-				// 		WError:     err,
-				// 		StatusCode: http.StatusForbidden,
-				// 	}
-				// }
-				// recipientId := chi.URLParam(r, "recipientId")
-				// if associatedUser, err := getAssociatedUserBy(db, sq.Eq{"user_id": token.UID}); err == nil && associatedUser.AssociatedID == recipientId {
-				if filter.Value == "1" {
-					hasGiftQuery.Bool = true
-				} else if filter.Value == "2" {
-					// leave as is
-					return nil
+				if token == nil {
+					return &ResponseError{
+						WError:     err,
+						StatusCode: http.StatusForbidden,
+					}
 				}
-				// return nil
-				// }
-				// if err != nil {
-				// 	log.Println(err)
-				// }
-				// return &ResponseError{
-				// 	StatusCode: http.StatusForbidden,
-				// }
+				recipientId := chi.URLParam(r, "recipientId")
+				if associatedUser, err := getAssociatedUserBy(db, sq.Eq{"user_id": token.UID}); err == nil && associatedUser.AssociatedID == recipientId {
+					if filter.Value == "1" {
+						hasGiftQuery.Bool = true
+					} else if filter.Value == "2" {
+						// leave as is
+						return nil
+					}
+					return nil
+				} else if err != nil {
+					log.Println(err)
+				}
+				return &ResponseError{
+					StatusCode: http.StatusForbidden,
+				}
 			}
 
 			searchReq.Query.(*query.ConjunctionQuery).AddQuery(hasGiftQuery)
@@ -774,9 +774,9 @@ func main() {
 		} else if message.HasGifts {
 			// make notes with gifts limited to sender and receivers only
 			// TODO: disable_restricted_access_to_gift_messages
-			// return &ResponseError{
-			// 	StatusCode: http.StatusForbidden,
-			// }
+			return &ResponseError{
+				StatusCode: http.StatusForbidden,
+			}
 		}
 
 		return jsonEncode(rw, map[string]interface{}{
@@ -789,9 +789,10 @@ func main() {
 	r.With(appVerifyUser, getRawMessage).Delete("/messages/{recipientId}/{messageId}", wrapHandler(func(rw http.ResponseWriter, r *http.Request) error {
 		token := r.Context().Value("authToken").(*auth.Token)
 		message := r.Context().Value("gotMessage").(RawMessage)
-		timeToSend := emailTemplates["message"].TimeToSend()
+		// timeToSend := emailTemplates["message"].TimeToSend()
+		//  || time.Since(message.CreatedAt) >= timeToSend
 
-		if message.UID != token.UID || time.Since(message.CreatedAt) >= timeToSend {
+		if message.UID != token.UID {
 			return &ResponseError{
 				StatusCode: http.StatusForbidden,
 			}

@@ -128,8 +128,8 @@ export default defineComponent({
     return {
       stats: { messages_count: 0, gift_messages_count: 0 },
       // TODO: disable_restricted_access_to_gift_messages
-      // hasGift: false
-      hasGift: null as boolean | null,
+      hasGift: false,
+      // hasGift: null as boolean | null,
       endpoint: ''
     };
   },
@@ -165,7 +165,7 @@ export default defineComponent({
       let times = Math.floor(quo);
       if (times < 1) times = Math.ceil(quo);
       for (let i = 0; i < data.length; i++) {
-        paperColorIds.push(availablePaperColorId[j]);
+        paperColorIds.push(availablePaperColorId[j % availablePaperColorId.length]);
         if (i != 0 && i % times == 0) {
           j++;
         }
