@@ -7,8 +7,8 @@
         <h1 class="text-center text-3xl font-bold">Valentine Ranking Board</h1>
 
         <div class="tabs tabs-boxed">
-          <button @click="rankingsGender = 'male'" :class="{ 'tab-active': rankingsGender == 'male' }" class="tab tab-lg">Male</button>
-          <button @click="rankingsGender = 'female'" :class="{ 'tab-active': rankingsGender == 'female' }" class="tab tab-lg">Female</button>
+          <button @click="rankingsSex = 'male'" :class="{ 'tab-active': rankingsSex == 'male' }" class="tab tab-lg">Male</button>
+          <button @click="rankingsSex = 'female'" :class="{ 'tab-active': rankingsSex == 'female' }" class="tab tab-lg">Female</button>
         </div>
       </div>
 
@@ -70,20 +70,20 @@ export default {
   data() {
     return {
       endpoint: '',
-      rankingsGender: 'male',
+      rankingsSex: 'male',
     }
   },
   watch: {
-    rankingsGender(newVal, oldVal) {
+    rankingsSex(newVal, oldVal) {
       if (newVal == oldVal) return;
       this.endpoint = this.getRankingsEndpoint();
     }
   },
   methods: {
     getRankingsEndpoint(): string {
-      // const rankingsGender = this.rankingsGender;
-      const rankingsGender = 'unknown';
-      return `/rankings?limit=2&gender=${rankingsGender}`;
+      // const rankingsSex = this.rankingsSex;
+      const rankingsSex = 'unknown';
+      return `/rankings?limit=2&sex=${rankingsSex}`;
     },
   }
 }

@@ -58,7 +58,7 @@ type Gift struct {
 type RecipientStats struct {
 	RecipientID       string `db:"recipient_id" json:"recipient_id"`
 	Department        string `db:"department" json:"department,omitempty"`
-	Gender            string `db:"gender" json:"gender,omitempty"`
+	Sex               string `db:"sex" json:"sex,omitempty"`
 	MessagesCount     int    `db:"messages_count" json:"messages_count"`
 	GiftMessagesCount int    `db:"gift_messages_count" json:"gift_messages_count"`
 }
@@ -77,13 +77,13 @@ func (a Recipients) Less(i, j int) bool {
 	return false
 }
 
-func (a Recipients) ByGender(gender string) Recipients {
-	if len(gender) == 0 || gender == "all" {
+func (a Recipients) BySex(sex string) Recipients {
+	if len(sex) == 0 || sex == "all" {
 		return a
 	}
 	res := make(Recipients, 0, len(a))
 	for _, v := range res {
-		if v.Gender == gender {
+		if v.Sex == sex {
 			res = append(res, v)
 		}
 	}
@@ -103,7 +103,7 @@ func fetchRecipientRankings(db *sqlx.DB) (Recipients, error) {
 	recipientsMap := map[string]*RecipientStats{}
 
 	// get all associated_users data
-	associatedUsersSQL := "SELECT associated_id, department, gender FROM associated_ids"
+	associatedUsersSQL := "SELECT associated_id, department, sex FROM associated_ids"
 	rows, err := db.Query(associatedUsersSQL)
 	if err != nil {
 		return nil, err
@@ -112,8 +112,8 @@ func fetchRecipientRankings(db *sqlx.DB) (Recipients, error) {
 	for rows.Next() {
 		var associatedId string
 		var collegeDepartment string
-		var gender string
-		rows.Scan(&associatedId, &collegeDepartment, &gender)
+		var sex string
+		rows.Scan(&associatedId, &collegeDepartment, &sex)
 		if len(associatedId) == 0 {
 			continue
 		} else if _, exists := recipientsMap[associatedId]; !exists {
@@ -122,7 +122,7 @@ func fetchRecipientRankings(db *sqlx.DB) (Recipients, error) {
 			}
 		}
 		recipientsMap[associatedId].Department = collegeDepartment
-		recipientsMap[associatedId].Gender = gender
+		recipientsMap[associatedId].Sex = sex
 	}
 
 	// get number of gift message for each recipient
@@ -141,7 +141,7 @@ func fetchRecipientRankings(db *sqlx.DB) (Recipients, error) {
 		} else if _, exists := recipientsMap[recipientId]; !exists {
 			recipientsMap[recipientId] = &RecipientStats{
 				RecipientID: recipientId,
-				Gender:      "unknown",
+				Sex:         "unknown",
 				Department:  "Unknown",
 			}
 		}
@@ -164,7 +164,7 @@ func fetchRecipientRankings(db *sqlx.DB) (Recipients, error) {
 		} else if _, exists := recipientsMap[recipientId]; !exists {
 			recipientsMap[recipientId] = &RecipientStats{
 				RecipientID: recipientId,
-				Gender:      "unknown",
+				Sex:         "unknown",
 				Department:  "Unknown",
 			}
 		}
@@ -186,7 +186,7 @@ type AssociatedUser struct {
 	AssociatedID string `db:"associated_id" json:"associated_id" validate:"required,numeric"`
 	TermsAgreed  bool   `db:"terms_agreed" json:"terms_agreed" validate:"required"`
 	Department   string `db:"department" json:"department" validate:"required"`
-	Gender       string `db:"gender" json:"gender" validate:"required"`
+	Sex          string `db:"sex" json:"sex" validate:"required"`
 }
 
 type UserConnection struct {
@@ -417,16 +417,16 @@ func main() {
 
 	rankingPaginator := &Paginator{}
 	r.With(pagination(rankingPaginator), customFilters(map[string]FilterFunc{
-		"gender": func(r *http.Request, c context.Context, f Filter) error {
+		"sex": func(r *http.Request, c context.Context, f Filter) error {
 			if !f.Exists {
 				return nil
 			} else if f.Value != "male" && f.Value != "female" && f.Value != "unknown" && f.Value != "all" {
 				return &ResponseError{
 					StatusCode: http.StatusUnprocessableEntity,
-					Message:    "gender query should be either male, female, unknown, or all",
+					Message:    "sex query should be either male, female, unknown, or all",
 				}
 			}
-			c = context.WithValue(c, "rankingGender", f.Value)
+			c = context.WithValue(c, "rankingSex", f.Value)
 			return nil
 		},
 	})).Get("/rankings", wrapHandler(func(rw http.ResponseWriter, r *http.Request) error {
@@ -449,8 +449,8 @@ func main() {
 			results = recs
 		}
 
-		if filterByGender, hasGenderValue := r.Context().Value("rankingGender").(string); hasGenderValue {
-			results = results.ByGender(filterByGender)
+		if filterBySex, hasSexValue := r.Context().Value("rankingSex").(string); hasSexValue {
+			results = results.BySex(filterBySex)
 		}
 
 		resp, err := pg.Load(&ArrayPaginatorSource{results})

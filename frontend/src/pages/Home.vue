@@ -39,8 +39,8 @@
           </div>
 
           <div class="tabs">
-            <button @click="rankingGender = 'male'" :class="{ 'tab-active': rankingGender == 'male' }" class="tab tab-lg flex-1 tab-bordered">Male</button>
-            <button @click="rankingGender = 'female'" :class="{ 'tab-active': rankingGender == 'female' }" class="tab tab-lg flex-1 tab-bordered">Female</button>
+            <button @click="rankingSex = 'male'" :class="{ 'tab-active': rankingSex == 'male' }" class="tab tab-lg flex-1 tab-bordered">Male</button>
+            <button @click="rankingSex = 'female'" :class="{ 'tab-active': rankingSex == 'female' }" class="tab tab-lg flex-1 tab-bordered">Female</button>
           </div>
 
           <div class="flex-1 flex flex-col ranking-board">
@@ -50,8 +50,8 @@
                 <div class="min-h-12 flex my-4 shadow ranking-info" :key="i" v-for="(r, i) in rankings">
                   <div class="w-2/12 bg-black text-white inline-flex items-center justify-center font-bold ranking-placement">{{ ordinalSuffixOf(i + 1) }}</div>
                   <div class="flex-1 py-2 pl-2 inline-flex items-center">
-                    <img v-if="r.gender == 'female'" src="../assets/images/home/queen.png" class="w-2/12 mx-4" :alt="r.gender" />
-                    <img v-else src="../assets/images/home/king.png" class="w-2/12 mx-4" :alt="r.gender" />
+                    <img v-if="r.sex == 'female'" src="../assets/images/home/queen.png" class="w-2/12 mx-4" :alt="r.sex" />
+                    <img v-else src="../assets/images/home/king.png" class="w-2/12 mx-4" :alt="r.sex" />
                     <!-- TODO: use shorthand dept name -->
                     <span class="font-bold">{{ r.department }}</span>
                   </div>
@@ -115,21 +115,21 @@ export default {
   data() {
     return {
       isFormOpen: false,
-      rankingGender: 'male',
+      rankingSex: 'male',
       rankingsEndpoint: ''
     }
   },
   watch: {
-    rankingGender(newVal, oldVal) {
+    rankingSex(newVal, oldVal) {
       if (newVal == oldVal) return;
       this.rankingsEndpoint = this.getRankingsEndpoint();
     }
   },
   methods: {
     getRankingsEndpoint(): string {
-      // const rankingGender = this.rankingGender;
-      const rankingGender = 'unknown';
-      return `/rankings?limit=3&gender=${rankingGender}`;
+      // const rankingSex = this.rankingSex;
+      const rankingSex = 'unknown';
+      return `/rankings?limit=3&sex=${rankingSex}`;
     },
     ordinalSuffixOf(i: number): string {
         var j = i % 10,

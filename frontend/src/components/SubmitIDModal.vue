@@ -18,10 +18,10 @@
       </div>
       <div class="form-control">
         <label class="label">
-          <span class="label-text">Gender</span>
+          <span class="label-text">Sex</span>
         </label>
-        <select name="gender" class="select select-bordered">
-          <option :value="g.value" :key="g.value" v-for="g in genderList">{{ g.label }}</option>
+        <select name="sex" class="select select-bordered">
+          <option :value="g.value" :key="g.value" v-for="g in sexList">{{ g.label }}</option>
         </select>
       </div>
       <button class="self-end px-12 btn bg-rose-500 hover:bg-rose-600 border-none mt-4" type="submit">Next</button>
@@ -83,7 +83,7 @@ export default {
     }, 500);
   },
   computed: {
-    genderList() {
+    sexList() {
       return [
         {
           label: 'Male',
@@ -141,7 +141,7 @@ export default {
           const { data: json } = await this.$client.postJson('/user/setup', {
             associated_id: formData.get('associated_id')?.toString(),
             department: formData.get('department')?.toString(),
-            gender: formData.get('gender')?.toString(),
+            sex: formData.get('sex')?.toString(),
             terms_agreed: this.termsAgreed
           });
 
