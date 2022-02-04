@@ -17,13 +17,38 @@ import (
 	"github.com/jmoiron/sqlx"
 )
 
-func jsonEncode(rw http.ResponseWriter, data interface{}) error {
+func getStatusCode(statusCodes ...int) int {
+	if len(statusCodes) != 0 {
+		return statusCodes[0]
+	} else {
+		return http.StatusOK
+	}
+}
+
+type ResponseEncoder interface {
+	WriteHeader(rw http.ResponseWriter, statusCode ...int)
+	Write(rw http.ResponseWriter, data interface{}) error
+}
+
+type JsonEncoder struct{}
+
+func (enc *JsonEncoder) WriteHeader(rw http.ResponseWriter, statusCode ...int) {
 	rw.Header().Set("Content-Type", "application/json")
+	rw.WriteHeader(getStatusCode(statusCode...))
+}
+
+func (enc *JsonEncoder) Write(rw http.ResponseWriter, data interface{}) error {
 	return json.NewEncoder(rw).Encode(data)
 }
 
-func htmlEncode(rw http.ResponseWriter, data interface{}) error {
+type HtmlEncoder struct{}
+
+func (enc *HtmlEncoder) WriteHeader(rw http.ResponseWriter, statusCode ...int) {
 	rw.Header().Set("Content-Type", "text/html")
+	rw.WriteHeader(getStatusCode(statusCode...))
+}
+
+func (enc *HtmlEncoder) Write(rw http.ResponseWriter, data interface{}) error {
 	if _, err := rw.Write([]byte("<html><body>")); err != nil {
 		return err
 	}
@@ -40,20 +65,34 @@ func htmlEncode(rw http.ResponseWriter, data interface{}) error {
 	return nil
 }
 
-func writeRespError(rw http.ResponseWriter, respErr *ResponseError, encoder ...func(http.ResponseWriter, interface{}) error) {
+var jsonEncoder ResponseEncoder = &JsonEncoder{}
+var htmlEncoder ResponseEncoder = &HtmlEncoder{}
+
+func jsonEncode(rw http.ResponseWriter, data interface{}) error {
+	jsonEncoder.WriteHeader(rw)
+	return jsonEncoder.Write(rw, data)
+}
+
+func htmlEncode(rw http.ResponseWriter, data interface{}) error {
+	htmlEncoder.WriteHeader(rw)
+	return htmlEncoder.Write(rw, data)
+}
+
+func writeRespError(rw http.ResponseWriter, respErr *ResponseError, encoder ...ResponseEncoder) {
 	if len(respErr.Message) == 0 {
 		respErr.Message = http.StatusText(respErr.StatusCode)
 	}
 	log.Println(respErr.Error())
-	rw.WriteHeader(respErr.StatusCode)
 	if len(encoder) == 0 {
-		jsonEncode(rw, respErr)
+		jsonEncoder.WriteHeader(rw, respErr.StatusCode)
+		jsonEncoder.Write(rw, respErr)
 	} else {
-		encoder[0](rw, respErr)
+		encoder[0].WriteHeader(rw, respErr.StatusCode)
+		encoder[0].Write(rw, respErr)
 	}
 }
 
-func wrapHandler(handler func(http.ResponseWriter, *http.Request) error, encoder ...func(http.ResponseWriter, interface{}) error) http.HandlerFunc {
+func wrapHandler(handler func(http.ResponseWriter, *http.Request) error, encoder ...ResponseEncoder) http.HandlerFunc {
 	return http.HandlerFunc(func(rw http.ResponseWriter, r *http.Request) {
 		if err := handler(rw, r); err != nil {
 			if respErr, ok := err.(*ResponseError); ok {
@@ -131,8 +170,9 @@ func wrapValidationError(rw http.ResponseWriter, err error) error {
 				"message": er.Error(),
 			})
 		}
-		rw.WriteHeader(http.StatusUnprocessableEntity)
-		return jsonEncode(rw, map[string]interface{}{
+
+		jsonEncoder.WriteHeader(rw, http.StatusUnprocessableEntity)
+		return jsonEncoder.Write(rw, map[string]interface{}{
 			"error_message": "there were errors when submitting your data.",
 			"errors":        errs,
 		})
