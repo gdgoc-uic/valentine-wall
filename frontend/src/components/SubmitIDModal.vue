@@ -29,23 +29,7 @@
     <form @submit.prevent="submitSetupForm" :class="[proceedToTerms ? 'flex' : 'hidden']" class="flex-col">
       <div class="p-4">
         <h2 class="text-center text-2xl mb-5">Terms and Conditions</h2>
-        <ul class="list-disc pl-2">
-          <li>
-            <p>Lorem ipsum dolor sit amet consectetur adipisicing elit. A, nisi!</p>
-          </li>
-          <li>
-            <p>Eius error sed tempora hic ratione, culpa vitae dicta nostrum?</p>
-          </li>
-          <li>
-            <p>Sed laboriosam unde iste in eum nam doloribus aspernatur delectus.</p>
-          </li>
-          <li>
-            <p>Saepe quo beatae nobis doloremque, odio unde asperiores quaerat ipsa!</p>
-          </li>
-          <li>
-            <p>Odit mollitia beatae dolorum. Neque aliquam dicta nihil iusto eos?</p>
-          </li>
-        </ul>
+        <terms-and-conditions-text />
         <p class="mt-4">By clicking "Agree", you have agreed to the terms and conditions of this site. Should you violate any of the text above will result to account termination.</p>
       </div>
       <div class="w-full space-x-2 mt-4 flex">
@@ -61,11 +45,12 @@
 import { APIResponseError } from '../client';
 import { catchAndNotifyError, notify } from '../notify';
 import Modal from './Modal.vue';
+import { VueComponent as TermsAndConditionsText } from '../assets/texts/terms-and-conditions.md';
 
 const emailRegex = /^[a-z]+_([0-9]+)@uic.edu.ph$/;
 
 export default {
-  components: { Modal },
+  components: { Modal, TermsAndConditionsText },
   data() {
     return {
       termsAgreed: false,
