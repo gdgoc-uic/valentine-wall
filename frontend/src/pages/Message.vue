@@ -5,7 +5,7 @@
         @success="handleResponse"
         @error="handleResponseError"
         disappear-on-loading
-        :endpoint="`/messages/${$route.params.recipientId}/${$route.params.messageId}`">
+        :endpoint="endpoint">
         <template #default="{ response: { data: { message, reply } } }">
           <div class="w-full bg-white rounded-lg divide-y-2 shadow-lg">
             <div class="p-12">
@@ -70,7 +70,7 @@
 
     <portal>
       <share-modal v-model:open="openShareModal" :recipient-id="$route.params.recipientId" :message-id="$route.params.messageId" :permalink="permalink" />
-      <reply-message-modal @update:hasReplied="message.has_replied ?? false" v-model:open="openReplyModal" :message="message" />
+      <reply-message-modal @update:hasReplied="handleHasReplied" v-model:open="openReplyModal" :message="message" />
       <modal v-model:open="openDeleteModal">
         <p>Are you sure you want to delete this?</p>
     
@@ -126,6 +126,9 @@ export default {
     Portal,
     ResponseHandler,
   },
+  created() {
+    this.endpoint = this.getEndpoint();
+  },
   mounted() {
     if (this.$route.query.from) {
       logEvent(analytics!, "traffic_source", { from: this.$route.query.from });
@@ -147,6 +150,7 @@ export default {
       openDeleteModal: false,
       openShareModal: false,
       revealContent: false,
+      endpoint: '',
       authLoadingWatcher: null as unknown as WatchStopHandle
     }
   },
@@ -158,6 +162,14 @@ export default {
         this.$router.replace({ name: 'home-page' });
       } catch(e) {
         catchAndNotifyError(this, e);
+      }
+    },
+    handleHasReplied(hasReplied: boolean) {
+      this.message.has_replied = hasReplied ?? false;
+      if (hasReplied) {
+        this.openReplyModal = false;
+        // FIXME: reload content
+        this.endpoint = this.getEndpoint();
       }
     },
     handleResponse(r: APIResponse) {
@@ -186,6 +198,9 @@ export default {
         displayStr = 'and ' + displayStr;
       }
       return displayStr;
+    },
+    getEndpoint(): string {
+      return `/messages/${this.$route.params.recipientId}/${this.$route.params.messageId}`;
     }
   },
   computed: {
