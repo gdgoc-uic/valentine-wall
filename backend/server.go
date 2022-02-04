@@ -1058,7 +1058,7 @@ func main() {
 		return nil
 	}))
 
-	r.With(appVerifyUser).Get("/user/connect_email", wrapHandler(func(rw http.ResponseWriter, r *http.Request) error {
+	r.With(appVerifyUser).Post("/user/connect_email", wrapHandler(func(rw http.ResponseWriter, r *http.Request) error {
 		token := r.Context().Value("authToken").(*auth.Token)
 		authClient := r.Context().Value("authClient").(*auth.Client)
 		userEmail, err := getUserEmailByUID(authClient, token.UID)

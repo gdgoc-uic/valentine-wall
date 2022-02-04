@@ -151,7 +151,7 @@ export default {
     },
     async skipLogin() {
       try {
-        const { data: json } = await this.$client.get('/user/connect_email');
+        const { data: json } = await this.$client.post('/user/connect_email');
         logEvent(analytics!, 'connect_email', { success: true });
         this.$store.commit('SET_USER_CONNECTIONS', json['user_connections']);
       } catch (e) {
