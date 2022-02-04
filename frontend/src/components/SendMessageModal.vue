@@ -15,13 +15,12 @@
         </div>
 
         <div class="flex">
-          <form @submit.prevent="submitForm" class="flex flex-col w-2/3 pr-8 overflow-y-auto"  style="max-height: 80vh">
+          <form ref="submitMessageForm" @submit.prevent="submitForm" class="flex flex-col w-2/3 pr-8 overflow-y-auto"  style="max-height: 80vh">
             <div class="form-control">
               <label class="label">
                 <span class="label-text">Recipient</span>
               </label>
-              <input 
-                :value="$route.params.recipientId || ''"
+              <input
                 class="input input-bordered" 
                 type="text"
                 name="recipient_id" 
@@ -105,6 +104,17 @@ export default {
     };
   },
   watch: {
+    'open'() {
+      this.injectRecipientId();
+    },
+    recipientId(newV: string) {
+      const counter = (this.$refs.counter as typeof ContentCounter);
+      if (!counter || typeof counter == 'undefined') {
+        this.shouldSend = false;
+      } else {
+        this.shouldSend = newV.length > 0;
+      }
+    },
     content(newV: string, oldV: string) {
       const counter = (this.$refs.counter as typeof ContentCounter);
       if (!counter || typeof counter == 'undefined') {
@@ -115,6 +125,25 @@ export default {
     }
   },
   methods: {
+    injectRecipientId() {
+      // sets the recipient id automatically if route
+      // has recipient id
+      if (this.$route.params.recipientId) {
+        setTimeout(() => {
+          const submitMessageForm = this.$refs.submitMessageForm;
+          if (!submitMessageForm || !(submitMessageForm instanceof HTMLFormElement)) {
+            return;
+          }
+
+          const recipientIdField = submitMessageForm.querySelector('input[name="recipient_id"]');
+          if (!recipientIdField || !(recipientIdField instanceof HTMLInputElement)) {
+            return;
+          }
+
+          recipientIdField.value = <string> this.$route.params.recipientId;
+        }, 500);
+      }
+    },
     async submitForm(e: SubmitEvent) {
       if (this.shouldSend) {
         this.shouldSend = false;
