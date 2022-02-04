@@ -61,6 +61,7 @@ import Portal from "./components/Portal.vue";
 import Navbar from "./components/Navbar.vue";
 import SubmitMessageModal from './components/SendMessageModal.vue';
 import Footer from "./components/Footer.vue";
+import { catchAndNotifyError } from "./notify";
 
 export default defineComponent({
   components: { 
@@ -99,9 +100,15 @@ export default defineComponent({
   },
   mounted() {
     if (!import.meta.env.SSR) {
-      this.$store.dispatch('getGiftList');
       auth.onAuthStateChanged((user) => {
         this.$store.dispatch('onReceiveUser', user);
+      });
+
+      Promise.all([
+        this.$store.dispatch('getGiftList'),
+        this.$store.dispatch('getDepartmentList')
+      ]).catch((err) => {
+        catchAndNotifyError(this, err);
       });
     }
   },

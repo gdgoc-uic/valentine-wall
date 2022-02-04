@@ -27,7 +27,8 @@ export interface State {
   isAuthLoading: boolean,
   isSendMessageModalOpen: boolean,
   isSetupModalOpen: boolean,
-  giftList: Gift[]
+  giftList: Gift[],
+  departmentList: Record<string, string>[]
 }
 
 export const storeKey = 'vuex-store' as unknown as InjectionKey<Store<State>>;
@@ -46,7 +47,8 @@ export function createStore() {
         isAuthLoading: true,
         isSendMessageModalOpen: false,
         isSetupModalOpen: false,
-        giftList: []
+        giftList: [],
+        departmentList: []
       }
     },
   
@@ -74,6 +76,9 @@ export function createStore() {
       },
       SET_GIFT_LIST(state, payload: Gift[]) {
         state.giftList = payload;
+      },
+      SET_DEPARTMENT_LIST(state, payload: Record<string, string>[]) {
+        state.departmentList = payload;
       },
       SET_SEND_MESSAGE_MODAL_OPEN(state, payload: boolean) {
         state.isSendMessageModalOpen = payload;
@@ -180,6 +185,10 @@ export function createStore() {
       async getGiftList({ commit, getters }) {
         const { data: json } = await getters.apiClient.get('/gifts');
         commit('SET_GIFT_LIST', json);
+      },
+      async getDepartmentList({ commit, getters }) {
+        const { data: json } = await getters.apiClient.get('/departments');
+        commit('SET_DEPARTMENT_LIST', json);
       }
     }
   })

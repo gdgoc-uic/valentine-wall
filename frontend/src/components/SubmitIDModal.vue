@@ -74,16 +74,13 @@ export default {
     };
   },
   mounted() {
-    this.loadDepartments()
-      .finally(() => {
-        setTimeout(() => {
-          const associatedIdField = document.getElementById('associated_id_field');
-          if (associatedIdField && associatedIdField instanceof HTMLInputElement) {
-            const extractedId = this.getIdFromEmail(this.$store.state.user.email);
-            associatedIdField.value = extractedId;
-          }
-        }, 300)
-      })
+    setTimeout(() => {
+      const associatedIdField = document.getElementById('associated_id_field');
+      if (associatedIdField && associatedIdField instanceof HTMLInputElement) {
+        const extractedId = this.getIdFromEmail(this.$store.state.user.email);
+        associatedIdField.value = extractedId;
+      }
+    }, 500);
   },
   computed: {
     genderList() {
@@ -103,15 +100,6 @@ export default {
     getIdFromEmail(input: string): string {
       const matches = emailRegex.exec(input)
       return matches?.[1] ?? '';
-    },
-
-    async loadDepartments() {
-      try {
-        const { data } = await this.$client.get('/departments');
-        this.departments = data;
-      } catch(e) {
-        catchAndNotifyError(this, e);
-      }
     },
 
     shouldProceed(e: SubmitEvent) {
