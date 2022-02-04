@@ -14,6 +14,7 @@ import (
 	"github.com/chromedp/chromedp"
 	"github.com/fogleman/gg"
 	"github.com/golang/freetype/truetype"
+	"github.com/patrickmn/go-cache"
 )
 
 type ImageType int
@@ -54,6 +55,39 @@ func loadFont(path string) *truetype.Font {
 func init() {
 	latoLight = loadFont("./fonts/lato/Lato-Light.ttf")
 	nanumPenScript = loadFont("./fonts/nanum-pen-script/NanumPenScript-Regular.ttf")
+}
+
+type ImageRenderer struct {
+	// for chrome-based image renderer
+	ChromeCtx  context.Context
+	Template   *template.Template
+	CacheStore *cache.Cache
+}
+
+func (ctx *ImageRenderer) Render(itype ImageType, message Message) ([]byte, error) {
+	// use cached image if available
+	imageCacheKey := fmt.Sprintf("image/%s", message.ID)
+	if cachedImage, isImageCached := ctx.CacheStore.Get(imageCacheKey); isImageCached && cachedImage != nil {
+		log.Println("using cached image...")
+		return cachedImage.([]byte), nil
+	}
+
+	imgBuf := &bytes.Buffer{}
+	var err error
+	if ctx.ChromeCtx != nil {
+		// use alternative gg-based mode if not connected to chrome
+		err = generateImagePNGChrome(imgBuf, ctx.ChromeCtx, ctx.Template, message)
+	}
+
+	if err != nil {
+		log.Println(err)
+		if err2 := generateImagePNG(imgBuf, imageTypeTwitter, message); err2 != nil {
+			return nil, err2
+		}
+	}
+
+	ctx.CacheStore.Set(imageCacheKey, imgBuf.Bytes(), cache.DefaultExpiration)
+	return imgBuf.Bytes(), nil
 }
 
 func generateImagePNG(wr io.Writer, itype ImageType, message Message) error {

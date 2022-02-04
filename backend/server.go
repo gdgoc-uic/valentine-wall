@@ -298,6 +298,11 @@ func main() {
 	// cache
 	cacher := cache.New(1*time.Hour, 1*time.Minute)
 
+	// image renderer
+	imageRenderer := &ImageRenderer{
+		CacheStore: cacher,
+	}
+
 	// chrome/browser-based image rendering specific code
 	if len(chromeDevtoolsURL) != 0 {
 		// launch chrome instance
@@ -316,6 +321,9 @@ func main() {
 		} else {
 			log.Printf("%d html templates have been loaded\n", len(htmlTemplates.Templates()))
 		}
+
+		imageRenderer.ChromeCtx = chromeCtx
+		imageRenderer.Template = htmlTemplates.Lookup("message_image.html.tpl")
 	}
 
 	// postal client
@@ -724,30 +732,13 @@ func main() {
 
 		// generate image if ?image query
 		if rr.URL.Query().Has("image") {
-			// use cached image if available
-			imageCacheKey := fmt.Sprintf("image/%s", message.ID)
-			if cachedImage, isImageCached := cacher.Get(imageCacheKey); isImageCached && cachedImage != nil {
-				log.Println("using cached image...")
-				rw.Write(cachedImage.([]byte))
-				return nil
-			}
-
-			imgBuf := &bytes.Buffer{}
-			var err error
-			if chromeCtx != nil {
-				// use alternative gg-based mode if not connected to chrome
-				err = generateImagePNGChrome(imgBuf, chromeCtx, htmlTemplates.Lookup("message_image.html.tpl"), message.Message)
-			}
-
+			buf, err := imageRenderer.Render(imageTypeTwitter, message.Message)
 			if err != nil {
-				log.Println(err)
-				if err2 := generateImagePNG(imgBuf, imageTypeTwitter, message.Message); err2 != nil {
-					return err2
-				}
+				return err
 			}
 
-			cacher.Set(imageCacheKey, imgBuf.Bytes(), cache.DefaultExpiration)
-			rw.Write(imgBuf.Bytes())
+			rw.Header().Set("Content-Type", "image/png")
+			rw.Write(buf)
 			return nil
 		}
 
@@ -857,14 +848,14 @@ func main() {
 			reply.MessageID = message.ID
 			var notifier Notifier
 			if twitterIdx, hasTwitter := isConnectedTo(connections, "twitter"); hasTwitter {
-				imageData := &bytes.Buffer{}
-				if err := generateImagePNG(imageData, imageTypeTwitter, message.Message); err != nil {
+				imageData, err := imageRenderer.Render(imageTypeTwitter, message.Message)
+				if err != nil {
 					return err
 				}
 
 				notifier = &TwitterNotifier{
 					Connection:  connections[twitterIdx],
-					ImageData:   imageData,
+					ImageData:   bytes.NewReader(imageData),
 					TextContent: reply.Content,
 				}
 			} else if _, hasEmail := isConnectedTo(connections, "email"); hasEmail {
