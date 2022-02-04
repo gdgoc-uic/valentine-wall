@@ -34,25 +34,31 @@
                   v-if="message.has_replied || $store.state.user.associatedId == message.recipient_id" 
                   @click="openReplyModal = true" 
                   :disabled="message.has_replied"
-                  class="flex-1 normal-case btn btn-md border-none space-x-2 bg-white text-gray-900 hover:bg-gray-100">
+                  class="flex-1 lg:flex-none normal-case btn btn-md border-none space-x-2 bg-white text-gray-900 hover:bg-gray-100">
                   <icon-reply :class="[message.has_replied ? 'text-pink-500' : 'text-gray-500']" />
                   <span>{{ message.has_replied ? 'Has replied' : 'Reply' }}</span>
                 </button>
               </template>
 
-              <button @click="openShareModal = true" class="hover:bg-gray-100 flex-1 normal-case btn btn-md border-none space-x-2 bg-white text-gray-900">
+              <button @click="openShareModal = true" class="hover:bg-gray-100 flex-1 lg:flex-none normal-case btn btn-md border-none space-x-2 bg-white text-gray-900">
                 <icon-share class="text-gray-500" />
                 <span>Share</span>
               </button>
 
-              <button v-if="isDeletable" @click="openDeleteModal = true" class="hover:bg-gray-100 flex-1 normal-case btn btn-md border-none space-x-2 bg-white text-red-500">
+              <button v-if="isDeletable" @click="openDeleteModal = true" class="hover:bg-gray-100 flex-1 lg:flex-none normal-case btn btn-md border-none space-x-2 bg-white text-red-500">
                 <icon-trash class="text-red-500" />
                 <span>Delete</span>
+              </button>
+
+              <!-- TODO: add report link -->
+              <button class="hover:bg-gray-100 flex-1 lg:flex-none normal-case btn btn-md border-none space-x-2 bg-white text-gray-900">
+                <icon-report class="text-gray-500" />
+                <span>Report</span>
               </button>
             </div>
           </div>
 
-          <div v-if="message.has_replied && (reply && reply.content)" class="w-full bg-white rounded-lg p-12">
+          <div v-if="message.has_replied && (reply && reply.content)" class="shadow-lg w-full bg-white rounded-lg p-12">
             <p class="text-gray-500 mb-2">{{ message.recipient_id }} replied</p>
             <p class="text-2xl">{{ reply.content }}</p>
           </div>
@@ -107,6 +113,7 @@ import { Gift } from '../store';
 import { WatchStopHandle } from '@vue/runtime-core';
 import Portal from '../components/Portal.vue';
 import ResponseHandler from '../components/ResponseHandler.vue';
+import IconReport from '~icons/uil/exclamation-circle';
 
 dayjs.extend(relativeTime);
 
@@ -119,6 +126,7 @@ export default {
     IconConfused,
     IconShare,
     IconTrash,
+    IconReport,
     ReplyMessageModal,
     ShareModal,
     GiftIcon,
