@@ -22,9 +22,9 @@ export class APIResponseError extends Error implements BaseResponse {
   static fromResponseWithJson(resp: Response, data?: any): APIResponseError {
     let errorMessage = 'Something went wrong.';
     if (data) {
-      if ('error_message' in data) {
+      if ('error_message' in data || data.error_message) {
         errorMessage = data['error_message'];
-      } else if ('messsage' in data) {
+      } else if ('messsage' in data || data.message) {
         errorMessage = data['message'];
       }
     }
@@ -45,7 +45,7 @@ export function createAPIClient(defaultHeadersFn?: () => Record<string, any>): A
     defaultHeadersFn,
 
     async request(endpoint: string, opts?: RequestInit): Promise<APIResponse> {
-      const resp = await fetch(expandAPIEndpoint(endpoint), {
+      const resp: Response = await fetch(expandAPIEndpoint(endpoint), {
         ...opts,
         headers: {
           ...opts?.headers,
@@ -59,7 +59,7 @@ export function createAPIClient(defaultHeadersFn?: () => Record<string, any>): A
         if (!resp.ok) {
           throw APIResponseError.fromResponseWithJson(resp, json);
         }
-    
+
         return {
           rawResponse: resp,
           data: json
@@ -67,6 +67,10 @@ export function createAPIClient(defaultHeadersFn?: () => Record<string, any>): A
       }
     
       const data = await resp.text();
+      if (!resp.ok) {
+        throw new APIResponseError(data, resp);
+      }
+
       return {
         rawResponse: resp,
         data
