@@ -79,14 +79,16 @@ func (ctx *ImageRenderer) Render(itype ImageType, message Message) ([]byte, erro
 		err = generateImagePNGChrome(imgBuf, ctx.ChromeCtx, ctx.Template, message)
 	}
 
-	if err != nil {
+	if err != nil || imgBuf.Len() == 0 {
 		log.Println(err)
 		if err2 := generateImagePNG(imgBuf, imageTypeTwitter, message); err2 != nil {
 			return nil, err2
 		}
 	}
 
-	ctx.CacheStore.Set(imageCacheKey, imgBuf.Bytes(), cache.DefaultExpiration)
+	if imgBuf.Len() != 0 {
+		ctx.CacheStore.Set(imageCacheKey, imgBuf.Bytes(), cache.DefaultExpiration)
+	}
 	return imgBuf.Bytes(), nil
 }
 
