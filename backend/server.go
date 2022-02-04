@@ -184,7 +184,7 @@ func fetchRecipientRankings(db *sqlx.DB) (Recipients, error) {
 type AssociatedUser struct {
 	UserID       string `db:"user_id" json:"user_id"`
 	AssociatedID string `db:"associated_id" json:"associated_id" validate:"required,numeric"`
-	TermsAgreed  bool   `db:"terms_agreed" json:"terms_agreed" validate:"required"`
+	TermsAgreed  bool   `db:"terms_agreed" json:"terms_agreed"`
 	Department   string `db:"department" json:"department" validate:"required"`
 	Sex          string `db:"sex" json:"sex" validate:"required"`
 }
@@ -972,7 +972,9 @@ func main() {
 				return wrapValidationError(rw, err)
 			}
 
-			if userEmail, err := getUserEmailByUID(authClient, token.UID); err == nil {
+			if !submittedData.TermsAgreed {
+				shouldDenyService = true
+			} else if userEmail, err := getUserEmailByUID(authClient, token.UID); err == nil {
 				matches := emailRegex.FindAllStringSubmatch(userEmail, -1)
 				// deny service if no matching ID found when scanning the email through regex
 				if (matches == nil || len(matches) == 0) || (len(matches[0]) < 2 || len(matches[0][1]) == 0) {
@@ -980,8 +982,6 @@ func main() {
 				} else if gotId := matches[0][1]; gotId != submittedData.AssociatedID {
 					shouldDenyService = true
 				}
-			} else if !submittedData.TermsAgreed {
-				shouldDenyService = true
 			}
 
 			if shouldDenyService {
@@ -1142,7 +1142,7 @@ func main() {
 
 		scriptJs := `<script type="text/javascript">window.opener.postMessage({message:'twitter connect success', user_connections:[{provider:'twitter'}]}, '` + frontendUrl + `')</script>`
 		return htmlEncode(rw, "<p>success</p>"+scriptJs)
-	}, htmlEncode))
+	}, htmlEncoder))
 
 	r.With(appVerifyUser).Delete("/user/connections/{connectionName}", wrapHandler(func(rw http.ResponseWriter, r *http.Request) error {
 		token := r.Context().Value("authToken").(*auth.Token)
