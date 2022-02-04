@@ -40,7 +40,7 @@ export function expandAPIEndpoint(endpoint: string): string {
   return backendUrl + finalEndpoint;
 }
 
-export function createAPIClient(defaultHeadersFn?: () => Record<string, any>) {
+export function createAPIClient(defaultHeadersFn?: () => Record<string, any>): APIClient {
   return {
     defaultHeadersFn,
 
@@ -95,6 +95,7 @@ export function createAPIClient(defaultHeadersFn?: () => Record<string, any>) {
 };
 
 export interface APIClient {
+  defaultHeadersFn?(): Record<string, string>,
   request(endpoint: string, opts?: RequestInit): Promise<APIResponse>
   get(endpoint: string, opts?: RequestInit): Promise<APIResponse>
   post(endpoint: string, opts?: RequestInit): Promise<APIResponse>
