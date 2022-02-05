@@ -29,7 +29,7 @@
         </select>
       </div>
       <div class="flex flex-col md:flex-row justify-between items-start md:item-center py-2 space-y-2 lg:space-y-0">
-        <label for="sex">Department</label>
+        <label for="department">Department</label>
         <select name="department" class="select select-bordered">
           <option value="none" selected>None</option>
           <option :selected="dept.id == $store.state.user.department" :value="dept.id" :key="dept.id" v-for="dept in $store.state.departmentList">{{ dept.label }} ({{ dept.id }})</option>
