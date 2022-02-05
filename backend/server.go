@@ -757,8 +757,7 @@ func main() {
 				isUserSenderOrReceiver = true
 			}
 
-			timeToSend := emailTemplates["message"].TimeToSend()
-			if token.UID == message.UID && time.Since(message.CreatedAt) < timeToSend {
+			if token.UID == message.UID {
 				isDeletable = true
 			}
 		} else if tErr != nil {
