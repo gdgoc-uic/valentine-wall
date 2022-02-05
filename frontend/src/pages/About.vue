@@ -5,7 +5,7 @@
             <img src="../assets/images/logo.png" alt="Valentine Wall" class="mb-20">
             <p class="font-bold text-center">Powered by:</p>
             <div class="flex w-full items-center justify-center">
-                <img src="../assets/images/usg.png" class="w-1/3" alt="University Student Government - UIC">
+                <!-- <img src="../assets/images/usg.png" class="w-1/3" alt="University Student Government - UIC"> -->
                 <img src="../assets/images/gdscuic.png" class="w-1/2" alt="Google Developer Student Clubs - UIC">
             </div>
         </div>
