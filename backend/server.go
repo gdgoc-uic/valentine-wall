@@ -92,7 +92,7 @@ func (a Recipients) BySex(sex string) Recipients {
 
 func fetchRecipientRankings(db *sqlx.DB) (Recipients, error) {
 	baseQuery := func(queryName string) sq.SelectBuilder {
-		return sq.Select("recipient_id", "count(*) "+queryName).From("messages").GroupBy("recipient_id")
+		return sq.Select("recipient_id", "count(*) "+queryName).From("messages").Where(sq.Eq{"deleted_at": nil}).GroupBy("recipient_id")
 	}
 
 	recipientsMap := map[string]*RecipientStats{}
@@ -257,6 +257,7 @@ func importExistingMessages(db *sqlx.DB, index bleve.Index) error {
 	batch := index.NewBatch()
 	sqlQuery, _, err := sq.
 		Select("id", "recipient_id", "created_at", "updated_at", "has_gifts").
+		Where(sq.Eq{"deleted_at": nil}).
 		From("messages").
 		ToSql()
 	if err != nil {
@@ -494,7 +495,7 @@ func main() {
 				}
 				querySql, queryArgs, err := sq.
 					Select("id", "recipient_id", "content", "has_replied", "has_gifts", "created_at", "updated_at").
-					From("messages").Where(ids).OrderBy(fmt.Sprintf("%s %s", pg.OrderKey, pg.Order)).ToSql()
+					From("messages").Where(sq.And{ids, sq.Eq{"deleted_at": nil}}).OrderBy(fmt.Sprintf("%s %s", pg.OrderKey, pg.Order)).ToSql()
 				if err != nil {
 					return nil, err
 				}
@@ -594,7 +595,7 @@ func main() {
 			// make lastpostinfo an array in order to avoid false positive error
 			// when user posts for the first time
 			lastPostInfos := []Message{}
-			if err := db.Select(&lastPostInfos, "SELECT recipient_id, content, created_at FROM messages WHERE submitter_user_id = ? ORDER BY datetime(created_at) DESC LIMIT 1", submittedMsg.UID); err != nil {
+			if err := db.Select(&lastPostInfos, "SELECT recipient_id, content, created_at FROM messages WHERE submitter_user_id = ? AND deleted_at IS NULL ORDER BY datetime(created_at) DESC LIMIT 1", submittedMsg.UID); err != nil {
 				return err
 			}
 
@@ -716,7 +717,7 @@ func main() {
 			recipientId := chi.URLParam(rr, "recipientId")
 			messageId := chi.URLParam(rr, "messageId")
 			message := RawMessage{}
-			if err := db.Get(&message, "SELECT * FROM messages WHERE id = ? AND recipient_id = ?", messageId, recipientId); err != nil {
+			if err := db.Get(&message, "SELECT * FROM messages WHERE id = ? AND recipient_id = ? AND deleted_at IS NULL", messageId, recipientId); err != nil {
 				log.Println(err)
 				r.NotFoundHandler().ServeHTTP(rw, rr)
 				return
@@ -798,7 +799,7 @@ func main() {
 			}
 		}
 
-		res, err := db.Exec("DELETE FROM messages WHERE id = ?", message.ID)
+		res, err := db.Exec("UPDATE messages SET deleted_at = ? WHERE id = ?", time.Now(), message.ID)
 		if err != nil {
 			return err
 		} else if err := wrapSqlResult(res); err != nil {
