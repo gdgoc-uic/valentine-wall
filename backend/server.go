@@ -211,8 +211,9 @@ type Message struct {
 
 type RawMessage struct {
 	Message
-	UID     string `db:"submitter_user_id" json:"uid" validate:"required"`
-	GiftIDs []int  `json:"gift_ids,omitempty" validate:"omitempty,max=3"`
+	UID       string     `db:"submitter_user_id" json:"uid" validate:"required"`
+	GiftIDs   []int      `json:"gift_ids,omitempty" validate:"omitempty,max=3"`
+	DeletedAt *time.Time `db:"deleted_at" json:"-"`
 }
 
 type MessageReply struct {
