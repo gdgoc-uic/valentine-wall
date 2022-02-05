@@ -17,8 +17,10 @@ export default defineConfig({
     markdown({
       mode: [Mode.HTML, Mode.VUE]
     }),
-    ViteFaviconsPlugin({
-      logo: "src/assets/images/icon.png"
-    })
+    ...(process.env.NODE_ENV == 'production' ? [
+      ViteFaviconsPlugin({
+        logo: "src/assets/images/icon.png"
+      })
+    ] : [])
   ]
 })
