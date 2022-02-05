@@ -22,6 +22,19 @@
           :value="$store.state.user.email"
           disabled class="w-full md:w-1/2 input input-bordered" />
       </div>
+      <div class="flex flex-col md:flex-row justify-between items-start md:item-center py-2 space-y-2 lg:space-y-0">
+        <label for="sex">Sex</label>
+        <select name="sex" class="select select-bordered">
+          <option :selected="g.value == $store.state.user.sex" :value="g.value" :key="g.value" v-for="g in sexList">{{ g.label }}</option>
+        </select>
+      </div>
+      <div class="flex flex-col md:flex-row justify-between items-start md:item-center py-2 space-y-2 lg:space-y-0">
+        <label for="sex">Department</label>
+        <select name="department" class="select select-bordered">
+          <option value="none" selected>None</option>
+          <option :selected="dept.id == $store.state.user.department" :value="dept.id" :key="dept.id" v-for="dept in $store.state.departmentList">{{ dept.label }} ({{ dept.id }})</option>
+        </select>
+      </div>
     </div>
     <div class="py-6">
       <p class="font-bold">Connections</p>
@@ -44,6 +57,23 @@
 <script lang="ts">
 import { catchAndNotifyError } from '../../notify';
 export default {
+  mounted() {
+    // TODO:
+  },
+  computed: {
+    sexList() {
+      return [
+        {
+          label: 'Male',
+          value: 'male'
+        },
+        {
+          label: 'Female',
+          value: 'female'
+        }
+      ];
+    }
+  },
   methods: {
     async disconnectUserConnection(name: string) {
       try {
