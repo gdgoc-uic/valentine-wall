@@ -79,6 +79,19 @@ export function createAPIClient(defaultHeadersFn?: () => Record<string, any>): A
     get(endpoint: string, opts?: RequestInit) {
       return this.request(endpoint, { method: 'GET', ...opts });
     },
+    patch(endpoint: string, opts?: RequestInit) {
+      return this.request(endpoint, { method: 'PATCH', ...opts });
+    },
+    patchJson(endpoint: string, payload: any, opts?: RequestInit) {
+      return this.patch(endpoint, {
+        ...opts,
+        headers: {
+          'Content-Type': 'application/json',
+          ...opts?.headers
+        },
+        body: JSON.stringify(payload)
+      });
+    },
     post(endpoint: string, opts?: RequestInit) {
       return this.request(endpoint, { method: 'POST', ...opts });
     },
@@ -102,6 +115,8 @@ export interface APIClient {
   defaultHeadersFn?(): Record<string, string>,
   request(endpoint: string, opts?: RequestInit): Promise<APIResponse>
   get(endpoint: string, opts?: RequestInit): Promise<APIResponse>
+  patch(endpoint: string, opts?: RequestInit): Promise<APIResponse>
+  patchJson(endpoint: string, payload: any, opts?: RequestInit): Promise<APIResponse>
   post(endpoint: string, opts?: RequestInit): Promise<APIResponse>
   postJson(endpoint: string, payload: any, opts?: RequestInit): Promise<APIResponse>
   delete(endpoint: string, opts?: RequestInit): Promise<APIResponse>

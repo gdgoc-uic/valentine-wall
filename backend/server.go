@@ -398,6 +398,7 @@ func main() {
 				http.MethodGet,
 				http.MethodPost,
 				http.MethodDelete,
+				http.MethodPatch,
 			},
 		}))
 	}
@@ -942,6 +943,31 @@ func main() {
 		}))
 
 	r.With(appVerifyUser).
+		Patch("/user/info", wrapHandler(func(rw http.ResponseWriter, r *http.Request) error {
+			token := r.Context().Value("authToken").(*auth.Token)
+			updatedAssocInfo := &AssociatedUser{}
+
+			if err := json.NewDecoder(r.Body).Decode(updatedAssocInfo); err != nil {
+				return err
+			}
+
+			if res, err := db.Exec(
+				"UPDATE associated_ids SET department = ?, sex = ? WHERE user_id = ?",
+				updatedAssocInfo.Department,
+				updatedAssocInfo.Sex,
+				token.UID,
+			); err != nil {
+				return err
+			} else if err := wrapSqlResult(res); err != nil {
+				return err
+			}
+
+			return jsonEncode(rw, map[string]string{
+				"message": "user details updated successfully",
+			})
+		}))
+
+	r.With(appVerifyUser).
 		Post("/user/info", wrapHandler(func(rw http.ResponseWriter, r *http.Request) error {
 			token := r.Context().Value("authToken").(*auth.Token)
 			associatedData, err := getAssociatedUserBy(db, sq.Eq{"user_id": token.UID})
@@ -1079,7 +1105,7 @@ func main() {
 
 		http.Redirect(rw, r, authUrl.String(), http.StatusFound)
 		return nil
-	}))
+	}, htmlEncoder))
 
 	r.With(appVerifyUser).Post("/user/connect_email", wrapHandler(func(rw http.ResponseWriter, r *http.Request) error {
 		token := r.Context().Value("authToken").(*auth.Token)
