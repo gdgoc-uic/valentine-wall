@@ -19,7 +19,7 @@
         <div class="bg-white p-16 space-y-8 rounded-2xl shadow-md h-full">
           <div>
             <h2 class="text-4xl font-bold mb-4">Search Messages</h2>
-            <p class="w-full text-2xl text-gray-500">Search your messages or even other friend's messages for free through your school ID.</p>
+            <p class="w-full text-2xl text-gray-500">Search your messages or even other friend's messages for free through the school ID.</p>
           </div>
 
           <search-form>
