@@ -128,18 +128,19 @@ export default {
       const agreeFormData = new FormData(e.target);
       try {
         try {
-          const { data: json } = await this.$client.postJson('/user/setup', {
+          const { data: setupJson } = await this.$client.postJson('/user/setup', {
             associated_id: formData.get('associated_id')?.toString(),
             department: formData.get('department')?.toString(),
             sex: formData.get('sex')?.toString(),
             terms_agreed: (agreeFormData.get('terms_agreed') ?? 'false') === 'true'
           });
-          notify(this, { type: 'success', text: json['message'] });
-          this.$store.commit('SET_USER_ASSOCIATED_ID', json['associated_id']);
+          notify(this, { type: 'success', text: setupJson['message'] });
+          await this.$store.dispatch('getUserInfo');
           this.$store.commit('SET_SETUP_MODAL_OPEN', false);
         } catch (e) {
           if (e instanceof APIResponseError && e.rawResponse.status == 403 && e.message == 'Access to the service is denied.') {
             await this.$store.dispatch('logout');
+            this.$router.replace('/');
           }
           throw e;
         }
