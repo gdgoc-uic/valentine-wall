@@ -25,10 +25,10 @@ export function notify(nt: Notifier, args: NotifierArguments) {
 }
 
 export function catchAndNotifyError(nt: Notifier, e: unknown) {
-  if (e instanceof Error) {
+  if (e instanceof Error && e.message) {
     notify(nt, { type: 'error', text: e.message });
   } else {
-    notify(nt, { type: 'error', text: `${e}` });
+    notify(nt, { type: 'error', text: `Unknown error.` });
   }
 }
 
