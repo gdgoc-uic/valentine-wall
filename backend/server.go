@@ -765,12 +765,20 @@ func main() {
 			log.Println(tErr.Error())
 		}
 
+		respPayload := map[string]interface{}{
+			"is_deletable": isDeletable,
+			"message":      message,
+		}
+
 		// get reply if possible
 		if isUserSenderOrReceiver {
 			if message.HasReplied {
 				// ignore error
 				if err := db.Get(reply, "SELECT * FROM message_replies WHERE message_id = ?", message.ID); err != nil {
 					log.Println(err)
+					respPayload["reply"] = nil
+				} else {
+					respPayload["reply"] = reply
 				}
 			}
 		} else if message.HasGifts {
@@ -781,11 +789,7 @@ func main() {
 			}
 		}
 
-		return jsonEncode(rw, map[string]interface{}{
-			"is_deletable": isDeletable,
-			"message":      message,
-			"reply":        reply,
-		})
+		return jsonEncode(rw, respPayload)
 	}))
 
 	r.With(appVerifyUser, getRawMessage).Delete("/messages/{recipientId}/{messageId}", wrapHandler(func(rw http.ResponseWriter, r *http.Request) error {
