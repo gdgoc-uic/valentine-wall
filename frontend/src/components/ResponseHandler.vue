@@ -58,7 +58,9 @@ export default {
     },
     computed: {
         fetchPromise() {
-            return this.$client.get(this.endpoint);
+            return !this.endpoint
+                ? Promise.reject(new Error('Not loaded.'))
+                : this.$client.get(this.endpoint);
         }
     },
     methods: {
