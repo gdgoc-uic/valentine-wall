@@ -161,6 +161,7 @@ export default {
     return {
       isDeletable: false,
       message: null as unknown as Record<string, any>,
+      reply: null as unknown as Record<string, any>,
       openReplyModal: false,
       openDeleteModal: false,
       openShareModal: false,
