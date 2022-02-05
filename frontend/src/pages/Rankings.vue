@@ -81,9 +81,9 @@ export default {
   },
   methods: {
     getRankingsEndpoint(): string {
-      // const rankingsSex = this.rankingsSex;
-      const rankingsSex = 'unknown';
-      return `/rankings?limit=2&sex=${rankingsSex}`;
+      const rankingsSex = this.rankingsSex;
+      // const rankingsSex = 'unknown';
+      return `/rankings?limit=10&sex=${rankingsSex}`;
     },
   }
 }

@@ -127,8 +127,8 @@ export default {
   },
   methods: {
     getRankingsEndpoint(): string {
-      // const rankingSex = this.rankingSex;
-      const rankingSex = 'unknown';
+      const rankingSex = this.rankingSex;
+      // const rankingSex = 'unknown';
       return `/rankings?limit=3&sex=${rankingSex}`;
     },
     ordinalSuffixOf(i: number): string {
