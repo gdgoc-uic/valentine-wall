@@ -108,23 +108,21 @@ export default {
       this.injectRecipientId();
     },
     recipientId(newV: string) {
-      const counter = (this.$refs.counter as typeof ContentCounter);
-      if (!counter || typeof counter == 'undefined') {
-        this.shouldSend = false;
-      } else {
-        this.shouldSend = newV.length > 0;
-      }
+      this.checkShouldSend(newV, this.content);
     },
     content(newV: string, oldV: string) {
-      const counter = (this.$refs.counter as typeof ContentCounter);
-      if (!counter || typeof counter == 'undefined') {
-        this.shouldSend = false;
-      } else {
-        this.shouldSend = this.recipientId.length > 0 && counter.shouldSend(newV);
-      }
+      this.checkShouldSend(this.recipientId, newV);
     }
   },
   methods: {
+    checkShouldSend(recipientId: string, content: string) {
+      const counter = (this.$refs.counter as typeof ContentCounter);
+      if (!counter || typeof counter == 'undefined') {
+        this.shouldSend = false;
+      } else {
+        this.shouldSend = recipientId.length > 0 && counter.shouldSend(content);
+      }
+    },
     injectRecipientId() {
       // sets the recipient id automatically if route
       // has recipient id
