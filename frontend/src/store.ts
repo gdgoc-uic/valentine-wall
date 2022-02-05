@@ -21,6 +21,8 @@ export interface State {
     email: string,
     id: string,
     associatedId: string,
+    sex: string,
+    department: string,
     accessToken: string,
     connections: UserConnection[]
   },
@@ -42,6 +44,8 @@ export function createStore() {
           id: '',
           associatedId: '',
           accessToken: '',
+          sex: '',
+          department: '',
           connections: []
         },
         isAuthLoading: true,
@@ -61,6 +65,12 @@ export function createStore() {
       },
       SET_USER_ASSOCIATED_ID(state, payload: string) {
         state.user.associatedId = payload;
+      },
+      SET_USER_SEX(state, payload: string) {
+        state.user.sex = payload;
+      },
+      SET_USER_DEPARTMENT(state, payload: string) {
+        state.user.department = payload;
       },
       SET_USER_ACCESS_TOKEN(state, payload: string) {
         state.user.accessToken = payload;
@@ -161,6 +171,8 @@ export function createStore() {
           commit('SET_USER_EMAIL', '');
           commit('SET_USER_ACCESS_TOKEN', '');
           commit('SET_USER_ASSOCIATED_ID', '');
+          commit('SET_USER_SEX', '');
+          commit('SET_USER_DEPARTMENT', '');
         } catch (e) {
           if (e instanceof APIResponseError) {
             throw Error('Unable to logout user.');
@@ -170,10 +182,12 @@ export function createStore() {
       },
       async getUserInfo({ commit, getters }) {
         const { 
-          data: { associated_id, user_connections } 
+          data: { associated_id, department, sex, user_connections } 
         }: { 
           data: { 
             associated_id: string, 
+            department: string,
+            sex: string,
             user_connections: UserConnection[] 
           } 
         } = await getters.apiClient.post('/user/info', { credentials: 'include' });
@@ -182,6 +196,8 @@ export function createStore() {
           commit('SET_SETUP_MODAL_OPEN', true);
         } else {
           commit('SET_USER_ASSOCIATED_ID', associated_id);
+          commit('SET_USER_SEX', sex);
+          commit('SET_USER_DEPARTMENT', department);
         }
       },
       async getGiftList({ commit, getters }) {

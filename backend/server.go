@@ -961,6 +961,8 @@ func main() {
 
 			return jsonEncode(rw, map[string]interface{}{
 				"associated_id":    associatedData.AssociatedID,
+				"department":       associatedData.Department,
+				"sex":              associatedData.Sex,
 				"user_connections": userConnections,
 			})
 		}))
