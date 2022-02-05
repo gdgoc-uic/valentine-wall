@@ -2,6 +2,7 @@
   <main class="min-h-[60vh]">
     <div class="max-w-3xl w-full mx-auto pt-4 flex flex-col space-y-4 self-start">
       <response-handler 
+        ref="messageResponse"
         @success="handleResponse"
         @error="handleResponseError"
         disappear-on-loading
@@ -15,10 +16,10 @@
                     <gift-icon :uid="gift.uid" class="text-4xl" />
                   </div>
                 </div>
-                <p class="mt-4 text-gray-500 text-xl mb-2">Someone gifted {{ displayName }}</p>
+                <p class="mt-4 text-gray-500 text-xl mb-2">Someone gifted {{ getDisplayName(message.recipient_id) }}</p>
                 <p class="text-3xl font-bold">{{ displayedGiftLabels }}</p>
               </div>
-              <p v-else class="text-gray-500 text-xl mb-2">For {{ displayName }}</p>
+              <p v-else class="text-gray-500 text-xl mb-2">For {{ getDisplayName(message.recipient_id) }}</p>
               <div class="mb-8" :class="{ 'mt-8 bg-amber-100 rounded-lg text-center': hasGifts, 'px-8 py-16': revealContent && hasGifts, 'mt-2': !hasGifts }">
                 <button v-if="hasGifts && !revealContent" class="w-full p-4 hover:bg-amber-200 rounded-lg" @click="revealContent = true">Reveal note</button>
                 <p v-if="revealContent" class="font-bold text-4xl">{{ message.content }}</p>
@@ -86,7 +87,6 @@
         :message="message" />
       <modal v-model:open="openDeleteModal">
         <p>Are you sure you want to delete this?</p>
-    
         <template #actions>
           <button class="btn" @click="openDeleteModal = false">Cancel</button>
           <button class="btn btn-error" @click="deleteMessage">Delete</button>
@@ -141,21 +141,10 @@ export default {
     Portal,
     ResponseHandler,
   },
-  created() {
-    this.endpoint = this.getEndpoint();
-  },
   mounted() {
     if (this.$route.query.from) {
       logEvent(analytics!, "traffic_source", { from: this.$route.query.from });
     }
-
-    // workaround in order to load gift messages
-    // this.authLoadingWatcher = this.$watch('$store.state.isAuthLoading', (newVal: boolean) => {
-    //   if (!newVal && !this.message) {
-    //     this.loadMessage()
-    //       .finally(this.authLoadingWatcher);
-    //   }
-    // }, { immediate: true });
   },
   data() {
     return {
@@ -166,7 +155,6 @@ export default {
       openDeleteModal: false,
       openShareModal: false,
       revealContent: false,
-      endpoint: '',
       authLoadingWatcher: null as unknown as WatchStopHandle
     }
   },
@@ -181,11 +169,9 @@ export default {
       }
     },
     handleHasReplied(hasReplied: boolean) {
-      this.message.has_replied = hasReplied ?? false;
+      this.message.has_replied = hasReplied;
       if (hasReplied) {
-        this.openReplyModal = false;
-        // FIXME: reload content
-        this.endpoint = this.getEndpoint();
+        this.$router.go(0);
       }
     },
     handleResponse(r: APIResponse) {
@@ -215,9 +201,13 @@ export default {
       }
       return displayStr;
     },
-    getEndpoint(): string {
-      return `/messages/${this.$route.params.recipientId}/${this.$route.params.messageId}`;
-    }
+    getDisplayName(recipientId: string): string {
+      if (recipientId === this.$store.state.user.associatedId) {
+        return "you";
+      } else {
+        return recipientId;
+      }
+    },
   },
   computed: {
     hasGifts(): boolean {
@@ -231,19 +221,15 @@ export default {
       if (!this.hasGifts || !this.gifts) return '';
       return this.gifts.map(this.generateDisplayGiftLabelString).join(this.gifts.length > 2 ? ', ' : this.gifts.length == 2 ? ' ' : '');
     },
-    displayName(): string {
-      if (this.message.recipient_id === this.$store.state.user.associatedId) {
-        return "you";
-      } else {
-        return this.message.recipient_id;
-      }
-    },
     permalink(): string {
       if (import.meta.env.SSR) {
         return import.meta.env.BASE_URL + this.$route.fullPath;
       } else {
         return window.location.href;
       }
+    },
+    endpoint(): string {
+      return `/messages/${this.$route.params.recipientId}/${this.$route.params.messageId}`;
     }
   },
 }
