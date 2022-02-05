@@ -117,10 +117,13 @@ export default defineComponent({
     IconGift
   },
   created() {
+    if (this.$store.getters.isLoggedIn) {
+      this.hasGift = null;
+    }
     this.endpoint = this.getMessagesEndpoint({ hasGift: this.hasGift });
   },
   mounted() {
-    if (this.stats.messages_count == 0) {
+    if (this.stats.messages_count == 0 && !import.meta.env.SSR) {
       this.loadData();
     }
   },
@@ -128,7 +131,7 @@ export default defineComponent({
     return {
       stats: { messages_count: 0, gift_messages_count: 0 },
       // TODO: disable_restricted_access_to_gift_messages
-      hasGift: false,
+      hasGift: false as boolean | null,
       // hasGift: null as boolean | null,
       endpoint: ''
     };
@@ -154,7 +157,7 @@ export default defineComponent({
       this.stats = { messages_count: 0, gift_messages_count: 0 };
       this.endpoint = this.getMessagesEndpoint({ hasGift: this.hasGift });
       this.loadData();
-    }
+    },
   },
   methods: {
     processResults(data: any[]): any[] {
