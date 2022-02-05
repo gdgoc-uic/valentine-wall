@@ -58,7 +58,7 @@ import ContentCounter from '../components/ContentCounter.vue';
 import { logEvent } from '@firebase/analytics';
 import { analytics } from '../firebase';
 import { catchAndNotifyError, notify } from '../notify';
-import { expandAPIEndpoint } from '../client';
+import { connectToEmail, connectToTwitter } from '../auth';
 
 export default {
   components: { 
@@ -100,63 +100,28 @@ export default {
     }
   },
   methods: {
-    popupCenter({url, title, w, h}: { url: string, title: string, w: number, h: number }): Window | null {
-      // Fixes dual-screen position                             Most browsers      Firefox
-      const dualScreenLeft = typeof window.screenLeft !==  'undefined' ? window.screenLeft : window.screenX;
-      const dualScreenTop = typeof window.screenTop !==  'undefined'   ? window.screenTop  : window.screenY;
-
-      const width = window.innerWidth ? window.innerWidth : document.documentElement.clientWidth ? document.documentElement.clientWidth : screen.width;
-      const height = window.innerHeight ? window.innerHeight : document.documentElement.clientHeight ? document.documentElement.clientHeight : screen.height;
-
-      const systemZoom = width / window.screen.availWidth;
-      const left = ((width - w) / 2) + systemZoom + dualScreenLeft
-      const top = ((height - h) / 2) + systemZoom + dualScreenTop
-      const newWindow = window.open(url, title, 
-        `
-        scrollbars=yes,
-        width=${w}, 
-        height=${h}, 
-        top=${top}, 
-        left=${left}
-        `
-      )
-
-      newWindow?.focus();
-      return newWindow;
-    },
     openTwitterLogin() {
-      const connectUrl = expandAPIEndpoint('/user/connect_twitter');
-      const loginWindow = this.popupCenter({ url: connectUrl, title: 'twitter_login_window', w: 800, h: 500});
-      if (!loginWindow) {
-        logEvent(analytics!, 'connect_twitter', { success: false });
-        this.$notify({ type: 'error', text: 'Failed to open window.' });
-        return;
+      let success: boolean = false;
+      try {
+        connectToTwitter(this.$store);
+        success = true;
+      } catch (e) {
+        success = false;
+        catchAndNotifyError(this, e);
+      } finally {
+        logEvent(analytics!, 'connect_twitter', { success });
       }
-      const vm = this;
-      const handleFn = function(this: Window, e: MessageEvent) {
-        if (e.origin !== import.meta.env.VITE_BACKEND_URL) return;
-        if (typeof e.data === 'object' && 'message' in e.data) {
-          const data = e.data;
-          if (data['message'] !== 'twitter connect success') {
-            logEvent(analytics!, 'connect_twitter', { success: false });
-            return;
-          }
-          logEvent(analytics!, 'connect_twitter', { success: true });
-          vm.$store.commit('SET_USER_CONNECTIONS', data['user_connections']);
-          window.removeEventListener('message', handleFn);
-          loginWindow.close();
-        }
-      }
-      window.addEventListener('message', handleFn);
     },
     async skipLogin() {
+      let success: boolean = false;
       try {
-        const { data: json } = await this.$client.post('/user/connect_email');
-        logEvent(analytics!, 'connect_email', { success: true });
-        this.$store.commit('SET_USER_CONNECTIONS', json['user_connections']);
+        connectToEmail(this.$store);
+        success = true;
       } catch (e) {
-        logEvent(analytics!, 'connect_email', { success: false });
+        success = false;
         catchAndNotifyError(this, e); 
+      } finally {
+        logEvent(analytics!, 'connect_email', { success });
       }
     },
     async submitReply() {
