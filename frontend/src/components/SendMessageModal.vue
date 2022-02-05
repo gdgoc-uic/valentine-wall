@@ -139,6 +139,7 @@ export default {
           }
 
           recipientIdField.value = <string> this.$route.params.recipientId;
+          this.recipientId = recipientIdField.value;
         }, 500);
       }
     },
