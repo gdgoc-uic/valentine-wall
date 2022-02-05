@@ -36,15 +36,20 @@
       @update:open="$store.commit('SET_SEND_MESSAGE_MODAL_OPEN', $event)" />
   </portal>
 
-  <navbar :is-home="$route.name === 'home-page'" class="sticky top-0 z-50" />
+  <div v-if="$store.state.isAuthLoading" class="h-screen flex items-center justify-center">
+    <loading />
+  </div>
 
-  <router-view v-slot="{ Component }">
-    <suspense>
-      <component :is="Component" class="relative" />
-    </suspense>
-  </router-view>
-  
-  <app-footer />
+  <template v-else>
+    <navbar :is-home="$route.name === 'home-page'" class="sticky top-0 z-50" />
+    <router-view v-slot="{ Component }">
+      <suspense>
+        <component :is="Component" class="relative" />
+      </suspense>
+    </router-view>
+
+    <app-footer />
+  </template>
 </template>
 
 <script lang="ts">
@@ -62,6 +67,7 @@ import Navbar from "./components/Navbar.vue";
 import SubmitMessageModal from './components/SendMessageModal.vue';
 import Footer from "./components/Footer.vue";
 import { catchAndNotifyError } from "./notify";
+import Loading from "./components/Loading.vue";
 
 export default defineComponent({
   components: { 
@@ -71,7 +77,8 @@ export default defineComponent({
     ClientOnly,
     Portal,
     Navbar,
-    AppFooter: Footer
+    AppFooter: Footer,
+    Loading
   },
   setup() {
     const route = useRoute();
