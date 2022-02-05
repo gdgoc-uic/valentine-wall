@@ -139,8 +139,8 @@ export default {
           this.$store.commit('SET_SETUP_MODAL_OPEN', false);
         } catch (e) {
           if (e instanceof APIResponseError && e.rawResponse.status == 403 && e.message == 'Access to the service is denied.') {
+            this.$router.replace({ name: 'home-page' });
             await this.$store.dispatch('logout');
-            this.$router.replace('/');
           }
           throw e;
         }

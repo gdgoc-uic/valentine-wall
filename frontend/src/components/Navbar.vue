@@ -207,8 +207,8 @@ export default {
     async logout(e: Event) {
       e.preventDefault();
       try {
+        this.$router.replace({ name: 'home-page' });
         await this.$store.dispatch('logout');
-        this.$router.replace('/');
       } catch(e) {
         catchAndNotifyError(this, e);
       }
