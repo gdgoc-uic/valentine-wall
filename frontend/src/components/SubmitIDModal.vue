@@ -21,7 +21,7 @@
           <span class="label-text">Sex</span>
         </label>
         <select name="sex" class="select select-bordered">
-          <option :value="g.value" :key="g.value" v-for="g in sexList">{{ g.label }}</option>
+          <option :value="g.value" :key="g.value" v-for="g in $store.getters.sexList">{{ g.label }}</option>
         </select>
       </div>
       <button class="self-end px-12 btn bg-rose-500 hover:bg-rose-600 border-none mt-4" type="submit">Next</button>
@@ -69,18 +69,6 @@ export default {
     }, 500);
   },
   computed: {
-    sexList() {
-      return [
-        {
-          label: 'Male',
-          value: 'male'
-        },
-        {
-          label: 'Female',
-          value: 'female'
-        }
-      ];
-    }
   },
   methods: {
     getIdFromEmail(input: string): string {
