@@ -118,6 +118,18 @@ export function createStore() {
         const res = emailRegex.exec(state.user.email);
         if (!res || res.length < 2) return '';
         return res[1];
+      },
+      sexList() {
+        return [
+          {
+            label: 'Male',
+            value: 'male'
+          },
+          {
+            label: 'Female',
+            value: 'female'
+          }
+        ];
       }
     },
   
