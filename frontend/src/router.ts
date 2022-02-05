@@ -31,6 +31,14 @@ const routes: RouteRecordRaw[] = [
     }
   },
   {
+    name: 'old-message-page',
+    path: '/messages/:recipientId/:messageId',
+    redirect: to => ({
+      name: 'message-page',
+      params: to.params
+    })
+  },
+  {
     name: 'message-page',
     path: '/wall/:recipientId/:messageId',
     component: () => import('./pages/Message.vue'),
@@ -104,6 +112,10 @@ const routes: RouteRecordRaw[] = [
 export function createRouter() {
   return createVueRouter({
     history: import.meta.env.SSR ? createMemoryHistory(): createWebHistory(),
+    scrollBehavior(to, from, savedPosition) {
+      // always scroll to top
+      return { top: 0 }
+    },
     routes
   });
 }
