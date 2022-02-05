@@ -43,6 +43,9 @@ export default {
     watch: {
         promise: {
             handler() {
+                if (import.meta.env.SSR) {
+                   return;
+                }
                 this.status = STATUS_PENDING;
                 this.promise.then(d => {
                     this.failFn?.(d);
