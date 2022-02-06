@@ -968,7 +968,23 @@ func main() {
 		}))
 
 	r.With(appVerifyUser).
-		Post("/user/info", wrapHandler(func(rw http.ResponseWriter, r *http.Request) error {
+		Post("/user/session", wrapHandler(func(rw http.ResponseWriter, r *http.Request) error {
+			token := r.Context().Value("authToken").(*auth.Token)
+			session, _ := store.Get(r, sessionName)
+			session.Values["uid"] = token.UID
+			if err := session.Save(r, rw); err != nil {
+				return &ResponseError{
+					StatusCode: http.StatusUnprocessableEntity,
+					WError:     err,
+				}
+			}
+			return jsonEncode(rw, map[string]string{
+				"message": "ok",
+			})
+		}))
+
+	r.With(appVerifyUser).
+		Get("/user/info", wrapHandler(func(rw http.ResponseWriter, r *http.Request) error {
 			token := r.Context().Value("authToken").(*auth.Token)
 			associatedData, err := getAssociatedUserBy(db, sq.Eq{"user_id": token.UID})
 			if err != nil {
@@ -981,15 +997,6 @@ func main() {
 			}
 
 			userConnections := getUserConnections(db, token.UID)
-			session, _ := store.Get(r, sessionName)
-			session.Values["uid"] = token.UID
-			if err := session.Save(r, rw); err != nil {
-				return &ResponseError{
-					StatusCode: http.StatusUnprocessableEntity,
-					WError:     err,
-				}
-			}
-
 			return jsonEncode(rw, map[string]interface{}{
 				"associated_id":    associatedData.AssociatedID,
 				"department":       associatedData.Department,

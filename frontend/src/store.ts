@@ -156,7 +156,7 @@ export function createStore() {
           commit('SET_AUTH_LOADING', false);
         }
       },
-      async onReceiveUser({ commit, dispatch }, user: User | null): Promise<void> {  
+      async onReceiveUser({ commit, dispatch, getters }, user: User | null): Promise<void> {  
         try {
           if (!user) {
             return;
@@ -165,7 +165,11 @@ export function createStore() {
           commit('SET_USER_ID', user.uid);
           commit('SET_USER_EMAIL', user.email ?? '<unknown e-mail>');
           commit('SET_USER_ACCESS_TOKEN', await user.getIdToken(false));
-          await dispatch('getUserInfo');
+          await Promise.all([
+            getters.apiClient.post('/user/session', { credentials: 'include' }),
+            dispatch('getUserInfo')
+          ]);
+
           setUserId(analytics!, user.uid);
           setUserProperties(analytics!, { account_type: 'student' });
         } catch (e) {
@@ -202,8 +206,7 @@ export function createStore() {
             sex: string,
             user_connections: UserConnection[] 
           } 
-        } = await getters.apiClient.post('/user/info', { credentials: 'include' });
-        commit('SET_USER_CONNECTIONS', user_connections);
+        } = await getters.apiClient.get('/user/info');
         if (associated_id.length == 0) {
           commit('SET_SETUP_MODAL_OPEN', true);
         } else {
