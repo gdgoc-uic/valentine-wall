@@ -117,7 +117,7 @@ export default defineComponent({
     IconGift
   },
   created() {
-    if (this.$store.getters.isLoggedIn) {
+    if (this.$route.params.recipientId && this.$store.getters.isLoggedIn) {
       this.hasGift = null;
     }
     this.endpoint = this.getMessagesEndpoint({ hasGift: this.hasGift });
