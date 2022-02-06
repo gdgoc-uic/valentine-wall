@@ -50,6 +50,6 @@ export function connectToTwitter(store: Store<State>) {
 }
 
 export async function connectToEmail(store: Store<State>) {
-    const { data: json } = await store.getters.$client.post('/user/connect_email');
+    const { data: json } = await store.getters.apiClient.post('/user/connect_email');
     store.commit('SET_USER_CONNECTIONS', json['user_connections']);
 }
