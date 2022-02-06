@@ -16,6 +16,10 @@ export interface Gift {
   label: string
 }
 
+export interface VirtualWallet {
+  balance: number
+}
+
 export interface State {
   user: {
     email: string,
@@ -24,6 +28,7 @@ export interface State {
     sex: string,
     department: string,
     accessToken: string,
+    wallet: VirtualWallet | null,
     connections: UserConnection[]
   },
   isAuthLoading: boolean,
@@ -46,6 +51,7 @@ export function createStore() {
           accessToken: '',
           sex: '',
           department: '',
+          wallet: null,
           connections: []
         },
         isAuthLoading: true,
@@ -74,6 +80,14 @@ export function createStore() {
       },
       SET_USER_ACCESS_TOKEN(state, payload: string) {
         state.user.accessToken = payload;
+      },
+      SET_USER_WALLET(state, payload: VirtualWallet | null) {
+        state.user.wallet = payload;
+      },
+      SET_USER_WALLET_BALANCE(state, payload: number) {
+        if (state.user.wallet) {
+          state.user.wallet.balance = payload;
+        }
       },
       SET_SETUP_MODAL_OPEN(state, payload: boolean) {
         state.isSetupModalOpen = payload;
@@ -189,6 +203,7 @@ export function createStore() {
           commit('SET_USER_ASSOCIATED_ID', '');
           commit('SET_USER_SEX', '');
           commit('SET_USER_DEPARTMENT', '');
+          commit('SET_USER_WALLET', null);
         } catch (e) {
           if (e instanceof APIResponseError) {
             throw Error('Unable to logout user.');
@@ -198,13 +213,14 @@ export function createStore() {
       },
       async getUserInfo({ commit, getters }) {
         const { 
-          data: { associated_id, department, sex, user_connections } 
+          data: { associated_id, department, sex, user_connections, wallet } 
         }: { 
           data: { 
             associated_id: string, 
             department: string,
             sex: string,
-            user_connections: UserConnection[] 
+            user_connections: UserConnection[],
+            wallet: VirtualWallet | null
           } 
         } = await getters.apiClient.get('/user/info');
         if (associated_id.length == 0) {
@@ -213,6 +229,8 @@ export function createStore() {
           commit('SET_USER_ASSOCIATED_ID', associated_id);
           commit('SET_USER_SEX', sex);
           commit('SET_USER_DEPARTMENT', department);
+          commit('SET_USER_CONNECTIONS', user_connections);
+          commit('SET_USER_WALLET', wallet);
         }
       },
       async getGiftList({ commit, getters }) {

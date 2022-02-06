@@ -97,6 +97,15 @@ const routes: RouteRecordRaw[] = [
         }
       },
       {
+        name: 'settings-transactions-section',
+        path: 'transactions',
+        component: () => import('./pages/settings/Transactions.vue'),
+        meta: {
+          pageTitle: 'Transactions | Settings',
+          label: 'Transactions'
+        }
+      },
+      {
         name: 'settings-delete-account-section',
         path: 'delete-account',
         component: () => import('./pages/settings/DeleteAccount.vue'),

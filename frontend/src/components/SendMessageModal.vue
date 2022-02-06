@@ -177,6 +177,7 @@ export default {
 
         logEvent(analytics!, 'post-message');
         notify(this, { type: 'success', text: json['message'] });
+        this.$store.commit('SET_USER_WALLET_BALANCE', json['current_balance'])
         e.target.reset();
         this.$emit('update:open', false);
         this.$router.push(json['route']);

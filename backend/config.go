@@ -41,17 +41,17 @@ var postalOfficeAddress = "localhost:3350"
 var dataDirPath = filepath.Join(".", "_data")
 
 var validator = goValidator.New()
-var giftList = []Gift{
-	{1, "sunflower", "Sunflower"},
-	{2, "rose", "Rose"},
-	{3, "balloons", "Balloons"},
-	{4, "teddy-bear", "Teddy Bear"},
-	{5, "ring", "Ring"},
-	{6, "money", "Money"},
-	{7, "heart", "Heart"},
-	{8, "chocolate", "Chocolate"},
-	{9, "pizza", "Pizza"},
-	{10, "milk-tea", "Milk Tea"},
+var giftList = Gifts{
+	{1, "sunflower", "Sunflower", 350},
+	{2, "rose", "Rose", 450},
+	{3, "balloons", "Balloons", 100},
+	{4, "teddy-bear", "Teddy Bear", 200},
+	{5, "ring", "Ring", 800},
+	{6, "money", "Money", 1000}, // NOTE: if you choose money, the money will be added to virtual coins
+	{7, "heart", "Heart", 200},
+	{8, "chocolate", "Chocolate", 500},
+	{9, "pizza", "Pizza", 150},
+	{10, "milk-tea", "Milk Tea", 150},
 }
 var collegeDepartments = []CollegeDepartment{
 	{"CABE", "College of Accounting and Business Education"},

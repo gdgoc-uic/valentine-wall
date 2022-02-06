@@ -132,6 +132,7 @@ export default {
         });
 
         notify(this, { type: 'success', text: json['message'] });
+        this.$store.commit('SET_USER_WALLET_BALANCE', json['current_balance']);
         this.$emit('update:open', false);
         this.$emit('update:hasReplied', true);
         logEvent(analytics!, 'reply-message', { id: this.message.id });

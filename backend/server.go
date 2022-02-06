@@ -50,9 +50,21 @@ type CollegeDepartment struct {
 }
 
 type Gift struct {
-	ID    int    `json:"id"`
-	UID   string `json:"uid"`
-	Label string `json:"label"`
+	ID    int     `json:"id"`
+	UID   string  `json:"uid"`
+	Label string  `json:"label"`
+	Price float32 `json:"price"`
+}
+
+type Gifts []Gift
+
+func (gs Gifts) GetPriceByID(id int) float32 {
+	for _, g := range gs {
+		if g.ID == id {
+			return g.Price
+		}
+	}
+	return 0
 }
 
 type RecipientStats struct {
@@ -82,7 +94,7 @@ func (a Recipients) BySex(sex string) Recipients {
 		return a
 	}
 	res := make(Recipients, 0, len(a))
-	for _, v := range res {
+	for _, v := range a {
 		if v.Sex == sex {
 			res = append(res, v)
 		}
@@ -98,8 +110,7 @@ func fetchRecipientRankings(db *sqlx.DB) (Recipients, error) {
 	recipientsMap := map[string]*RecipientStats{}
 
 	// get all associated_users data
-	associatedUsersSQL := "SELECT associated_id, department, sex FROM associated_ids"
-	rows, err := db.Query(associatedUsersSQL)
+	rows, err := db.Query("SELECT associated_id, department, sex FROM associated_ids")
 	if err != nil {
 		return nil, err
 	}
@@ -377,6 +388,14 @@ func main() {
 		log.Fatalln(err)
 	}
 
+	// virtual currency system (aka virtual bank)
+	b := &VirtualBank{DB: db}
+	if err := b.AddInitialAmountToExistingAccounts(firebaseApp); err != nil {
+		log.Println(err)
+	}
+
+	appCheckBalance := checkBalance(b)
+
 	// middlewares
 	jsonOnly := middleware.AllowContentType("application/json")
 	appVerifyUser := verifyUser(firebaseApp)
@@ -434,7 +453,6 @@ func main() {
 					Message:    "sex query should be either male, female, unknown, or all",
 				}
 			}
-			c = context.WithValue(c, "rankingSex", f.Value)
 			return nil
 		},
 	})).Get("/rankings", wrapHandler(func(rw http.ResponseWriter, r *http.Request) error {
@@ -458,7 +476,8 @@ func main() {
 			results = recs
 		}
 
-		if filterBySex, hasSexValue := r.Context().Value("rankingSex").(string); hasSexValue {
+		if r.URL.Query().Has("sex") {
+			filterBySex := r.URL.Query().Get("sex")
 			results = results.BySex(filterBySex)
 		}
 
@@ -574,7 +593,7 @@ func main() {
 		}
 		return jsonEncode(rw, stats)
 	}))
-	r.With(jsonOnly, appVerifyUser).
+	r.With(jsonOnly, appVerifyUser, appCheckBalance).
 		Post("/messages", wrapHandler(func(rw http.ResponseWriter, r *http.Request) error {
 			token := r.Context().Value("authToken").(*auth.Token)
 			authClient := r.Context().Value("authClient").(*auth.Client)
@@ -639,6 +658,25 @@ func main() {
 				return err
 			}
 
+			sendPrice := float32(150.0)
+
+			for _, giftId := range submittedMsg.GiftIDs {
+				giftPrice := giftList.GetPriceByID(giftId)
+				sendPrice += giftPrice
+			}
+
+			// transact first before proceeding
+			currentBalance, err := b.DeductBalanceTo(
+				token.UID,
+				sendPrice,
+				fmt.Sprintf("Send message to %s", submittedMsg.RecipientID),
+				tx,
+			)
+			if err != nil {
+				log.Println(tx.Rollback())
+				return err
+			}
+
 			res, err := tx.NamedExec("INSERT INTO messages (id, recipient_id, content, submitter_user_id, has_gifts) VALUES (:id, :recipient_id, :content, :submitter_user_id, :has_gifts)", &submittedMsg)
 			if err != nil {
 				log.Println(tx.Rollback())
@@ -650,6 +688,7 @@ func main() {
 				return err
 			}
 
+			// TODO: support for purchasing gifts
 			for _, giftId := range submittedMsg.GiftIDs {
 				if res, err := tx.Exec("INSERT INTO message_gifts (message_id, gift_id) VALUES (?, ?)", submittedMsg.ID, giftId); err != nil {
 					log.Println(tx.Rollback())
@@ -705,7 +744,8 @@ func main() {
 			}
 
 			return jsonEncode(rw, map[string]interface{}{
-				"message": "Message created successfully",
+				"message":         "Message created successfully",
+				"current_balance": currentBalance,
 				"route": map[string]interface{}{
 					"name":   "message-page",
 					"params": map[string]string{"recipientId": submittedMsg.RecipientID, "messageId": submittedMsg.ID},
@@ -857,6 +897,21 @@ func main() {
 			}
 
 			reply.MessageID = message.ID
+			tx := db.MustBeginTx(context.Background(), &sql.TxOptions{})
+
+			// transact first before proceeding
+			currentBalance, err := b.DeductBalanceTo(
+				token.UID,
+				150.0,
+				fmt.Sprintf("Reply message to %s", reply.MessageID),
+				tx,
+			)
+			if err != nil {
+				log.Println(tx.Rollback())
+				return err
+			}
+
+			// TODO: add toll fees for twitter, e-mail notifiers
 			var notifier Notifier
 			if twitterIdx, hasTwitter := isConnectedTo(connections, "twitter"); hasTwitter {
 				imageData, err := imageRenderer.Render(imageTypeTwitter, message.Message)
@@ -896,7 +951,6 @@ func main() {
 				log.Println(err)
 			}
 
-			tx := db.MustBeginTx(context.Background(), &sql.TxOptions{})
 			if updateRes, err := tx.NamedExec("INSERT INTO message_replies (message_id, content) VALUES (:message_id, :content)", &reply); err != nil {
 				defer log.Println(tx.Rollback())
 				return err
@@ -917,8 +971,9 @@ func main() {
 				return err
 			}
 
-			return jsonEncode(rw, map[string]string{
-				"message": "reply success",
+			return jsonEncode(rw, map[string]interface{}{
+				"message":         "reply success",
+				"current_balance": currentBalance,
 			})
 		}))
 
@@ -983,9 +1038,41 @@ func main() {
 			})
 		}))
 
+	r.With(appVerifyUser, pagination(&Paginator{
+		OrderKey:  "created_at",
+		TableName: virtualTransactionsTableName,
+	})).
+		Get("/user/transactions", wrapHandler(func(rw http.ResponseWriter, r *http.Request) error {
+			token := r.Context().Value("authToken").(*auth.Token)
+			pg := r.Context().Value("paginator").(*Paginator)
+			query := sq.Select("*").From(virtualTransactionsTableName).Where(sq.Eq{"user_id": token.UID})
+
+			resp, err := pg.Load(&DatabasePaginatorSource{
+				DB:        db,
+				BaseQuery: query,
+				DataQuery: query,
+				Converter: func(r *sqlx.Rows) (interface{}, error) {
+					vtx := VirtualTransaction{}
+					if err := r.StructScan(&vtx); err != nil {
+						return nil, err
+					}
+					return vtx, nil
+				},
+			})
+			if err != nil {
+				return err
+			}
+			return jsonEncode(rw, resp)
+		}))
+
 	r.With(appVerifyUser).
 		Get("/user/info", wrapHandler(func(rw http.ResponseWriter, r *http.Request) error {
 			token := r.Context().Value("authToken").(*auth.Token)
+			vWallet, err := b.GetWalletByUID(token.UID)
+			if err != nil {
+				log.Println(err)
+			}
+
 			associatedData, err := getAssociatedUserBy(db, sq.Eq{"user_id": token.UID})
 			if err != nil {
 				log.Println(err)
@@ -1002,6 +1089,7 @@ func main() {
 				"department":       associatedData.Department,
 				"sex":              associatedData.Sex,
 				"user_connections": userConnections,
+				"wallet":           vWallet,
 			})
 		}))
 
@@ -1053,17 +1141,48 @@ func main() {
 			}
 
 			submittedData.UserID = token.UID
-			if res, err := db.NamedExec(
+
+			tx, err := db.BeginTxx(context.Background(), &sql.TxOptions{})
+			if err != nil {
+				return err
+			}
+
+			if res, err := tx.NamedExec(
 				"INSERT INTO associated_ids (user_id, associated_id, terms_agreed, sex, department) VALUES (:user_id, :associated_id, :terms_agreed, :sex, :department)",
 				&submittedData,
 			); err != nil {
+				if err := tx.Rollback(); err != nil {
+					log.Println(err)
+				}
+
 				return &ResponseError{
 					WError:     err,
 					StatusCode: http.StatusUnprocessableEntity,
 					Message:    "Failed to connect ID to user. Please try again.",
 				}
 			} else if err := wrapSqlResult(res, "Failed to connect ID to user. Please try again"); err != nil {
+				if err := tx.Rollback(); err != nil {
+					log.Println(err)
+				}
+
 				return err
+			}
+
+			// initialize virtual wallet
+			if err := b.AddInitialBalanceTo(token.UID, tx); err != nil {
+				if err := tx.Rollback(); err != nil {
+					log.Println(err)
+				}
+
+				return err
+			}
+
+			if err := tx.Commit(); err != nil {
+				return &ResponseError{
+					WError:     err,
+					StatusCode: http.StatusUnprocessableEntity,
+					Message:    "Failed to connect ID to user. Please try again.",
+				}
 			}
 
 			// generate welcome message

@@ -58,6 +58,9 @@
               </li>
             </ul>
           </div>
+          <button :class="[!shouldSendButtonHide ? 'rounded-none' : 'rounded-l-none']" v-if="$store.getters.isLoggedIn" class="btn">
+            Coins: {{ $store.state.user.wallet.balance }}
+          </button>
           <button
             v-if="!shouldSendButtonHide && $store.getters.isLoggedIn"
             @click="$store.commit('SET_SEND_MESSAGE_MODAL_OPEN', true)"
