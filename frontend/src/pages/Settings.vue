@@ -16,7 +16,11 @@
         </section>
 
         <section class="px-8 lg:px-24 py-8">
-            <router-view></router-view>
+            <router-view v-slot="{ Component }">
+                <keep-alive>
+                    <component :is="Component" />
+                </keep-alive>
+            </router-view>
         </section>
     </article>
   </main>
