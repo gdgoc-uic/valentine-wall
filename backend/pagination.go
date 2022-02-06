@@ -204,35 +204,37 @@ func (src *DatabasePaginatorSource) Count() (int64, error) {
 	count := int64(0)
 	if countQuery, args, err := src.BaseQuery.Column("count(*)").ToSql(); err != nil {
 		return 0, err
-	} else if err := src.DB.Get(&count, countQuery, args...); err != nil {
+	} else if rows, err := src.DB.Query(countQuery, args...); err != nil {
 		return 0, err
+	} else if rows.Next() {
+		rows.Scan(&count)
 	}
 	return count, nil
 }
 
-func (src *DatabasePaginatorSource) Fetch(page, limit int64, orderKey, order string) ([]interface{}, error) {
+func (src *DatabasePaginatorSource) Fetch(page, limit int64, orderKey, order string) (interface{}, int, error) {
 	finalDataQuery, args, err := src.DataQuery.
 		OrderBy(orderKey + " " + order).
 		Limit(uint64(limit)).
 		Offset(uint64(page-1) * uint64(limit)).ToSql()
 	if err != nil {
-		return nil, err
+		return nil, 0, err
 	}
 
 	rows, err := src.DB.Queryx(finalDataQuery, args...)
 	if err != nil {
-		return nil, &ResponseError{StatusCode: http.StatusNotFound, WError: err}
+		return nil, 0, &ResponseError{StatusCode: http.StatusNotFound, WError: err}
 	}
 
 	results := []interface{}{}
 	for rows.Next() {
 		gotData, err := src.Converter(rows)
 		if err != nil {
-			return nil, err
+			return nil, 0, err
 		}
 		results = append(results, gotData)
 	}
-	return results, nil
+	return results, len(results), nil
 }
 
 type BlevePaginatorSource struct {
