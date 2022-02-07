@@ -112,7 +112,7 @@ func (b *VirtualBank) AddInitialAmountToExistingAccounts(firebaseApp *firebase.A
 func (b *VirtualBank) AddInitialBalanceTo(uid string, tx *sqlx.Tx) error {
 	amount := float32(4000)
 	if vWallet, err := b.GetWalletByUID(uid); err == nil && vWallet.Balance <= 0 {
-		return b.AddBalanceTo(uid, amount, tx)
+		return b.AddBalanceTo(uid, amount, "Add balance", tx)
 	}
 
 	if err := b.AddTransaction(uid, amount, "Initial Balance", tx); err != nil {
@@ -141,7 +141,7 @@ func (b *VirtualBank) GetWalletByUID(uid string) (*VirtualWallet, error) {
 	return vWallet, nil
 }
 
-func (b *VirtualBank) AddBalanceTo(uid string, amount float32, tx *sqlx.Tx) error {
+func (b *VirtualBank) AddBalanceTo(uid string, amount float32, desc string, tx *sqlx.Tx) error {
 	vWallet, err := b.GetWalletByUID(uid)
 	if err == sql.ErrNoRows {
 		return b.AddInitialBalanceTo(uid, tx)
@@ -149,7 +149,7 @@ func (b *VirtualBank) AddBalanceTo(uid string, amount float32, tx *sqlx.Tx) erro
 		return err
 	}
 
-	if err := b.AddTransaction(uid, amount, "Add balance", tx); err != nil {
+	if err := b.AddTransaction(uid, amount, desc, tx); err != nil {
 		return err
 	}
 
