@@ -717,9 +717,14 @@ func main() {
 
 			sendPrice := float32(150.0)
 
+			hasMoney := false
 			for _, giftId := range submittedMsg.GiftIDs {
 				giftPrice := giftList.GetPriceByID(giftId)
 				sendPrice += giftPrice
+
+				if giftId == moneyGift.ID {
+					hasMoney = true
+				}
 			}
 
 			// transact first before proceeding
@@ -756,6 +761,23 @@ func main() {
 				}
 			}
 
+			recipientUser, getUserErr := getUserBySID(db, authClient, submittedMsg.RecipientID)
+			if getUserErr != nil {
+				log.Println(err)
+			}
+
+			// give the money to the person
+			if hasMoney {
+				if err := b.AddBalanceTo(
+					recipientUser.UID,
+					moneyGift.Price,
+					fmt.Sprintf("Money gift from message %s", submittedMsg.ID),
+					tx,
+				); err != nil {
+					log.Println(err)
+				}
+			}
+
 			if err := tx.Commit(); err != nil {
 				return err
 			}
@@ -778,11 +800,8 @@ func main() {
 			}
 
 			// send email to recipient if available
-			recipientUser, err := getUserBySID(db, authClient, submittedMsg.RecipientID)
 			// ignore the errors, just pass through
-			if err != nil {
-				log.Println(err)
-			} else {
+			if getUserErr == nil {
 				notifier := &EmailNotifier{
 					Client:   postalOfficeClient,
 					Template: emailTemplates["message"],
