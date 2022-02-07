@@ -171,10 +171,6 @@ export default {
     navbarLinks(): any[] {
       return [
         {
-          label: 'Recent',
-          to: { name: 'message-wall-page' }
-        },
-        {
           label: 'Rankings',
           to: { name: 'rankings-page' }
         },

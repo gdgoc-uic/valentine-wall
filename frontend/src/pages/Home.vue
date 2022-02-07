@@ -83,6 +83,11 @@
         </aside>
       </div>
     </section>
+
+    <div class="mt-8">
+      <h2 class="text-2xl lg:text-3xl font-bold text-rose-600 mb-3">Recent Messages</h2>
+      <message-tiles :messages="recentMessages" prepend />
+    </div>
   </main>
 </template>
 
@@ -95,6 +100,8 @@ import SearchForm from '../components/SearchForm.vue';
 import IconSend from '~icons/uil/message';
 import LoginButton from '../components/LoginButton.vue';
 import PaginatedResponseHandler from '../components/PaginatedResponseHandler.vue';
+import MessageTiles from '../components/MessageTiles.vue';
+import { expandAPIEndpoint } from '../client';
 
 export default {
   components: { 
@@ -105,18 +112,35 @@ export default {
     IconSend,
     SearchForm,
     LoginButton,
-    PaginatedResponseHandler
+    PaginatedResponseHandler,
+    MessageTiles
   },
   created() {
     if (!this.rankingsEndpoint.length) {
       this.rankingsEndpoint = this.getRankingsEndpoint();
     }
   },
+  mounted() {
+    if (!import.meta.env.SSR) {
+      this.recentsSSE = new EventSource(expandAPIEndpoint('/recent-messages'));
+      this.recentsSSE.onmessage = (event) => {
+        console.log(event);
+        this.recentMessages = [JSON.parse(event.data)];
+      }
+    }
+  },
+  unmounted() {
+    if (!import.meta.env.SSR) {
+      this.recentsSSE.close();
+    }
+  },
   data() {
     return {
       isFormOpen: false,
       rankingSex: 'male',
-      rankingsEndpoint: ''
+      rankingsEndpoint: '',
+      recentMessages: [] as any[],
+      recentsSSE: null as unknown as EventSource
     }
   },
   watch: {

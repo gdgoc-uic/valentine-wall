@@ -220,6 +220,8 @@ type Message struct {
 	UpdatedAt time.Time `db:"updated_at" json:"updated_at"`
 }
 
+var recentMessagesChan chan Message
+
 type RawMessage struct {
 	Message
 	UID       string     `db:"submitter_user_id" json:"uid" validate:"required"`
@@ -304,6 +306,8 @@ func main() {
 	var chromeCtx context.Context
 	var chromeCancel context.CancelFunc
 	htmlTemplates := &htmlTemplate.Template{}
+	recentMessagesChan = make(chan Message, 10)
+	defer close(recentMessagesChan)
 
 	// cache
 	cacher := cache.New(1*time.Hour, 1*time.Minute)
@@ -582,6 +586,59 @@ func main() {
 		},
 	})
 
+	r.Get("/recent-messages", func(rw http.ResponseWriter, r *http.Request) {
+		rw.Header().Set("Content-Type", "text/event-stream")
+		rw.Header().Set("Cache-Control", "no-cache")
+		rw.Header().Set("Connection", "keep-alive")
+
+		existingEntriesChan := make(chan Message, 10)
+		f, _ := rw.(http.Flusher)
+
+		go func() {
+			mSql, mArgs, _ := sq.Select("id", "recipient_id", "content", "has_replied", "has_gifts", "created_at", "updated_at").
+				From("messages").Limit(10).OrderBy("created_at ASC").
+				Where(sq.And{sq.Eq{"deleted_at": nil}, sq.LtOrEq{"created_at": time.Now()}}).ToSql()
+
+			rows, err := db.Queryx(mSql, mArgs...)
+			if err != nil {
+				log.Println(err)
+				return
+			}
+
+			for rows.Next() {
+				msg := Message{}
+				if err := rows.StructScan(&msg); err != nil {
+					log.Println(err)
+				}
+				existingEntriesChan <- msg
+			}
+		}()
+
+		defer close(existingEntriesChan)
+
+		encoder := json.NewEncoder(rw)
+		encodeData := func(rw http.ResponseWriter, f http.Flusher, msg Message) {
+			fmt.Fprint(rw, "data: ")
+			if err := encoder.Encode(msg); err != nil {
+				log.Println(err)
+				fmt.Fprintf(rw, "{}")
+			}
+			fmt.Fprint(rw, "\n\n")
+			f.Flush()
+		}
+
+		for {
+			select {
+			case entry := <-existingEntriesChan:
+				encodeData(rw, f, entry)
+			case entry2 := <-recentMessagesChan:
+				encodeData(rw, f, entry2)
+			case <-r.Context().Done():
+				return
+			}
+		}
+	})
+
 	messageListMiddlewares := []func(http.Handler) http.Handler{injectSearchQuery, customMsgQueryFilters, pagination(messagesPaginator)}
 	r.With(messageListMiddlewares...).Get("/messages", getMessagesHandler)
 	r.With(messageListMiddlewares...).Get("/messages/{recipientId}", getMessagesHandler)
@@ -741,6 +798,10 @@ func main() {
 				if err := notifier.Notify(); err != nil {
 					log.Println(err)
 				}
+			}
+
+			if !submittedMsg.HasGifts {
+				recentMessagesChan <- submittedMsg.Message
 			}
 
 			return jsonEncode(rw, map[string]interface{}{

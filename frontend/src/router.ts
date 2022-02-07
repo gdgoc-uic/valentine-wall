@@ -21,8 +21,13 @@ const routes: RouteRecordRaw[] = [
     component: () => import('./pages/Home.vue')
   },
   {
+    name: 'recent-wall-page',
+    path: '/wall',
+    redirect: { name: 'home-page' }
+  },
+  {
     name: 'message-wall-page',
-    path: '/wall/:recipientId?',
+    path: '/wall/:recipientId',
     component: () => import('./pages/Wall.vue'),
     meta: {
       pageTitle: (route: RouteLocationNormalizedLoaded) => {
