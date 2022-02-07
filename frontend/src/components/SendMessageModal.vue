@@ -32,7 +32,8 @@
               <p class="pl-3 text-gray-900 text-sm my-2">Select gift (Optional)</p>
               <fieldset class="gift-list-checkboxes">
                 <div class="gift-item tooltip tooltip-bottom" :data-tip="gift.label" :key="'gift_' + gift.uid" v-for="gift in $store.state.giftList">
-                  <div class="gift-item-btn-wrapper">
+                  <div class="gift-item-btn-wrapper indicator">
+                    <div class="indicator-top indicator-center indicator-item badge badge-primary bg-rose-500 border-rose-500">{{ gift.price }}</div> 
                     <input class="absolute appearance-none top-0 left-0" type="checkbox" :name="'gift_ids['+gift.id+']'" :id="gift.uid">
                     <label class="btn btn-checkbox rounded-xl p-1 flex flex-col text-center h-full w-full" :for="gift.uid">
                       <gift-icon :uid="gift.uid" class="text-4xl" />
