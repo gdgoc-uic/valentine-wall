@@ -51,7 +51,7 @@ export default {
     }
   },
   mounted() {
-    this.applyChanges(this.messages);
+    this.applyChanges(this.processResults(this.messages));
   },
   data() {
     return {
@@ -82,18 +82,24 @@ export default {
       let j = 0;
       let times = Math.floor(quo);
       if (times < 1) times = Math.ceil(quo);
-      for (let i = 0; i < data.length; i++) {
-        paperColorIds.push(availablePaperColorId[j % availablePaperColorId.length]);
-        if (i != 0 && i % times == 0) {
-          j++;
+
+      if (data.length > 1) {
+        for (let i = 0; i < data.length; i++) {
+          paperColorIds.push(availablePaperColorId[j % availablePaperColorId.length]);
+          if (i != 0 && i % times == 0) {
+            j++;
+          }
         }
+
+        // add a check to avoid repetitions
+        for (let i = 0; i < times; i++) {
+          paperColorIds = this.shuffle(paperColorIds);
+        }
+      } else {
+        paperColorIds = this.shuffle(availablePaperColorId.slice());
       }
 
-      // add a check to avoid repetitions
-      for (let i = 0; i < times; i++) {
-        paperColorIds = this.shuffle(paperColorIds);
-      }
-
+      console.log(paperColorIds);
       return data.map((d, i) => {
         const paperColor = paperColorIds[i];
         return {
