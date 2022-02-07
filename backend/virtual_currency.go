@@ -5,6 +5,7 @@ import (
 	"database/sql"
 	"fmt"
 	"log"
+	"math"
 	"net/http"
 	"time"
 
@@ -13,7 +14,6 @@ import (
 	sq "github.com/Masterminds/squirrel"
 	"github.com/jmoiron/sqlx"
 	goNanoid "github.com/matoous/go-nanoid/v2"
-	"google.golang.org/api/iterator"
 )
 
 /*
@@ -52,29 +52,52 @@ func (b *VirtualBank) AddInitialAmountToExistingAccounts(firebaseApp *firebase.A
 		return err
 	}
 
+	rows, err := b.DB.Query("SELECT user_id from associated_ids")
+	if err != nil {
+		return err
+	}
+
+	identifiers := []auth.UserIdentifier{}
+	for rows.Next() {
+		var userId string
+		rows.Scan(&userId)
+		identifiers = append(identifiers, auth.UIDIdentifier{UID: userId})
+	}
+
+	iters := int(math.Ceil(float64(len(identifiers)) / 100))
+	added := 0
 	tx, err := b.DB.BeginTxx(context.Background(), &sql.TxOptions{})
 	if err != nil {
 		return err
 	}
 
-	added := 0
-	iter := authClient.Users(context.Background(), "")
-	for {
-		user, err := iter.Next()
-		if err == iterator.Done {
-			break
-		} else if err != nil {
-			log.Println(tx.Rollback())
-			return err
-		} else if user.UserMetadata.CreationTimestamp > accountCreated {
-			continue
+	lastFirstNum := 0
+	lastLastNum := 100
+
+	for i := 1; i <= iters; i++ {
+		if idLen := len(identifiers); idLen < lastLastNum {
+			lastLastNum = idLen
 		}
-		if b.AddInitialBalanceTo(user.UID, tx); err != nil {
-			log.Println(tx.Rollback())
+
+		results, err := authClient.GetUsers(context.Background(), identifiers[lastFirstNum:lastLastNum-1])
+		if err != nil {
 			return err
-		} else {
-			added++
 		}
+
+		for _, user := range results.Users {
+			if user.UserMetadata.CreationTimestamp > accountCreated {
+				continue
+			}
+
+			if b.AddInitialBalanceTo(user.UID, tx); err != nil {
+				log.Println(tx.Rollback())
+				return err
+			} else {
+				added++
+			}
+		}
+
+		lastFirstNum, lastLastNum = lastLastNum+1, 100*(i+1)
 	}
 
 	if err := tx.Commit(); err != nil {
@@ -88,6 +111,10 @@ func (b *VirtualBank) AddInitialAmountToExistingAccounts(firebaseApp *firebase.A
 
 func (b *VirtualBank) AddInitialBalanceTo(uid string, tx *sqlx.Tx) error {
 	amount := float32(4000)
+	if vWallet, err := b.GetWalletByUID(uid); err == nil && vWallet.Balance <= 0 {
+		return b.AddBalanceTo(uid, amount, tx)
+	}
+
 	if err := b.AddTransaction(uid, amount, "Initial Balance", tx); err != nil {
 		return err
 	}
