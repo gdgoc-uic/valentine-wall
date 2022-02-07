@@ -86,7 +86,7 @@
 
     <div class="mt-8">
       <h2 class="text-2xl lg:text-3xl font-bold text-rose-600 mb-3">Recent Messages</h2>
-      <message-tiles :messages="recentMessages" prepend />
+      <message-tiles :limit="20" :messages="recentMessages" prepend />
     </div>
   </main>
 </template>

@@ -45,6 +45,9 @@ export default {
       type: Boolean,
       default: false
     },
+    limit: {
+      type: Number
+    },
     messages: {
       type: Array,
       default :[]
@@ -69,7 +72,15 @@ export default {
 
       if (this.replace) {
         this.messageList = this.processResults(newMessages);
-      } else if (this.prepend) {
+        return;
+      } 
+
+      if (this.limit && (this.messageList.length + newMessages.length) > this.limit) {
+        // limit list to (limit - nm.len)
+        this.messageList = this.messageList.splice(0, this.limit - newMessages.length);
+      }
+      
+      if (this.prepend) {
         this.messageList.unshift(...this.processResults(newMessages));
       } else {
         this.messageList.push(...this.processResults(newMessages));
