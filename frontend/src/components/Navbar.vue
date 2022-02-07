@@ -58,7 +58,7 @@
               </li>
             </ul>
           </div>
-          <button :class="[!shouldSendButtonHide ? 'rounded-none' : 'rounded-l-none']" v-if="$store.getters.isLoggedIn" class="btn">
+          <button :class="[!shouldSendButtonHide ? 'rounded-none' : 'rounded-l-none']" v-if="$store.getters.isLoggedIn && $store.state.user.wallet.balance" class="btn">
             Coins: {{ $store.state.user.wallet.balance }}
           </button>
           <button
