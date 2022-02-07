@@ -29,7 +29,7 @@
                 placeholder="6 to 12-digit Student ID (e.g. 200xxxxxxxxx)">
             </div>
             <div class="flex flex-col mt-4 -mx-2">
-              <p class="pl-3 text-gray-900 text-sm my-2">Select gift (A maximum of 3 may be attached)</p>
+              <p class="pl-3 text-gray-900 text-sm my-2">Select gift (Optional)</p>
               <fieldset class="gift-list-checkboxes">
                 <div class="gift-item tooltip tooltip-bottom" :data-tip="gift.label" :key="'gift_' + gift.uid" v-for="gift in $store.state.giftList">
                   <div class="gift-item-btn-wrapper">
