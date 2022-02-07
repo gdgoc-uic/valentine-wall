@@ -13,6 +13,7 @@ import (
 	sq "github.com/Masterminds/squirrel"
 	"github.com/jmoiron/sqlx"
 	goNanoid "github.com/matoous/go-nanoid/v2"
+	"google.golang.org/api/iterator"
 )
 
 /*
@@ -43,15 +44,10 @@ type VirtualBank struct {
 	DB *sqlx.DB
 }
 
-var accountCreated = time.Date(2022, time.February, 6, 0, 0, 0, 0, time.UTC)
+var accountCreated = time.Date(2022, time.February, 6, 0, 0, 0, 0, time.UTC).UnixMilli()
 
 func (b *VirtualBank) AddInitialAmountToExistingAccounts(firebaseApp *firebase.App) error {
 	authClient, err := firebaseApp.Auth(context.Background())
-	if err != nil {
-		return err
-	}
-
-	res, err := authClient.GetUsers(context.Background(), []auth.UserIdentifier{})
 	if err != nil {
 		return err
 	}
@@ -62,20 +58,27 @@ func (b *VirtualBank) AddInitialAmountToExistingAccounts(firebaseApp *firebase.A
 	}
 
 	added := 0
-	for _, user := range res.Users {
-		if time.UnixMilli(user.UserMetadata.CreationTimestamp).Before(accountCreated) {
-			if b.AddInitialBalanceTo(user.UID, tx); err != nil {
-				if err := tx.Rollback(); err != nil {
-					log.Println(err)
-				}
-				return err
-			} else {
-				added++
-			}
+	iter := authClient.Users(context.Background(), "")
+	for {
+		user, err := iter.Next()
+		if err == iterator.Done {
+			break
+		} else if err != nil {
+			log.Println(tx.Rollback())
+			return err
+		} else if user.UserMetadata.CreationTimestamp > accountCreated {
+			continue
+		}
+		if b.AddInitialBalanceTo(user.UID, tx); err != nil {
+			log.Println(tx.Rollback())
+			return err
+		} else {
+			added++
 		}
 	}
 
 	if err := tx.Commit(); err != nil {
+		log.Println(tx.Rollback())
 		return err
 	}
 
