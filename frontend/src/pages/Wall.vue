@@ -152,7 +152,7 @@ export default defineComponent({
     },
     getMessagesEndpoint({ hasGift = false }: { hasGift?: boolean | null }): string {
       const recipientId = this.$route.params.recipientId ?? '';
-      return `/messages/${recipientId}?order=created_at,desc&limit=10&${hasGift == null ? 'has_gift=2' : hasGift ? 'has_gift=1' : 'has_gift=0'}`
+      return `/messages/${recipientId}?order=created_at,desc&limit=10&has_gift=${hasGift == null ? '2' : hasGift ? '1' : '0'}`
     }
   }
 })
