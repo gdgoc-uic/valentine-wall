@@ -1414,7 +1414,7 @@ func main() {
 		})
 	}))
 
-	r.With(appVerifyUser).Get("/user/delete", wrapHandler(func(rw http.ResponseWriter, r *http.Request) error {
+	r.With(appVerifyUser).Post("/user/delete", wrapHandler(func(rw http.ResponseWriter, r *http.Request) error {
 		authClient := r.Context().Value("authClient").(*auth.Client)
 		token := r.Context().Value("authToken").(*auth.Token)
 

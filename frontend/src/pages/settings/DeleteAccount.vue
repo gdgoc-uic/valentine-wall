@@ -55,7 +55,7 @@ export default {
       try {
         if (!e.target || !(e.target instanceof HTMLFormElement)) return;
         const formData = new FormData(e.target);
-        const { data: json } = await this.$client.postJson('/messages', {
+        const { data: json } = await this.$client.postJson('/user/delete', {
           input_sid: formData.get('recipient_id'),
           input_uid: this.$store.state.user.id
         });
