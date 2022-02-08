@@ -110,7 +110,7 @@ export default {
         paperColorIds = this.shuffle(availablePaperColorId.slice());
       }
 
-      console.log(paperColorIds);
+      // console.log(paperColorIds);
       return data.map((d, i) => {
         const paperColor = paperColorIds[i];
         return {
