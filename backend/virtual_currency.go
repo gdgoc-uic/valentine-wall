@@ -56,6 +56,7 @@ func (b *VirtualBank) AddInitialAmountToExistingAccounts(firebaseApp *firebase.A
 	if err != nil {
 		return err
 	}
+	defer rows.Close()
 
 	identifiers := []auth.UserIdentifier{}
 	for rows.Next() {

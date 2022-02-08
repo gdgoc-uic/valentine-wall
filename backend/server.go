@@ -114,6 +114,7 @@ func fetchRecipientRankings(db *sqlx.DB) (Recipients, error) {
 	if err != nil {
 		return nil, err
 	}
+	defer rows.Close()
 
 	for rows.Next() {
 		var associatedId string
@@ -137,6 +138,7 @@ func fetchRecipientRankings(db *sqlx.DB) (Recipients, error) {
 	if err != nil {
 		return nil, err
 	}
+	defer recipientsWithGiftsRows.Close()
 
 	for recipientsWithGiftsRows.Next() {
 		var recipientId string
@@ -160,6 +162,7 @@ func fetchRecipientRankings(db *sqlx.DB) (Recipients, error) {
 	if err != nil {
 		return nil, err
 	}
+	defer recipientsWithoutGiftsRows.Close()
 
 	for recipientsWithoutGiftsRows.Next() {
 		var recipientId string
@@ -282,6 +285,7 @@ func importExistingMessages(db *sqlx.DB, index bleve.Index) error {
 	if err != nil {
 		return err
 	}
+	defer rows.Close()
 
 	for rows.Next() {
 		var result struct {
@@ -528,6 +532,8 @@ func main() {
 				if err != nil {
 					return nil, err
 				}
+				defer rows.Close()
+
 				results := []interface{}{}
 				for rows.Next() {
 					msg := Message{}
@@ -605,6 +611,7 @@ func main() {
 				log.Println(err)
 				return
 			}
+			defer rows.Close()
 
 			for rows.Next() {
 				msg := Message{}
