@@ -31,7 +31,8 @@
   <!-- ID Modal -->
   <portal>
     <submit-id-modal v-if="!$store.state.user.associatedId && $store.getters.isLoggedIn" />
-    <submit-message-modal 
+    <submit-message-modal
+      :key="$route.fullPath" 
       :open="$store.state.isSendMessageModalOpen" 
       @update:open="$store.commit('SET_SEND_MESSAGE_MODAL_OPEN', $event)" />
   </portal>
