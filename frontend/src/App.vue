@@ -31,7 +31,8 @@
   <!-- ID Modal -->
   <portal>
     <submit-id-modal v-if="!$store.state.user.associatedId && $store.getters.isLoggedIn" />
-    <submit-message-modal 
+    <submit-message-modal
+      :key="$route.fullPath" 
       :open="$store.state.isSendMessageModalOpen" 
       @update:open="$store.commit('SET_SEND_MESSAGE_MODAL_OPEN', $event)" />
   </portal>
@@ -41,7 +42,7 @@
   </div>
 
   <template v-else>
-    <navbar :is-home="$route.name === 'home-page'" class="sticky top-0 z-50" />
+    <navbar v-if="!$route.meta.disableAppHeader" :is-home="$route.name === 'home-page'" class="sticky top-0 z-50" />
     <router-view v-slot="{ Component }">
       <suspense>
         <component :is="Component" class="relative" />

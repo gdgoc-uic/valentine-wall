@@ -208,6 +208,7 @@ func (src *DatabasePaginatorSource) Count() (int64, error) {
 		return 0, err
 	} else if rows.Next() {
 		rows.Scan(&count)
+		rows.Close()
 	}
 	return count, nil
 }
@@ -225,6 +226,7 @@ func (src *DatabasePaginatorSource) Fetch(page, limit int64, orderKey, order str
 	if err != nil {
 		return nil, 0, &ResponseError{StatusCode: http.StatusNotFound, WError: err}
 	}
+	defer rows.Close()
 
 	results := []interface{}{}
 	for rows.Next() {

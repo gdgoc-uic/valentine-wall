@@ -12,6 +12,7 @@ import (
 	"net/http"
 	"regexp"
 	"sort"
+	"strconv"
 	"text/template"
 	"time"
 
@@ -114,6 +115,7 @@ func fetchRecipientRankings(db *sqlx.DB) (Recipients, error) {
 	if err != nil {
 		return nil, err
 	}
+	defer rows.Close()
 
 	for rows.Next() {
 		var associatedId string
@@ -137,6 +139,7 @@ func fetchRecipientRankings(db *sqlx.DB) (Recipients, error) {
 	if err != nil {
 		return nil, err
 	}
+	defer recipientsWithGiftsRows.Close()
 
 	for recipientsWithGiftsRows.Next() {
 		var recipientId string
@@ -160,6 +163,7 @@ func fetchRecipientRankings(db *sqlx.DB) (Recipients, error) {
 	if err != nil {
 		return nil, err
 	}
+	defer recipientsWithoutGiftsRows.Close()
 
 	for recipientsWithoutGiftsRows.Next() {
 		var recipientId string
@@ -282,6 +286,7 @@ func importExistingMessages(db *sqlx.DB, index bleve.Index) error {
 	if err != nil {
 		return err
 	}
+	defer rows.Close()
 
 	for rows.Next() {
 		var result struct {
@@ -399,6 +404,12 @@ func main() {
 	}
 
 	appCheckBalance := checkBalance(b)
+
+	// invitation system
+	invSys := &InvitationSystem{
+		DB:         db,
+		CookieName: invitationCookieName,
+	}
 
 	// middlewares
 	jsonOnly := middleware.AllowContentType("application/json")
@@ -528,6 +539,8 @@ func main() {
 				if err != nil {
 					return nil, err
 				}
+				defer rows.Close()
+
 				results := []interface{}{}
 				for rows.Next() {
 					msg := Message{}
@@ -556,8 +569,7 @@ func main() {
 
 			// TODO: disable_restricted_access_to_gift_messages
 			token, _, err := getAuthToken(r, firebaseApp)
-			switch filter.Value {
-			case "1", "2":
+			if filter.Value == "1" || filter.Value == "2" {
 				if token == nil {
 					return &ResponseError{
 						WError:     err,
@@ -565,19 +577,21 @@ func main() {
 					}
 				}
 				recipientId := chi.URLParam(r, "recipientId")
-				if associatedUser, err := getAssociatedUserBy(db, sq.Eq{"user_id": token.UID}); err == nil && associatedUser.AssociatedID == recipientId {
+				associatedUser, err := getAssociatedUserBy(db, sq.Eq{"user_id": token.UID})
+				if err != nil {
+					return &ResponseError{
+						WError:     err,
+						StatusCode: http.StatusForbidden,
+					}
+				}
+
+				if err == nil && associatedUser.AssociatedID == recipientId {
 					if filter.Value == "1" {
 						hasGiftQuery.Bool = true
 					} else if filter.Value == "2" {
 						// leave as is
 						return nil
 					}
-					return nil
-				} else if err != nil {
-					log.Println(err)
-				}
-				return &ResponseError{
-					StatusCode: http.StatusForbidden,
 				}
 			}
 
@@ -604,6 +618,7 @@ func main() {
 				log.Println(err)
 				return
 			}
+			defer rows.Close()
 
 			for rows.Next() {
 				msg := Message{}
@@ -1118,6 +1133,75 @@ func main() {
 			})
 		}))
 
+	r.Get("/invite/{invitationCode}", wrapHandler(func(rw http.ResponseWriter, r *http.Request) error {
+		_, _, err := getAuthToken(r, firebaseApp)
+		if err == nil {
+			return &ResponseError{
+				StatusCode: http.StatusForbidden,
+				Message:    "Invitation links are only available for unregistered users.",
+			}
+		}
+
+		invitationCode := chi.URLParam(r, "invitationCode")
+
+		// verify invitation
+		gotInvitation, err := invSys.VerifyInvitationCode(invitationCode)
+		if err != nil {
+			return err
+		}
+
+		// inject invitation referral
+		invSys.InjectToRequest(rw, gotInvitation)
+		return jsonEncode(rw, map[string]string{
+			"message":         "ok",
+			"invitation_code": gotInvitation.ID,
+		})
+	}))
+
+	r.With(appVerifyUser).Get("/user/invitations", wrapHandler(func(rw http.ResponseWriter, r *http.Request) error {
+		token := r.Context().Value("authToken").(*auth.Token)
+		invitations, err := invSys.GetInvitationsByUID(token.UID)
+		if err != nil {
+			return err
+		}
+		return jsonEncode(rw, invitations)
+	}))
+
+	r.With(appVerifyUser).Post("/user/invitations/generate", wrapHandler(func(rw http.ResponseWriter, r *http.Request) error {
+		token := r.Context().Value("authToken").(*auth.Token)
+		if err := invSys.CheckEligibilityByUID(token.UID); err != nil {
+			return err
+		}
+
+		r.ParseForm()
+		rawMaxUsers := r.PostFormValue("max_users")
+		if len(rawMaxUsers) == 0 {
+			rawMaxUsers = "1"
+		}
+
+		maxUsers, err := strconv.Atoi(rawMaxUsers)
+		if err != nil {
+			return &ResponseError{
+				StatusCode: http.StatusBadRequest,
+				WError:     err,
+				Message:    "Invalid value for max_users. Must be a number",
+			}
+		}
+
+		newInvitationId, err := invSys.Generate(token.UID, maxUsers)
+		if err != nil {
+			return err
+		}
+
+		return jsonEncode(rw, map[string]interface{}{
+			"message":         "Invitation link created successfully.",
+			"invitation_code": newInvitationId,
+			"expires_in_hrs":  defaultInvitationExpiration / time.Hour,
+			"max_users":       maxUsers,
+			"reward_coins":    int(invitationMoney),
+		})
+	}))
+
 	r.With(appVerifyUser, pagination(&Paginator{
 		OrderKey:  "created_at",
 		TableName: virtualTransactionsTableName,
@@ -1263,6 +1347,11 @@ func main() {
 					StatusCode: http.StatusUnprocessableEntity,
 					Message:    "Failed to connect ID to user. Please try again.",
 				}
+			}
+
+			// verify and save invitation
+			if err := invSys.UseInvitationFromReq(rw, r, token.UID, b); err != nil {
+				log.Println(err)
 			}
 
 			// generate welcome message

@@ -39,6 +39,7 @@ var frontendUrl = "http://localhost:3000"
 var targetEnv = "development"
 var postalOfficeAddress = "localhost:3350"
 var dataDirPath = filepath.Join(".", "_data")
+var invitationCookieName = "vw-invitation_ref"
 
 var validator = goValidator.New()
 var giftList = Gifts{
@@ -159,5 +160,9 @@ func init() {
 
 	if gotChromeDevtoolsURL, exists := os.LookupEnv("CHROME_DEVTOOLS_URL"); exists {
 		chromeDevtoolsURL = gotChromeDevtoolsURL
+	}
+
+	if gotInvitationCookieName, exists := os.LookupEnv("INVITATION_COOKIE_NAME"); exists {
+		invitationCookieName = gotInvitationCookieName
 	}
 }
