@@ -5,7 +5,6 @@ import (
 	"context"
 	"database/sql"
 	"encoding/json"
-	"errors"
 	"fmt"
 	htmlTemplate "html/template"
 	"log"
@@ -13,6 +12,7 @@ import (
 	"regexp"
 	"sort"
 	"strconv"
+	"sync"
 	"text/template"
 	"time"
 
@@ -40,6 +40,31 @@ import (
 
 	"github.com/patrickmn/go-cache"
 )
+
+type RegistrationTokensManager struct {
+	sync.Mutex
+	keys []string
+}
+
+func (m *RegistrationTokensManager) Add(key string) {
+	m.Unlock()
+	m.keys = append(m.keys, key)
+	m.Lock()
+}
+
+func (m *RegistrationTokensManager) Get(i int) string {
+	return m.keys[i]
+}
+
+func (m *RegistrationTokensManager) Delete(i int) {
+	m.Unlock()
+	m.keys = append(m.keys[:i], m.keys[i+1:]...)
+	m.Lock()
+}
+
+func (m *RegistrationTokensManager) Keys() []string {
+	return m.keys
+}
 
 var messagesPaginator = &Paginator{
 	OrderKey: "id",
@@ -411,6 +436,11 @@ func main() {
 		CookieName: invitationCookieName,
 	}
 
+	// registration key manager
+	// this is for storing registration keys in firebase
+	// messaging for notifications
+	// registrationTokens := &RegistrationTokensManager{}
+
 	// middlewares
 	jsonOnly := middleware.AllowContentType("application/json")
 	appVerifyUser := verifyUser(firebaseApp)
@@ -448,6 +478,38 @@ func main() {
 			StatusCode: http.StatusMethodNotAllowed,
 		}
 	}))
+
+	// r.Post("/app/register_token", wrapHandler(func(rw http.ResponseWriter, r *http.Request) error {
+	// 	var parsedData struct {
+	// 		RegistrationToken string `json:"registration_token"`
+	// 	}
+
+	// 	if err := json.NewDecoder(r.Body).Decode(&parsedData); err != nil {
+	// 		return err
+	// 	}
+
+	// 	registrationTokens.Add(parsedData.RegistrationToken)
+	// 	client, err := firebaseApp.Messaging(r.Context())
+	// 	if err != nil {
+	// 		return err
+	// 	}
+
+	// 	response, err := client.Send(r.Context(), &messaging.Message{
+	// 		Data: map[string]string{
+	// 			"message": "Test",
+	// 		},
+	// 		Token: parsedData.RegistrationToken,
+	// 	})
+	// 	if err != nil {
+	// 		return err
+	// 	}
+
+	// 	fmt.Println("Successfully sent message: ", response)
+
+	// 	return jsonEncode(rw, map[string]string{
+	// 		"message": "ok",
+	// 	})
+	// }))
 
 	r.Get("/departments", wrapHandler(func(rw http.ResponseWriter, r *http.Request) error {
 		return jsonEncode(rw, collegeDepartments)
@@ -1543,11 +1605,15 @@ func main() {
 			return err
 		}
 
-		for _, tableName := range []string{"user_connections", "associated_ids"} {
+		for _, tableName := range []string{"user_connections", "virtual_wallets", "associated_ids"} {
 			if deleteSql, deleteArgs, err := sq.Delete(tableName).Where(sq.Eq{"user_id": token.UID}).ToSql(); err != nil {
 				return err
-			} else if res, err := tx.Exec(deleteSql, deleteArgs...); err != nil && !errors.Is(err, sql.ErrNoRows) {
-				return err
+			} else if res, err := tx.Exec(deleteSql, deleteArgs...); err != nil {
+				if err == sql.ErrNoRows {
+					continue
+				} else {
+					return err
+				}
 			} else if err := wrapSqlResult(res); err != nil {
 				return err
 			}
