@@ -556,8 +556,7 @@ func main() {
 
 			// TODO: disable_restricted_access_to_gift_messages
 			token, _, err := getAuthToken(r, firebaseApp)
-			switch filter.Value {
-			case "1", "2":
+			if filter.Value == "1" || filter.Value == "2" {
 				if token == nil {
 					return &ResponseError{
 						WError:     err,
@@ -565,19 +564,21 @@ func main() {
 					}
 				}
 				recipientId := chi.URLParam(r, "recipientId")
-				if associatedUser, err := getAssociatedUserBy(db, sq.Eq{"user_id": token.UID}); err == nil && associatedUser.AssociatedID == recipientId {
+				associatedUser, err := getAssociatedUserBy(db, sq.Eq{"user_id": token.UID})
+				if err != nil {
+					return &ResponseError{
+						WError:     err,
+						StatusCode: http.StatusForbidden,
+					}
+				}
+
+				if err == nil && associatedUser.AssociatedID == recipientId {
 					if filter.Value == "1" {
 						hasGiftQuery.Bool = true
 					} else if filter.Value == "2" {
 						// leave as is
 						return nil
 					}
-					return nil
-				} else if err != nil {
-					log.Println(err)
-				}
-				return &ResponseError{
-					StatusCode: http.StatusForbidden,
 				}
 			}
 
