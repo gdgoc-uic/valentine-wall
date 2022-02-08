@@ -1552,7 +1552,8 @@ func main() {
 					return err
 				}
 			} else if err := wrapSqlResult(res); err != nil {
-				return err
+				log.Println(err)
+				continue
 			}
 		}
 
