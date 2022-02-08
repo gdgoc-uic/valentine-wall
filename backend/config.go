@@ -53,6 +53,9 @@ var giftList = Gifts{
 	{9, "pizza", "Pizza", 150},
 	{10, "milk-tea", "Milk Tea", 150},
 }
+
+var moneyGift = giftList[5]
+
 var collegeDepartments = []CollegeDepartment{
 	{"CABE", "College of Accounting and Business Education"},
 	{"CAH", "College of Arts and Humanities"},

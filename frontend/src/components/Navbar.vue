@@ -42,7 +42,7 @@
       <client-only>
         <div class="flex-none hidden md:ml-auto md:flex">
           <div v-if="$store.getters.isLoggedIn" class="dropdown dropdown-end dropdown-hover -mb-2">
-            <div :class="{'rounded-r-none': !shouldSendButtonHide}" tabindex="0" class="mb-2 shadow-md btn normal-case text-black bg-white border-0 hover:bg-gray-100">
+            <div tabindex="0" class="rounded-r-none mb-2 shadow-md btn normal-case text-black bg-white border-0 hover:bg-gray-100">
               <span class="overflow-hidden text-ellipsis">
                 {{ $store.getters.username }}
               </span>
@@ -58,8 +58,13 @@
               </li>
             </ul>
           </div>
-          <button :class="[!shouldSendButtonHide ? 'rounded-none' : 'rounded-l-none']" v-if="$store.getters.isLoggedIn && $store.state.user.wallet.balance" class="btn">
-            Coins: ღ{{ $store.state.user.wallet.balance }}
+          <!-- TODO: add 'add coins' modal -->
+          <button 
+            :class="[!shouldSendButtonHide ? 'rounded-none' : 'rounded-l-none']" 
+            v-if="$store.getters.isLoggedIn && $store.state.user.wallet.balance" 
+            class="btn shadow-md btn normal-case text-black bg-white border-0 hover:bg-gray-100">
+            <icon-coin class="mr-2" />
+            <span>ღ{{ $store.state.user.wallet.balance }}</span>
           </button>
           <button
             v-if="!shouldSendButtonHide && $store.getters.isLoggedIn"
@@ -77,8 +82,8 @@
     <div 
       @click.self="menuOpen = false" 
       :class="[menuOpen ? 'block' : 'hidden']" 
-      class="bg-[#FFEFEF] bg-opacity-50 h-screen fixed inset-x-0 bottom-0">
-      <div class="bg-[#FFEFEF] flex  h-full lg:hidden p-8 flex-col w-[85vw] drop-shadow-xl">
+      class="lg:hidden bg-[#FFEFEF] bg-opacity-50 h-screen fixed inset-x-0 bottom-0">
+      <div class="bg-[#FFEFEF] flex h-full lg:hidden p-8 flex-col w-[85vw] drop-shadow-xl">
         <button
           @click="menuOpen = false"
           style="right: 20px; top: 20px;"
@@ -112,6 +117,12 @@
                 </component>
               </li>
             </ul>
+            <button 
+              v-if="$store.getters.isLoggedIn && $store.state.user.wallet.balance" 
+              class="btn shadow-md btn normal-case text-black bg-white border-0 hover:bg-gray-100 w-full mb-2">
+              <icon-coin class="mr-2" />
+              <span>ღ{{ $store.state.user.wallet.balance }}</span>
+            </button>
             <button
               v-if="!shouldSendButtonHide"
               @click="$store.commit('SET_SEND_MESSAGE_MODAL_OPEN', true); menuOpen = false"
@@ -133,6 +144,7 @@ import IconDropdown from '~icons/uil/angle-down';
 import IconSend from '~icons/uil/message';
 import IconSearch from '~icons/uil/search';
 import IconClose from '~icons/uil/multiply';
+import IconCoin from '~icons/twemoji/coin';
 import { catchAndNotifyError } from '../notify';
 import ClientOnly from './ClientOnly.vue';
 import LoginButton from './LoginButton.vue';
@@ -151,6 +163,7 @@ export default {
     IconSend,
     IconSearch,
     IconClose,
+    IconCoin,
     SearchForm,
     ClientOnly,
     LoginButton
@@ -170,10 +183,6 @@ export default {
     },
     navbarLinks(): any[] {
       return [
-        {
-          label: 'Recent',
-          to: { name: 'message-wall-page' }
-        },
         {
           label: 'Rankings',
           to: { name: 'rankings-page' }

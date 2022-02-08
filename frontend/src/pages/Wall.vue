@@ -43,30 +43,10 @@
       </section>
     </client-only>
 
-    <paginated-response-handler :origin-endpoint="endpoint" :process-fn="processResults" :fail-fn="checkMessagesLength">
+    <paginated-response-handler :origin-endpoint="endpoint" :fail-fn="checkMessagesLength">
       <template #default="{ data: messages, links, goto }">
         <div class="max-w-7xl w-full mx-auto flex flex-col">
-          <masonry class="message-results -mx-2">
-            <!-- TODO: make card widths and --colors-- different -->
-            <div :key="msg.id" v-for="msg in messages" class="w-1/2 md:w-1/3 lg:w-1/4 message-paper-wrapper">
-              <router-link
-                :to="{ name: 'message-page', params: { recipientId: msg.recipient_id, messageId: msg.id } }"
-                class="message-paper"
-                :class="[msg.has_gifts ? 'paper-variant-gift' : `paper-variant-${msg.paperColor}`]">
-                  <div v-if="!msg.has_gifts" class="px-6 pt-6">
-                    <p>{{ msg.content }}</p>
-                  </div>
-                  <div v-else class="flex w-full h-full items-center justify-center">
-                    <icon-gift class="text-white text-9xl" />
-                  </div>
-                  <div class="message-meta-info">
-                    <p :class="[msg.has_gifts ? 'text-white' : 'text-gray-500']" class="text-sm">{{ humanizeTime(msg.created_at) }} ago</p>
-                    <icon-reply v-if="msg.has_replied" class="text-pink-500" />
-                  </div>
-              </router-link>
-            </div>
-          </masonry>
-
+          <message-tiles :messages="messages" replace />
           <pagination-load-more-button :link="links.next" @click="goto(links.next, true)" />
         </div>
       </template>
@@ -91,30 +71,22 @@
 </template>
 
 <script lang="ts">
-import dayjs from 'dayjs';
-import relativeTime from 'dayjs/plugin/relativeTime';
-import IconReply from '~icons/uil/comment-heart';
 import { catchAndNotifyError } from '../notify';
 import { defineComponent } from '@vue/runtime-core';
 import ClientOnly from '../components/ClientOnly.vue';
-import Masonry from '../components/Masonry.vue';
 import { APIResponse } from '../client';
 import PaginatedResponseHandler from '../components/PaginatedResponseHandler.vue';
 import PaginationLoadMoreButton from '../components/PaginationLoadMoreButton.vue';
 import LoginButton from '../components/LoginButton.vue';
-import IconGift from '~icons/uil/gift';
-
-dayjs.extend(relativeTime);
+import MessageTiles from '../components/MessageTiles.vue';
 
 export default defineComponent({
   components: {
-    IconReply,
     ClientOnly,
-    Masonry,
     PaginatedResponseHandler,
     PaginationLoadMoreButton,
     LoginButton,
-    IconGift
+    MessageTiles
   },
   created() {
     if (this.$route.params.recipientId && this.$store.getters.isLoggedIn) {
@@ -160,46 +132,6 @@ export default defineComponent({
     },
   },
   methods: {
-    processResults(data: any[]): any[] {
-      const availablePaperColorId = [1,2,3,4];
-      const quo = data.length / availablePaperColorId.length;
-      let paperColorIds: number[] = [];
-      let j = 0;
-      let times = Math.floor(quo);
-      if (times < 1) times = Math.ceil(quo);
-      for (let i = 0; i < data.length; i++) {
-        paperColorIds.push(availablePaperColorId[j % availablePaperColorId.length]);
-        if (i != 0 && i % times == 0) {
-          j++;
-        }
-      }
-
-      // add a check to avoid repetitions
-      for (let i = 0; i < times; i++) {
-        paperColorIds = this.shuffle(paperColorIds);
-      }
-
-      return data.map((d, i) => {
-        const paperColor = paperColorIds[i];
-        return {
-          ...d, 
-          paperColor
-        }
-      });
-    },
-    shuffle(array: any[]) {
-        var i = array.length,
-            j = 0,
-            temp;
-        while (i--) {
-            j = Math.floor(Math.random() * (i+1));
-            // swap randomly chosen element with current element
-            temp = array[i];
-            array[i] = array[j];
-            array[j] = temp;
-        }
-        return array;
-    },
     loadData(): Promise<any> {
       return this.loadStats();
     },
@@ -221,61 +153,7 @@ export default defineComponent({
     getMessagesEndpoint({ hasGift = false }: { hasGift?: boolean | null }): string {
       const recipientId = this.$route.params.recipientId ?? '';
       return `/messages/${recipientId}?order=created_at,desc&limit=10&${hasGift == null ? 'has_gift=2' : hasGift ? 'has_gift=1' : 'has_gift=0'}`
-    },
-    humanizeTime(date: Date | string): string {
-      return dayjs(date).toNow(true);
     }
   }
 })
 </script>
-
-<style lang="postcss">
-.message-results > .message-paper-wrapper {
-  @apply p-2 min-h-16;
-}
-
-.message-paper-wrapper > .message-paper {
-  @apply rounded-lg flex flex-col justify-between shadow-lg h-64 hover:scale-110 transition-transform;
-  background-size: 100% 22px;
-}
-
-.message-paper .message-meta-info {
-  @apply  px-6 pb-6 flex justify-between items-center mt-4 rounded-b-lg;
-}
-
-.message-paper.paper-variant-gift {
-  @apply bg-rose-400;
-}
-
-.message-paper.paper-variant-1 {
-  background-image: linear-gradient(to bottom,rgb(254, 243, 199) 21px,#00b0d7 1px); 
-}
-
-.message-paper.paper-variant-1 .message-meta-info {
-  background-color: rgb(254, 243, 199);
-}
-
-.message-paper.paper-variant-2 {
-  background-image: linear-gradient(to bottom,rgb(152, 221, 255) 21px,#213381 1px); 
-}
-
-.message-paper.paper-variant-2 .message-meta-info {
-  background-color: rgb(152, 221, 255);
-}
-
-.message-paper.paper-variant-3 {
-  background-image: linear-gradient(to bottom,rgb(155, 255, 183) 21px,#00b0d7 1px); 
-}
-
-.message-paper.paper-variant-3 .message-meta-info {
-  background-color: rgb(155, 255, 183);
-}
-
-.message-paper.paper-variant-4 {
-  background-image: linear-gradient(to bottom,rgb(255, 194, 175) 21px,#213381 1px); 
-}
-
-.message-paper.paper-variant-4 .message-meta-info {
-  background-color: rgb(255, 194, 175);
-}
-</style>
