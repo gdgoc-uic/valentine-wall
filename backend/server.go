@@ -597,7 +597,7 @@ func main() {
 		go func() {
 			mSql, mArgs, _ := sq.Select("id", "recipient_id", "content", "has_replied", "has_gifts", "created_at", "updated_at").
 				From("messages").Limit(10).OrderBy("created_at ASC").
-				Where(sq.And{sq.Eq{"deleted_at": nil}, sq.LtOrEq{"created_at": time.Now()}}).ToSql()
+				Where(sq.And{sq.Eq{"deleted_at": nil, "has_gifts": false}, sq.LtOrEq{"created_at": time.Now()}}).ToSql()
 
 			rows, err := db.Queryx(mSql, mArgs...)
 			if err != nil {
