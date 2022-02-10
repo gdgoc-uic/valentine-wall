@@ -145,3 +145,18 @@ func (em *EmailNotifier) Notify() error {
 	)
 	return err
 }
+
+type MultiNotifier struct {
+	notifiers []Notifier
+}
+
+func (mn *MultiNotifier) Notify() error {
+	for _, n := range mn.notifiers {
+		passivePrintError(n.Notify())
+	}
+	return nil
+}
+
+func (mn *MultiNotifier) Add(notifier Notifier) {
+	mn.notifiers = append(mn.notifiers, notifier)
+}

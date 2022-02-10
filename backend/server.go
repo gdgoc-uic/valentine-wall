@@ -940,10 +940,20 @@ func main() {
 			}
 
 			// decode reply payload
-			var reply MessageReply
-			if err := json.NewDecoder(rr.Body).Decode(&reply); err != nil {
+			var submittedData struct {
+				Reply   MessageReply `json:"reply"`
+				Options struct {
+					PostToTwitter bool `json:"post_to_twitter"`
+					PostToEmail   bool `json:"post_to_email"`
+				} `json:"options"`
+			}
+
+			if err := json.NewDecoder(rr.Body).Decode(&submittedData); err != nil {
 				return err
-			} else if err := checkProfanity(reply.Content); err != nil {
+			}
+
+			reply := submittedData.Reply
+			if err := checkProfanity(reply.Content); err != nil {
 				return err
 			} else if err := validator.Struct(&reply); err != nil {
 				return wrapValidationError(rw, err)
@@ -965,28 +975,30 @@ func main() {
 			}
 
 			// TODO: add toll fees for twitter, e-mail notifiers
-			var notifier Notifier
-			if twitterIdx, hasTwitter := isConnectedTo(connections, "twitter"); hasTwitter {
+			notifier := MultiNotifier{[]Notifier{}}
+			if twitterIdx, hasTwitter := isConnectedTo(connections, "twitter"); submittedData.Options.PostToTwitter && hasTwitter {
 				imageData, err := imageRenderer.Render(imageTypeTwitter, message.Message)
 				if err != nil {
 					return err
 				}
 
-				notifier = &TwitterNotifier{
+				notifier.Add(&TwitterNotifier{
 					Connection:  connections[twitterIdx],
 					ImageData:   bytes.NewReader(imageData),
 					TextContent: reply.Content,
 					Hashtag:     twHashTag,
 					Link:        fmt.Sprintf("%s/wall/%s/%s", frontendUrl, message.RecipientID, message.ID),
-				}
-			} else if _, hasEmail := isConnectedTo(connections, "email"); hasEmail {
+				})
+			}
+
+			if _, hasEmail := isConnectedTo(connections, "email"); submittedData.Options.PostToEmail && hasEmail {
 				// get sender email
 				senderEmail, err := getUserEmailByUID(authClient, message.UID)
 				if err != nil {
 					return err
 				}
 
-				notifier = &EmailNotifier{
+				notifier.Add(&EmailNotifier{
 					Client:   postalOfficeClient,
 					Template: emailTemplates["reply"],
 					Context: &MailSenderContext{
@@ -995,10 +1007,7 @@ func main() {
 						MessageID:   message.ID,
 						FrontendURL: frontendUrl,
 					},
-				}
-			} else {
-				// just to be sure
-				return noConnectionErr
+				})
 			}
 
 			// dont let notifier errors stop the process.

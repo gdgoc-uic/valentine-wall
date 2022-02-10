@@ -129,7 +129,13 @@ export default {
       try {
         this.isSending = true;
         const { data: json } = await this.$client.postJson(`/messages/${this.message.recipient_id}/${this.message.id}/reply`, {
-          'content': this.content
+          reply: {
+            content: this.content
+          },
+          options: {
+            post_to_email: true,
+            post_to_twitter: true
+          }
         });
 
         notify(this, { type: 'success', text: json['message'] });
