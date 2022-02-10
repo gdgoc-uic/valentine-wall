@@ -18,7 +18,7 @@
             </ul>
         </section>
 
-        <section class="px-8 lg:px-24 py-8">
+        <section class="px-8 lg:px-24 py-8 w-full overflow-x-auto">
             <router-view v-slot="{ Component }">
                 <keep-alive>
                     <component :is="Component" />
