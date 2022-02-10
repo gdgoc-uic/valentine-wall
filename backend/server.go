@@ -750,35 +750,35 @@ func main() {
 				tx,
 			)
 			if err != nil {
-				log.Println(tx.Rollback())
+				passivePrintError(tx.Rollback())
 				return err
 			}
 
 			res, err := tx.NamedExec("INSERT INTO messages (id, recipient_id, content, submitter_user_id, has_gifts) VALUES (:id, :recipient_id, :content, :submitter_user_id, :has_gifts)", &submittedMsg)
 			if err != nil {
-				log.Println(tx.Rollback())
+				passivePrintError(tx.Rollback())
 				return err
 			}
 
 			if err := wrapSqlResult(res); err != nil {
-				log.Println(tx.Rollback())
+				passivePrintError(tx.Rollback())
 				return err
 			}
 
 			// TODO: support for purchasing gifts
 			for _, giftId := range submittedMsg.GiftIDs {
 				if res, err := tx.Exec("INSERT INTO message_gifts (message_id, gift_id) VALUES (?, ?)", submittedMsg.ID, giftId); err != nil {
-					log.Println(tx.Rollback())
+					passivePrintError(tx.Rollback())
 					return err
 				} else if err := wrapSqlResult(res); err != nil {
-					log.Println(tx.Rollback())
+					passivePrintError(tx.Rollback())
 					return err
 				}
 			}
 
 			recipientUser, getUserErr := getUserBySID(db, authClient, submittedMsg.RecipientID)
 			if getUserErr != nil {
-				log.Println(err)
+				passivePrintError(err)
 			}
 
 			// give the money to the person
@@ -789,7 +789,7 @@ func main() {
 					fmt.Sprintf("Money gift from message %s", submittedMsg.ID),
 					tx,
 				); err != nil {
-					log.Println(err)
+					passivePrintError(err)
 				}
 			}
 
@@ -798,7 +798,7 @@ func main() {
 			}
 
 			// save to search engine
-			if err := UpsertEntry(messagesSearchIndex, submittedMsg.ID, struct {
+			passivePrintError(UpsertEntry(messagesSearchIndex, submittedMsg.ID, struct {
 				MessageID   string    `db:"id" json:"-"`
 				RecipientID string    `db:"recipient_id" json:"recipient_id"`
 				CreatedAt   time.Time `db:"created_at" json:"created_at"`
@@ -810,9 +810,7 @@ func main() {
 				CreatedAt:   submittedMsg.CreatedAt,
 				UpdatedAt:   submittedMsg.UpdatedAt,
 				HasGifts:    submittedMsg.HasGifts,
-			}); err != nil {
-				log.Println(err)
-			}
+			}))
 
 			// send email to recipient if available
 			// ignore the errors, just pass through
@@ -829,9 +827,7 @@ func main() {
 				}
 
 				// send the mail within n minutes.
-				if err := notifier.Notify(); err != nil {
-					log.Println(err)
-				}
+				passivePrintError(notifier.Notify())
 			}
 
 			if !submittedMsg.HasGifts {
@@ -855,13 +851,13 @@ func main() {
 			messageId := chi.URLParam(rr, "messageId")
 			message := RawMessage{}
 			if err := db.Get(&message, "SELECT * FROM messages WHERE id = ? AND recipient_id = ? AND deleted_at IS NULL", messageId, recipientId); err != nil {
-				log.Println(err)
+				passivePrintError(err)
 				r.NotFoundHandler().ServeHTTP(rw, rr)
 				return
 			}
 
 			if err := db.Select(&message.GiftIDs, "SELECT gift_id FROM message_gifts WHERE message_id = ?", messageId); err != nil {
-				log.Println(err)
+				passivePrintError(err)
 			}
 
 			newCtx := context.WithValue(rr.Context(), gotMessageKey{}, message)
@@ -1002,7 +998,7 @@ func main() {
 				tx,
 			)
 			if err != nil {
-				log.Println(tx.Rollback())
+				passivePrintError(tx.Rollback())
 				return err
 			}
 
@@ -1041,24 +1037,22 @@ func main() {
 				return noConnectionErr
 			}
 
-			if err := notifier.Notify(); err != nil {
-				// dont let notifier errors stop the process.
-				log.Println(err)
-			}
+			// dont let notifier errors stop the process.
+			passivePrintError(notifier.Notify())
 
 			if updateRes, err := tx.NamedExec("INSERT INTO message_replies (message_id, content) VALUES (:message_id, :content)", &reply); err != nil {
-				defer log.Println(tx.Rollback())
+				defer passivePrintError(tx.Rollback())
 				return err
 			} else if err := wrapSqlResult(updateRes); err != nil {
-				defer log.Println(tx.Rollback())
+				defer passivePrintError(tx.Rollback())
 				return err
 			}
 
 			if res, err := tx.Exec("UPDATE messages SET has_replied = true WHERE id = ?", message.ID); err != nil {
-				defer log.Println(tx.Rollback())
+				defer passivePrintError(tx.Rollback())
 				return err
 			} else if err := wrapSqlResult(res); err != nil {
-				defer log.Println(tx.Rollback())
+				defer passivePrintError(tx.Rollback())
 				return err
 			}
 
@@ -1570,15 +1564,13 @@ func main() {
 					return err
 				}
 			} else if err := wrapSqlResult(res); err != nil {
-				log.Println(err)
+				passivePrintError(err)
 				continue
 			}
 		}
 
 		if err := tx.Commit(); err != nil {
-			if err := tx.Rollback(); err != nil {
-				log.Println(err)
-			}
+			passivePrintError(tx.Rollback())
 			return err
 		} else if err := authClient.DeleteUser(r.Context(), token.UID); err != nil {
 			return err
