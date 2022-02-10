@@ -39,10 +39,14 @@ type TwUploadImageResponse struct {
 	} `json:"image"`
 }
 
+var twHashTag = "#ProjectKupido2022"
+
 type TwitterNotifier struct {
 	Connection  UserConnection
 	ImageData   io.Reader
 	TextContent string
+	Hashtag     string
+	Link        string
 }
 
 // TODO: add hashtag
@@ -51,8 +55,22 @@ func (tw *TwitterNotifier) Notify() error {
 		return err
 	}
 
+	spacesNeeded := 1
+	if len(tw.Link) > 0 {
+		tw.Link = tw.Link + " "
+		spacesNeeded++
+	}
+
+	if len(tw.TextContent)+len(tw.Hashtag)+spacesNeeded > 240 {
+		combinedLen := len(tw.Hashtag) + (3 + spacesNeeded)
+		// 3 for ellipsis, 2 for spaces (1 included already in tw.Link)
+		end := len(tw.TextContent) - combinedLen
+		tw.TextContent = tw.TextContent[:end] + "..."
+	}
+
+	tw.TextContent = tw.TextContent + " "
 	tweetRespBody := map[string]interface{}{
-		"text": tw.TextContent,
+		"text": tw.TextContent + tw.Link + tw.Hashtag,
 	}
 
 	// commence posting process

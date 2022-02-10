@@ -976,6 +976,8 @@ func main() {
 					Connection:  connections[twitterIdx],
 					ImageData:   bytes.NewReader(imageData),
 					TextContent: reply.Content,
+					Hashtag:     twHashTag,
+					Link:        fmt.Sprintf("%s/wall/%s/%s", frontendUrl, message.RecipientID, message.ID),
 				}
 			} else if _, hasEmail := isConnectedTo(connections, "email"); hasEmail {
 				// get sender email
