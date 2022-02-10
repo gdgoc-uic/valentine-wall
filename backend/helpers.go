@@ -1,6 +1,7 @@
 package main
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
 	"fmt"
@@ -352,5 +353,25 @@ func customFilters(filters map[string]FilterFunc) func(http.Handler) http.Handle
 func passivePrintError(err error) {
 	if err != nil {
 		log.Println(err)
+	}
+}
+
+// sse-related
+func encodeDataSSE(rw http.ResponseWriter, msg Message) {
+	writer := &bytes.Buffer{}
+	encoder := json.NewEncoder(writer)
+	if err := encoder.Encode(msg); err != nil {
+		log.Println(err)
+		fmt.Fprintf(writer, "null")
+	}
+	writeResponseDataSSE(rw, writer)
+}
+
+func writeResponseDataSSE(rw http.ResponseWriter, buf *bytes.Buffer) {
+	fmt.Fprint(rw, "data: ")
+	buf.WriteTo(rw)
+	fmt.Fprint(rw, "\n\n")
+	if f, _ := rw.(http.Flusher); f != nil {
+		f.Flush()
 	}
 }

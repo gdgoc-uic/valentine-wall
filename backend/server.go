@@ -607,7 +607,6 @@ func main() {
 		rw.Header().Set("Connection", "keep-alive")
 
 		existingEntriesChan := make(chan Message, 10)
-		f, _ := rw.(http.Flusher)
 
 		go func() {
 			mSql, mArgs, _ := sq.Select("id", "recipient_id", "content", "has_replied", "has_gifts", "created_at", "updated_at").
@@ -629,26 +628,14 @@ func main() {
 				existingEntriesChan <- msg
 			}
 		}()
-
 		defer close(existingEntriesChan)
-
-		encoder := json.NewEncoder(rw)
-		encodeData := func(rw http.ResponseWriter, f http.Flusher, msg Message) {
-			fmt.Fprint(rw, "data: ")
-			if err := encoder.Encode(msg); err != nil {
-				log.Println(err)
-				fmt.Fprintf(rw, "{}")
-			}
-			fmt.Fprint(rw, "\n\n")
-			f.Flush()
-		}
 
 		for {
 			select {
 			case entry := <-existingEntriesChan:
-				encodeData(rw, f, entry)
+				go encodeDataSSE(rw, entry)
 			case entry2 := <-recentMessagesChan:
-				encodeData(rw, f, entry2)
+				go encodeDataSSE(rw, entry2)
 			case <-r.Context().Done():
 				return
 			}

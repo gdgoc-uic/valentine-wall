@@ -124,6 +124,7 @@ export default {
     if (!import.meta.env.SSR) {
       this.recentsSSE = new EventSource(expandAPIEndpoint('/recent-messages'));
       this.recentsSSE.onmessage = (event) => {
+        if (event.data === 'null') return;
         // console.log(event);
         this.recentMessages = [JSON.parse(event.data)];
       }
