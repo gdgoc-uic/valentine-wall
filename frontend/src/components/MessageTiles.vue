@@ -22,13 +22,10 @@
 </template>
 
 <script lang="ts">
-import dayjs from 'dayjs';
-import relativeTime from 'dayjs/plugin/relativeTime';
 import Masonry from './Masonry.vue';
 import IconReply from '~icons/uil/comment-heart';
 import IconGift from '~icons/uil/gift';
-
-dayjs.extend(relativeTime);
+import { toNow } from '../time_utils';
 
 export default {
   components: { 
@@ -132,8 +129,8 @@ export default {
         }
         return array;
     },
-    humanizeTime(date: Date | string): string {
-      return dayjs(date).toNow(true);
+    humanizeTime(date: Date): string {
+      return toNow(date);
     }
   }
 }

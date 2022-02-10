@@ -25,7 +25,7 @@
                 <p v-if="revealContent" class="font-bold text-4xl">{{ message.content }}</p>
               </div>
               <p class="text-gray-500" :class="{ 'text-center': hasGifts }">
-                Posted {{ relativifyDate(message.created_at) }} ({{ formatDate(message.created_at, 'MMMM D, YYYY h:mm A') }})
+                Posted {{ relativifyDate(message.created_at) }} ({{ prettifyDate(message.created_at) }})
               </p>
             </div>
 
@@ -110,8 +110,6 @@ import ReplyMessageModal from '../components/ReplyMessageModal.vue';
 import ShareModal from '../components/ShareModal.vue';
 import Modal from '../components/Modal.vue';
 
-import dayjs from 'dayjs';
-import relativeTime from 'dayjs/plugin/relativeTime';
 import { logEvent } from '@firebase/analytics';
 import { analytics } from '../firebase';
 import { APIResponse, APIResponseError } from '../client';
@@ -121,8 +119,7 @@ import { WatchStopHandle } from '@vue/runtime-core';
 import Portal from '../components/Portal.vue';
 import ResponseHandler from '../components/ResponseHandler.vue';
 import IconReport from '~icons/uil/exclamation-circle';
-
-dayjs.extend(relativeTime);
+import { fromNow, prettifyDateTime } from '../time_utils';
 
 export default {
   components: {
@@ -189,10 +186,10 @@ export default {
       }
     },
     relativifyDate(date: Date) {
-      return dayjs(date).fromNow();
+      return fromNow(date);
     },
-    formatDate(date: Date, format: string) {
-      return dayjs(date).format(format);
+    prettifyDate(date: Date) {
+      return prettifyDateTime(date);
     },
     generateDisplayGiftLabelString(g: Gift, i: number, arr: Gift[]) {
       let displayStr = g.label;
