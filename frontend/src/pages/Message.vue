@@ -8,7 +8,7 @@
         disappear-on-loading
         :endpoint="endpoint">
         <template #default="{ response: { data: { message, reply } } }">
-          <div class="w-full bg-white rounded-lg divide-y-2 shadow-lg">
+          <div class="w-full bg-white rounded-xl divide-y-2 shadow-lg">
             <div class="p-12">
               <div class="flex flex-col items-center text-center" v-if="hasGifts">
                 <div class="flex flex-row space-x-2 items-center justify-center">
@@ -69,6 +69,14 @@
               <span>Delete</span>
             </button>
           </div>
+          <div v-else-if="!message.has_replied && $store.state.user.associatedId == message.recipient_id" class="p-12 bg-white rounded-xl shadow-lg">
+            <h2 class="font-bold text-2xl mb-4">Your reply</h2>
+            <reply-message-box
+              class="py-8"
+              @update:hasReplied="handleHasReplied" 
+              v-model:open="openReplyModal" 
+              :message="message" />
+          </div>
         </template>
 
         <template #error="{ error: { rawResponse: resp } }">
@@ -87,10 +95,6 @@
         :recipient-id="$route.params.recipientId" 
         :message-id="$route.params.messageId" 
         :permalink="permalink" />
-      <reply-message-modal 
-        @update:hasReplied="handleHasReplied" 
-        v-model:open="openReplyModal" 
-        :message="message" />
       <modal v-model:open="openDeleteModal">
         <p>Are you sure you want to delete this?</p>
         <template #actions>
@@ -105,6 +109,7 @@
 <script lang="ts">
 import IconFacebook from '~icons/uil/facebook-f';
 import IconTwitter from '~icons/uil/twitter';
+import IconSend from '~icons/uil/message';
 import IconLink from '~icons/uil/link';
 import IconReply from '~icons/uil/comment-heart';
 import IconConfused from '~icons/uil/confused';
@@ -112,7 +117,7 @@ import IconTrash from '~icons/uil/trash-alt';
 import IconShare from '~icons/uil/share-alt';
 import GiftIcon from '../components/GiftIcon.vue';
 
-import ReplyMessageModal from '../components/ReplyMessageModal.vue';
+import ReplyMessageBox from '../components/ReplyMessageBox.vue';
 import ShareModal from '../components/ShareModal.vue';
 import Modal from '../components/Modal.vue';
 
@@ -135,9 +140,10 @@ export default {
     IconReply,
     IconConfused,
     IconShare,
+    IconSend,
     IconTrash,
     IconReport,
-    ReplyMessageModal,
+    ReplyMessageBox,
     ShareModal,
     GiftIcon,
     Modal,
