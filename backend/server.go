@@ -783,7 +783,7 @@ func main() {
 
 			// give the money to the person
 			if hasMoney {
-				if err := b.AddBalanceTo(
+				if _, err := b.AddBalanceTo(
 					recipientUser.UID,
 					moneyGift.Price,
 					fmt.Sprintf("Money gift from message %s", submittedMsg.ID),
@@ -1344,7 +1344,7 @@ func main() {
 			}
 
 			// initialize virtual wallet
-			if err := b.AddInitialBalanceTo(token.UID, tx); err != nil {
+			if _, err := b.AddInitialBalanceTo(token.UID, tx); err != nil {
 				if err := tx.Rollback(); err != nil {
 					log.Println(err)
 				}

@@ -122,24 +122,25 @@ func (b *VirtualBank) AddInitialAmountToExistingAccounts(firebaseApp *firebase.A
 	return nil
 }
 
-func (b *VirtualBank) AddInitialBalanceTo(uid string, tx *sqlx.Tx) error {
+func (b *VirtualBank) AddInitialBalanceTo(uid string, tx *sqlx.Tx) (*VirtualTransaction, error) {
 	amount := float32(4000)
 	if vWallet, err := b.GetWalletByUID(uid); err == nil && vWallet.Balance <= 0 {
 		return b.AddBalanceTo(uid, amount, "Add balance", tx)
 	}
 
-	if err := b.AddTransaction(uid, amount, "Initial Balance", tx); err != nil {
-		return err
+	gotTransaction, err := b.AddTransaction(uid, amount, "Initial Balance", tx)
+	if err != nil {
+		return nil, err
 	}
 
 	walletSql, walletArgs, _ := sq.Insert(virtualWalletsTableName).Columns("user_id", "balance").Values(uid, amount).ToSql()
 	if res, err := tx.Exec(walletSql, walletArgs...); err != nil {
-		return err
+		return nil, err
 	} else if err := wrapSqlResult(res); err != nil {
-		return err
+		return nil, err
 	}
 
-	return nil
+	return gotTransaction, nil
 }
 
 func (b *VirtualBank) GetWalletByUID(uid string) (*VirtualWallet, error) {
@@ -154,39 +155,51 @@ func (b *VirtualBank) GetWalletByUID(uid string) (*VirtualWallet, error) {
 	return vWallet, nil
 }
 
-func (b *VirtualBank) AddBalanceTo(uid string, amount float32, desc string, tx *sqlx.Tx) error {
+func (b *VirtualBank) AddBalanceTo(uid string, amount float32, desc string, tx *sqlx.Tx) (*VirtualTransaction, error) {
 	vWallet, err := b.GetWalletByUID(uid)
 	if err == sql.ErrNoRows {
 		return b.AddInitialBalanceTo(uid, tx)
 	} else if err != nil {
-		return err
+		return nil, err
 	}
 
-	if err := b.AddTransaction(uid, amount, desc, tx); err != nil {
-		return err
+	gotTransaction, err := b.AddTransaction(uid, amount, desc, tx)
+	if err != nil {
+		return nil, err
 	}
 
 	walletSql, walletArgs, _ := sq.Update(virtualWalletsTableName).Set("balance", vWallet.Balance+amount).Where(sq.Eq{"user_id": uid}).ToSql()
 	if res, err := tx.Exec(walletSql, walletArgs...); err != nil {
-		return err
+		return nil, err
 	} else if err := wrapSqlResult(res); err != nil {
-		return err
+		return nil, err
 	}
 
-	return nil
+	return gotTransaction, nil
 }
 
-func (b *VirtualBank) AddTransaction(uid string, amount float32, desc string, tx *sqlx.Tx) error {
+func (b *VirtualBank) AddTransaction(uid string, amount float32, desc string, tx *sqlx.Tx) (*VirtualTransaction, error) {
 	id, _ := goNanoid.New()
-	transactionSql, txArgs, _ := sq.Insert(virtualTransactionsTableName).
-		Columns("id", "user_id", "amount", "description").Values(id, uid, amount, desc).ToSql()
-	if res, err := tx.Exec(transactionSql, txArgs...); err != nil {
-		return err
-	} else if err := wrapSqlResult(res); err != nil {
-		return err
+	newTransaction := &VirtualTransaction{
+		ID:          id,
+		UserID:      uid,
+		Amount:      amount,
+		Description: desc,
+		CreatedAt:   time.Now(),
 	}
 
-	return nil
+	transactionSql := fmt.Sprintf(
+		"INSERT INTO %s VALUES (id, user_id, amount, description, created_at) VALUES (:id, :user_id, :amount, :description, :created_at)",
+		virtualTransactionsTableName,
+	)
+
+	if res, err := tx.NamedExec(transactionSql, newTransaction); err != nil {
+		return nil, err
+	} else if err := wrapSqlResult(res); err != nil {
+		return nil, err
+	}
+
+	return newTransaction, nil
 }
 
 func (b *VirtualBank) DeductBalanceTo(uid string, amount float32, desc string, tx *sqlx.Tx) (float32, error) {
@@ -203,7 +216,7 @@ func (b *VirtualBank) DeductBalanceTo(uid string, amount float32, desc string, t
 		}
 	}
 
-	if err := b.AddTransaction(uid, amount, desc, tx); err != nil {
+	if _, err := b.AddTransaction(uid, -amount, desc, tx); err != nil {
 		return 0, err
 	}
 
@@ -286,7 +299,7 @@ func (b *VirtualBank) DepositChequeByID(chequeID string, recipientUID string) er
 		return err
 	}
 
-	if err := b.AddBalanceTo(
+	if _, err := b.AddBalanceTo(
 		gotCheque.UserID,
 		gotCheque.Amount,
 		gotCheque.Description,
