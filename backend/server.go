@@ -1029,6 +1029,35 @@ func main() {
 			})
 		}))
 
+	r.With(jsonOnly, appVerifyUser, getRawMessage).
+		Delete("/messages/{recipientId}/{messageId}/reply", wrapHandler(func(rw http.ResponseWriter, r *http.Request) error {
+			token := getAuthTokenByReq(r)
+			tx, err := db.BeginTxx(r.Context(), &sql.TxOptions{})
+			if err != nil {
+				return err
+			}
+
+			messageId := chi.URLParam(r, "messageId")
+			if res, err := tx.Exec("DELETE FROM message_replies WHERE message_id = ?", messageId); err != nil {
+				return err
+			} else if err := wrapSqlResult(res); err != nil {
+				return err
+			}
+
+			if res, err := tx.Exec("UPDATE messages SET has_replied = false WHERE id = ?", messageId); err != nil {
+				return err
+			} else if err := wrapSqlResult(res); err != nil {
+				return err
+			}
+
+			if err := tx.Commit(); err != nil {
+				return err
+			}
+
+			defer passivePrintError(updateUserLastActive(db, token.UID))
+			return jsonEncode(rw, map[string]string{"message": "reply deleted successfully."})
+		}))
+
 	r.With(appVerifyUser).
 		Post("/user/logout_callback", wrapHandler(func(rw http.ResponseWriter, r *http.Request) error {
 			session, err := store.Get(r, sessionName)

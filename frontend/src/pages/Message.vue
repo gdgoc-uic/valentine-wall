@@ -62,6 +62,12 @@
           <div v-if="message.has_replied && (reply && reply.content)" class="shadow-lg w-full bg-white rounded-lg p-12">
             <p class="text-gray-500 mb-2">{{ message.recipient_id }} replied</p>
             <p class="text-2xl">{{ reply.content }}</p>
+
+            <!-- TODO: polish UI -->
+            <button v-if="$store.state.user.associatedId == message.recipient_id" @click="deleteReply" class="btn space-x-2 flex items-center">
+              <icon-trash />
+              <span>Delete</span>
+            </button>
           </div>
         </template>
 
@@ -161,6 +167,16 @@ export default {
         const { data: json } = await this.$client.delete(`/messages/${this.$route.params.recipientId}/${this.$route.params.messageId}`);
         this.$notify({ type: 'success', text: json['message'] });
         this.$router.replace({ name: 'home-page' });
+      } catch(e) {
+        catchAndNotifyError(this, e);
+      }
+    },
+    async deleteReply() {
+      try {
+        const { data: json } = await this.$client.delete(`/messages/${this.$route.params.recipientId}/${this.$route.params.messageId}/reply`);
+        this.$notify({ type: 'success', text: json['message'] });
+        this.message.has_replied = false;
+        this.$router.go(0);
       } catch(e) {
         catchAndNotifyError(this, e);
       }
