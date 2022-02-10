@@ -40,7 +40,9 @@
       </div>
     </div>
     <div class="py-6">
-      <p class="font-bold">Connections</p>
+      <h2 class="font-bold text-2xl">Connections</h2>
+      <p>Third-party accounts for use on sharing content outside the site such as replies and etc.</p>
+
       <div class="flex flex-col">
         <div v-if="$store.state.user.connections.findIndex(c => c.provider === 'twitter') === -1" class="flex justify-between items-center py-2">
           <label>twitter</label>
@@ -63,7 +65,6 @@
             @click="disconnectUserConnection(conn.provider)" 
             class="btn btn-error btn-outline">Disconnect</button>
         </div>
-        <p class="py-4 text-gray-600" v-if="$store.state.user.connections.length == 0">No connections found.</p>
       </div>
     </div>
   </div>
