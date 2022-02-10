@@ -1233,9 +1233,7 @@ func main() {
 		Get("/user/info", wrapHandler(func(rw http.ResponseWriter, r *http.Request) error {
 			token := getAuthTokenByReq(r)
 			vWallet, err := b.GetWalletByUID(token.UID)
-			if err != nil {
-				log.Println(err)
-			}
+			passivePrintError(err)
 
 			associatedData, err := getAssociatedUserBy(db, sq.Eq{"user_id": token.UID})
 			if err != nil {

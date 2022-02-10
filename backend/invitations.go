@@ -132,12 +132,6 @@ func (sys *InvitationSystem) DestroyInvitation(id string, tx *sqlx.Tx) error {
 	return nil
 }
 
-func passivePrintError(err error) {
-	if err != nil {
-		log.Println(err)
-	}
-}
-
 func (sys *InvitationSystem) UseInvitationFromReq(rw http.ResponseWriter, r *http.Request, signedUpUid string, b *VirtualBank) error {
 	inv, invErr := sys.InvitationFromCookie(r)
 	if invErr != nil {

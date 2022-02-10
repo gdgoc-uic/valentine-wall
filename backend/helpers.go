@@ -335,3 +335,9 @@ func customFilters(filters map[string]FilterFunc) func(http.Handler) http.Handle
 		})
 	}
 }
+
+func passivePrintError(err error) {
+	if err != nil {
+		log.Println(err)
+	}
+}
