@@ -1,7 +1,7 @@
 <template>
   <masonry class="message-results -mx-2">
     <!-- TODO: make card widths and --colors-- different -->
-    <div :key="msg.id" v-for="msg in messageList" class="w-1/2 md:w-1/3 lg:w-1/4 message-paper-wrapper">
+    <div :key="msg.id" v-for="msg in messageList" :class="boxClass" class="message-paper-wrapper">
       <router-link
         :to="{ name: 'message-page', params: { recipientId: msg.recipient_id, messageId: msg.id } }"
         class="message-paper"
@@ -47,7 +47,11 @@ export default {
     },
     messages: {
       type: Array,
-      default :[]
+      default: []
+    },
+    boxClass: {
+      type: String,
+      default: 'w-1/2 md:w-1/3 lg:w-1/4'
     }
   },
   mounted() {
