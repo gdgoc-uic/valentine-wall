@@ -633,9 +633,9 @@ func main() {
 		for {
 			select {
 			case entry := <-existingEntriesChan:
-				go encodeDataSSE(rw, entry)
+				encodeDataSSE(rw, entry)
 			case entry2 := <-recentMessagesChan:
-				go encodeDataSSE(rw, entry2)
+				encodeDataSSE(rw, entry2)
 			case <-r.Context().Done():
 				return
 			}

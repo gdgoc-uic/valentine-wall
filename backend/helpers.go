@@ -371,7 +371,7 @@ func writeResponseDataSSE(rw http.ResponseWriter, buf *bytes.Buffer) {
 	fmt.Fprint(rw, "data: ")
 	buf.WriteTo(rw)
 	fmt.Fprint(rw, "\n\n")
-	if f, _ := rw.(http.Flusher); f != nil {
+	if f, ok := rw.(http.Flusher); ok {
 		f.Flush()
 	}
 }
