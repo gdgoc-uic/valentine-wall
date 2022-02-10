@@ -17,10 +17,14 @@ import (
 )
 
 /*
-
 TODO:
-- Earn via referral/invitation links
 - Earn via share links
+- Admin API
+- Live notifications of transaction
+
+ADDED:
+- Earn via referral/invitation links
+- Earn via cheques (contests, etc.)
 - Earn via last idle session computation
 */
 
@@ -37,8 +41,17 @@ type VirtualTransaction struct {
 	CreatedAt   time.Time `db:"created_at" json:"created_at"`
 }
 
+type Cheque struct {
+	ID          string    `db:"id" json:"id"`
+	UserID      string    `db:"user_id" json:"user_id"`
+	Amount      float32   `db:"amount" json:"amount"`
+	Description string    `db:"description" json:"description"`
+	CreatedAt   time.Time `db:"created_at" json:"created_at"`
+}
+
 const virtualTransactionsTableName = "virtual_transactions"
 const virtualWalletsTableName = "virtual_wallets"
+const chequesTableName = "cheques"
 
 type VirtualBank struct {
 	DB *sqlx.DB
@@ -110,24 +123,25 @@ func (b *VirtualBank) AddInitialAmountToExistingAccounts(firebaseApp *firebase.A
 	return nil
 }
 
-func (b *VirtualBank) AddInitialBalanceTo(uid string, tx *sqlx.Tx) error {
+func (b *VirtualBank) AddInitialBalanceTo(uid string, tx *sqlx.Tx) (*VirtualTransaction, error) {
 	amount := float32(4000)
 	if vWallet, err := b.GetWalletByUID(uid); err == nil && vWallet.Balance <= 0 {
 		return b.AddBalanceTo(uid, amount, "Add balance", tx)
 	}
 
-	if err := b.AddTransaction(uid, amount, "Initial Balance", tx); err != nil {
-		return err
+	gotTransaction, err := b.AddTransaction(uid, amount, "Initial Balance", tx)
+	if err != nil {
+		return nil, err
 	}
 
 	walletSql, walletArgs, _ := sq.Insert(virtualWalletsTableName).Columns("user_id", "balance").Values(uid, amount).ToSql()
 	if res, err := tx.Exec(walletSql, walletArgs...); err != nil {
-		return err
+		return nil, err
 	} else if err := wrapSqlResult(res); err != nil {
-		return err
+		return nil, err
 	}
 
-	return nil
+	return gotTransaction, nil
 }
 
 func (b *VirtualBank) GetWalletByUID(uid string) (*VirtualWallet, error) {
@@ -142,39 +156,51 @@ func (b *VirtualBank) GetWalletByUID(uid string) (*VirtualWallet, error) {
 	return vWallet, nil
 }
 
-func (b *VirtualBank) AddBalanceTo(uid string, amount float32, desc string, tx *sqlx.Tx) error {
+func (b *VirtualBank) AddBalanceTo(uid string, amount float32, desc string, tx *sqlx.Tx) (*VirtualTransaction, error) {
 	vWallet, err := b.GetWalletByUID(uid)
 	if err == sql.ErrNoRows {
 		return b.AddInitialBalanceTo(uid, tx)
 	} else if err != nil {
-		return err
+		return nil, err
 	}
 
-	if err := b.AddTransaction(uid, amount, desc, tx); err != nil {
-		return err
+	gotTransaction, err := b.AddTransaction(uid, amount, desc, tx)
+	if err != nil {
+		return nil, err
 	}
 
 	walletSql, walletArgs, _ := sq.Update(virtualWalletsTableName).Set("balance", vWallet.Balance+amount).Where(sq.Eq{"user_id": uid}).ToSql()
 	if res, err := tx.Exec(walletSql, walletArgs...); err != nil {
-		return err
+		return nil, err
 	} else if err := wrapSqlResult(res); err != nil {
-		return err
+		return nil, err
 	}
 
-	return nil
+	return gotTransaction, nil
 }
 
-func (b *VirtualBank) AddTransaction(uid string, amount float32, desc string, tx *sqlx.Tx) error {
+func (b *VirtualBank) AddTransaction(uid string, amount float32, desc string, tx *sqlx.Tx) (*VirtualTransaction, error) {
 	id, _ := goNanoid.New()
-	transactionSql, txArgs, _ := sq.Insert(virtualTransactionsTableName).
-		Columns("id", "user_id", "amount", "description").Values(id, uid, amount, desc).ToSql()
-	if res, err := tx.Exec(transactionSql, txArgs...); err != nil {
-		return err
-	} else if err := wrapSqlResult(res); err != nil {
-		return err
+	newTransaction := &VirtualTransaction{
+		ID:          id,
+		UserID:      uid,
+		Amount:      amount,
+		Description: desc,
+		CreatedAt:   time.Now(),
 	}
 
-	return nil
+	transactionSql := fmt.Sprintf(
+		"INSERT INTO %s (id, user_id, amount, description, created_at) VALUES (:id, :user_id, :amount, :description, :created_at)",
+		virtualTransactionsTableName,
+	)
+
+	if res, err := tx.NamedExec(transactionSql, newTransaction); err != nil {
+		return nil, err
+	} else if err := wrapSqlResult(res); err != nil {
+		return nil, err
+	}
+
+	return newTransaction, nil
 }
 
 func (b *VirtualBank) DeductBalanceTo(uid string, amount float32, desc string, tx *sqlx.Tx) (float32, error) {
@@ -191,7 +217,7 @@ func (b *VirtualBank) DeductBalanceTo(uid string, amount float32, desc string, t
 		}
 	}
 
-	if err := b.AddTransaction(uid, amount, desc, tx); err != nil {
+	if _, err := b.AddTransaction(uid, -amount, desc, tx); err != nil {
 		return 0, err
 	}
 
@@ -205,11 +231,128 @@ func (b *VirtualBank) DeductBalanceTo(uid string, amount float32, desc string, t
 	return vWallet.Balance - amount, nil
 }
 
+func (b *VirtualBank) ConvertIdleTime(uid string, lastActiveAt time.Time) (*VirtualTransaction, error) {
+	// compute by the minute
+	// 20 * (total idle time / 10 minutes)
+	idleTime := time.Since(lastActiveAt)
+	quotientMinutes := math.Floor(idleTime.Minutes() / 10)
+
+	// player should be atleast 10 minutes in order to earn
+	if quotientMinutes < 10 {
+		return nil, nil
+	}
+
+	coinsToEarn := 20 * quotientMinutes
+	tx, err := b.DB.BeginTxx(context.Background(), &sql.TxOptions{})
+	if err != nil {
+		return nil, err
+	}
+
+	return b.AddBalanceTo(uid, float32(coinsToEarn), "Idle time earning", tx)
+}
+
+func (b *VirtualBank) GenerateCheque(toUID string, amount float32) (*Cheque, error) {
+	id, _ := goNanoid.New()
+	timestamp := time.Now()
+	chequeDescription := "Deposit check"
+	res, err := b.DB.Exec(
+		"INSERT INTO cheques (id, user_id, amount, description, created_at) VALUES (?, ?, ?, ?, ?)",
+		id, toUID, amount, chequeDescription, timestamp,
+	)
+	if err != nil {
+		return nil, err
+	} else if err := wrapSqlResult(res); err != nil {
+		return nil, err
+	}
+
+	finalCheque := &Cheque{
+		ID:          id,
+		UserID:      toUID,
+		Amount:      amount,
+		Description: chequeDescription,
+		CreatedAt:   timestamp,
+	}
+
+	return finalCheque, nil
+}
+
+func (b *VirtualBank) GenerateChequeBySID(sid string, amount float32) (*Cheque, error) {
+	gotUser, err := getAssociatedUserBy(b.DB, sq.Eq{"associated_id": sid})
+	if err != nil {
+		return nil, err
+	}
+
+	return b.GenerateCheque(gotUser.UserID, amount)
+}
+
+func (b *VirtualBank) DepositChequeByID(chequeID string, recipientUID string) error {
+	if len(chequeID) == 0 {
+		return &ResponseError{
+			StatusCode: http.StatusBadRequest,
+			Message:    "Cheque ID is empty.",
+		}
+	} else if len(recipientUID) == 0 {
+		return &ResponseError{
+			WError:     fmt.Errorf("recipient uid is empty"),
+			StatusCode: http.StatusBadRequest,
+		}
+	}
+
+	// verify cheque
+	gotCheque := Cheque{}
+	if err := b.DB.Get(
+		&gotCheque,
+		"SELECT * FROM cheques WHERE id = ? AND user_id = ?",
+		chequeID, recipientUID,
+	); err != nil {
+		if err == sql.ErrNoRows {
+			return &ResponseError{
+				StatusCode: http.StatusNotFound,
+				Message:    "invalid cheque",
+			}
+		}
+		return err
+	}
+
+	// deposit cheque
+	tx, err := b.DB.BeginTxx(context.Background(), &sql.TxOptions{})
+	if err != nil {
+		return err
+	}
+
+	if _, err := b.AddBalanceTo(
+		gotCheque.UserID,
+		gotCheque.Amount,
+		gotCheque.Description,
+		tx,
+	); err != nil {
+		passivePrintError(tx.Rollback())
+		return err
+	}
+
+	if err := tx.Commit(); err != nil {
+		passivePrintError(tx.Rollback())
+		return err
+	}
+
+	return nil
+}
+
+type virtualWalletKey struct{}
+
+func getVirtualWalletFromReq(r *http.Request) *VirtualWallet {
+	vWallet, ok := r.Context().Value(virtualWalletKey{}).(*VirtualWallet)
+	if !ok {
+		return nil
+	}
+	return vWallet
+}
+
 func checkBalance(b *VirtualBank) func(http.Handler) http.Handler {
 	return func(next http.Handler) http.Handler {
 		return wrapHandler(func(rw http.ResponseWriter, r *http.Request) error {
-			token, ok := r.Context().Value("authToken").(*auth.Token)
-			if !ok {
+			token := getAuthTokenByReq(r)
+			if token == nil {
 				return &ResponseError{
 					StatusCode: http.StatusForbidden,
 					Message:    "Forbidden transaction.",
@@ -228,7 +371,7 @@ func checkBalance(b *VirtualBank) func(http.Handler) http.Handler {
 				}
 			}
 
-			ctx := context.WithValue(r.Context(), "virtualWallet", vWallet)
+			ctx := context.WithValue(r.Context(), virtualWalletKey{}, vWallet)
 			next.ServeHTTP(rw, r.WithContext(ctx))
 			return nil
 		})

@@ -42,8 +42,8 @@
               <td class="text-md font-bold text-gray-700">{{iv.id}}</td>
               <td class="text-md font-semibold text-gray-500">{{ iv.max_users }}</td>
               <td class="text-md font-semibold text-gray-500">{{ iv.user_count }}</td>
-              <td class="text-md text-gray-500 text-center">{{ formatDate(iv.created_at, 'MMMM D, YYYY h:mm A') }}</td>
-              <td class="text-md text-gray-500 text-center">{{ formatDate(iv.expires_at, 'MMMM D, YYYY h:mm A') }}</td>
+              <td class="text-md text-gray-500 text-center">{{ prettifyDate(iv.created_at) }}</td>
+              <td class="text-md text-gray-500 text-center">{{ prettifyDate(iv.expires_at) }}</td>
             </tr>
           </tbody>
         </table>
@@ -57,7 +57,7 @@
 
 <script lang="ts">
 import { defineComponent } from 'vue';
-import dayjs from 'dayjs';
+import { prettifyDateTime } from '../../time_utils';
 
 import ResponseHandler from '../../components/ResponseHandler.vue';
 import IconPlus from '~icons/uil/plus'
@@ -79,8 +79,8 @@ export default defineComponent({
     }
   },
   methods: {
-    formatDate(date: Date, format: string) {
-      return dayjs(date).format(format);
+    prettifyDate(date: Date) {
+      return prettifyDateTime(date);
     },
     handleModalOpen(newOpen: boolean) {
       this.openGenerateModal = newOpen;

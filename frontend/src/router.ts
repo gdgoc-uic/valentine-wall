@@ -111,6 +111,15 @@ const routes: RouteRecordRaw[] = [
         }
       },
       {
+        name: 'settings-cheques-section',
+        path: 'transactions',
+        component: () => import('./pages/settings/Cheques.vue'),
+        meta: {
+          pageTitle: 'Cheques | Settings',
+          label: 'Cheques'
+        }
+      },
+      {
         name: 'settings-invitations-section',
         path: 'invitations',
         component: () => import('./pages/settings/Invitations.vue'),

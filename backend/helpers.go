@@ -1,6 +1,7 @@
 package main
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
 	"fmt"
@@ -8,6 +9,7 @@ import (
 	"log"
 	"net/http"
 	"strings"
+	"time"
 
 	firebase "firebase.google.com/go/v4"
 	"firebase.google.com/go/v4/auth"
@@ -108,6 +110,25 @@ func wrapHandler(handler func(http.ResponseWriter, *http.Request) error, encoder
 	})
 }
 
+type authTokenKey struct{}
+type authClientKey struct{}
+
+func getAuthClientByReq(r *http.Request) *auth.Client {
+	cl, ok := r.Context().Value(authClientKey{}).(*auth.Client)
+	if !ok {
+		return nil
+	}
+	return cl
+}
+
+func getAuthTokenByReq(r *http.Request) *auth.Token {
+	token, ok := r.Context().Value(authTokenKey{}).(*auth.Token)
+	if !ok {
+		return nil
+	}
+	return token
+}
+
 func getAuthToken(r *http.Request, firebaseApp *firebase.App) (*auth.Token, *auth.Client, error) {
 	authHeader := r.Header.Get("Authorization")
 	if len(authHeader) == 0 || !strings.HasPrefix(authHeader, "Bearer ") {
@@ -141,8 +162,8 @@ func verifyUser(firebaseApp *firebase.App) func(http.Handler) http.Handler {
 				return err
 			}
 
-			ctx := context.WithValue(r.Context(), "authToken", token)
-			ctxWithClient := context.WithValue(ctx, "authClient", authClient)
+			ctx := context.WithValue(r.Context(), authTokenKey{}, token)
+			ctxWithClient := context.WithValue(ctx, authClientKey{}, authClient)
 			next.ServeHTTP(rw, r.WithContext(ctxWithClient))
 			return nil
 		})
@@ -222,7 +243,7 @@ func checkProfanity(content string) error {
 
 func getUserConnections(db *sqlx.DB, uid string) []UserConnection {
 	connections := []UserConnection{}
-	if err := db.Select(&connections, "SELECT * FROM user_connections WHERE user_id = ?", uid); err != nil {
+	if err := db.Select(&connections, "SELECT * FROM user_connections_new WHERE user_id = ?", uid); err != nil {
 		log.Println(err)
 		// return err
 	}
@@ -264,6 +285,18 @@ func getAssociatedUserBy(db *sqlx.DB, pred Predicate) (*AssociatedUser, error) {
 		return nil, err
 	}
 	return associatedData, nil
+}
+
+func updateUserLastActive(db *sqlx.DB, uid string) error {
+	if res, err := db.Exec(
+		"UPDATE associated_ids SET last_active_at = ? WHERE user_id = ?",
+		time.Now(), uid,
+	); err != nil {
+		return err
+	} else if err := wrapSqlResult(res); err != nil {
+		return err
+	}
+	return nil
 }
 
 func getRecipientStatsBySID(index bleve.Index, sid string) (*RecipientStats, error) {
@@ -314,5 +347,31 @@ func customFilters(filters map[string]FilterFunc) func(http.Handler) http.Handle
 			next.ServeHTTP(rw, r.WithContext(ctx))
 			return nil
 		})
+	}
+}
+
+func passivePrintError(err error) {
+	if err != nil {
+		log.Println(err)
+	}
+}
+
+// sse-related
+func encodeDataSSE(rw http.ResponseWriter, msg Message) {
+	writer := &bytes.Buffer{}
+	encoder := json.NewEncoder(writer)
+	if err := encoder.Encode(msg); err != nil {
+		log.Println(err)
+		fmt.Fprintf(writer, "null")
+	}
+	writeResponseDataSSE(rw, writer)
+}
+
+func writeResponseDataSSE(rw http.ResponseWriter, buf *bytes.Buffer) {
+	fmt.Fprint(rw, "data: ")
+	buf.WriteTo(rw)
+	fmt.Fprint(rw, "\n\n")
+	if f, ok := rw.(http.Flusher); ok {
+		f.Flush()
 	}
 }

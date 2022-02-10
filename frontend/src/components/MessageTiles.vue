@@ -1,7 +1,7 @@
 <template>
   <masonry class="message-results -mx-2">
     <!-- TODO: make card widths and --colors-- different -->
-    <div :key="msg.id" v-for="msg in messageList" class="w-1/2 md:w-1/3 lg:w-1/4 message-paper-wrapper">
+    <div :key="msg.id" v-for="msg in messageList" :class="boxClass" class="message-paper-wrapper">
       <router-link
         :to="{ name: 'message-page', params: { recipientId: msg.recipient_id, messageId: msg.id } }"
         class="message-paper"
@@ -22,13 +22,10 @@
 </template>
 
 <script lang="ts">
-import dayjs from 'dayjs';
-import relativeTime from 'dayjs/plugin/relativeTime';
 import Masonry from './Masonry.vue';
 import IconReply from '~icons/uil/comment-heart';
 import IconGift from '~icons/uil/gift';
-
-dayjs.extend(relativeTime);
+import { toNow } from '../time_utils';
 
 export default {
   components: { 
@@ -50,7 +47,11 @@ export default {
     },
     messages: {
       type: Array,
-      default :[]
+      default: []
+    },
+    boxClass: {
+      type: String,
+      default: 'w-1/2 md:w-1/3 lg:w-1/4'
     }
   },
   mounted() {
@@ -132,8 +133,8 @@ export default {
         }
         return array;
     },
-    humanizeTime(date: Date | string): string {
-      return dayjs(date).toNow(true);
+    humanizeTime(date: Date): string {
+      return toNow(date);
     }
   }
 }

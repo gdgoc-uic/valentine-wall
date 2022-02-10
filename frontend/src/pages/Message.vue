@@ -8,7 +8,7 @@
         disappear-on-loading
         :endpoint="endpoint">
         <template #default="{ response: { data: { message, reply } } }">
-          <div class="w-full bg-white rounded-lg divide-y-2 shadow-lg">
+          <div class="w-full bg-white rounded-xl divide-y-2 shadow-lg">
             <div class="p-12">
               <div class="flex flex-col items-center text-center" v-if="hasGifts">
                 <div class="flex flex-row space-x-2 items-center justify-center">
@@ -25,7 +25,7 @@
                 <p v-if="revealContent" class="font-bold text-4xl">{{ message.content }}</p>
               </div>
               <p class="text-gray-500" :class="{ 'text-center': hasGifts }">
-                Posted {{ relativifyDate(message.created_at) }} ({{ formatDate(message.created_at, 'MMMM D, YYYY h:mm A') }})
+                Posted {{ relativifyDate(message.created_at) }} ({{ prettifyDate(message.created_at) }})
               </p>
             </div>
 
@@ -62,6 +62,20 @@
           <div v-if="message.has_replied && (reply && reply.content)" class="shadow-lg w-full bg-white rounded-lg p-12">
             <p class="text-gray-500 mb-2">{{ message.recipient_id }} replied</p>
             <p class="text-2xl">{{ reply.content }}</p>
+
+            <!-- TODO: polish UI -->
+            <button v-if="$store.state.user.associatedId == message.recipient_id" @click="deleteReply" class="btn space-x-2 flex items-center">
+              <icon-trash />
+              <span>Delete</span>
+            </button>
+          </div>
+          <div v-else-if="!message.has_replied && $store.state.user.associatedId == message.recipient_id" class="p-12 bg-white rounded-xl shadow-lg">
+            <h2 class="font-bold text-2xl mb-4">Your reply</h2>
+            <reply-message-box
+              class="py-8"
+              @update:hasReplied="handleHasReplied" 
+              v-model:open="openReplyModal" 
+              :message="message" />
           </div>
         </template>
 
@@ -81,10 +95,6 @@
         :recipient-id="$route.params.recipientId" 
         :message-id="$route.params.messageId" 
         :permalink="permalink" />
-      <reply-message-modal 
-        @update:hasReplied="handleHasReplied" 
-        v-model:open="openReplyModal" 
-        :message="message" />
       <modal v-model:open="openDeleteModal">
         <p>Are you sure you want to delete this?</p>
         <template #actions>
@@ -99,6 +109,7 @@
 <script lang="ts">
 import IconFacebook from '~icons/uil/facebook-f';
 import IconTwitter from '~icons/uil/twitter';
+import IconSend from '~icons/uil/message';
 import IconLink from '~icons/uil/link';
 import IconReply from '~icons/uil/comment-heart';
 import IconConfused from '~icons/uil/confused';
@@ -106,12 +117,10 @@ import IconTrash from '~icons/uil/trash-alt';
 import IconShare from '~icons/uil/share-alt';
 import GiftIcon from '../components/GiftIcon.vue';
 
-import ReplyMessageModal from '../components/ReplyMessageModal.vue';
+import ReplyMessageBox from '../components/ReplyMessageBox.vue';
 import ShareModal from '../components/ShareModal.vue';
 import Modal from '../components/Modal.vue';
 
-import dayjs from 'dayjs';
-import relativeTime from 'dayjs/plugin/relativeTime';
 import { logEvent } from '@firebase/analytics';
 import { analytics } from '../firebase';
 import { APIResponse, APIResponseError } from '../client';
@@ -121,8 +130,7 @@ import { WatchStopHandle } from '@vue/runtime-core';
 import Portal from '../components/Portal.vue';
 import ResponseHandler from '../components/ResponseHandler.vue';
 import IconReport from '~icons/uil/exclamation-circle';
-
-dayjs.extend(relativeTime);
+import { fromNow, prettifyDateTime } from '../time_utils';
 
 export default {
   components: {
@@ -132,9 +140,10 @@ export default {
     IconReply,
     IconConfused,
     IconShare,
+    IconSend,
     IconTrash,
     IconReport,
-    ReplyMessageModal,
+    ReplyMessageBox,
     ShareModal,
     GiftIcon,
     Modal,
@@ -168,6 +177,16 @@ export default {
         catchAndNotifyError(this, e);
       }
     },
+    async deleteReply() {
+      try {
+        const { data: json } = await this.$client.delete(`/messages/${this.$route.params.recipientId}/${this.$route.params.messageId}/reply`);
+        this.$notify({ type: 'success', text: json['message'] });
+        this.message.has_replied = false;
+        this.$router.go(0);
+      } catch(e) {
+        catchAndNotifyError(this, e);
+      }
+    },
     handleHasReplied(hasReplied: boolean) {
       this.message.has_replied = hasReplied;
       if (hasReplied) {
@@ -189,10 +208,10 @@ export default {
       }
     },
     relativifyDate(date: Date) {
-      return dayjs(date).fromNow();
+      return fromNow(date);
     },
-    formatDate(date: Date, format: string) {
-      return dayjs(date).format(format);
+    prettifyDate(date: Date) {
+      return prettifyDateTime(date);
     },
     generateDisplayGiftLabelString(g: Gift, i: number, arr: Gift[]) {
       let displayStr = g.label;

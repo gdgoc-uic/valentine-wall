@@ -27,20 +27,32 @@ export function popupCenter({ url, title, w, h }: { url: string, title: string, 
     return newWindow;
 };
 
-export function connectToTwitter(store: Store<State>) {
+interface ConnectCallbacks {
+    onSuccess?: () => void,
+    onError?: (e: unknown) => void,
+    onFinally?: () => void
+}
+
+export function connectToTwitter(store: Store<State>, cbs?: ConnectCallbacks) {
     const connectUrl = expandAPIEndpoint('/user/connect_twitter');
     const loginWindow = popupCenter({ url: connectUrl, title: 'twitter_login_window', w: 800, h: 500 });
     if (!loginWindow) {
-        throw new Error('Failed to open window.');
+        cbs?.onError?.(new Error('Failed to open window.'));
+        cbs?.onFinally?.();
+        return;
     }
 
     const handleFn = function (this: Window, e: MessageEvent) {
         if (e.origin === import.meta.env.VITE_BACKEND_URL && typeof e.data === 'object' && 'message' in e.data) {
             const data = e.data;
             if (data['message'] !== 'twitter connect success') {
-                throw new Error();
+                cbs?.onError?.(new Error());
+                cbs?.onFinally?.();
+                return 
             }
             store.commit('SET_USER_CONNECTIONS', data['user_connections']);
+            cbs?.onSuccess?.();
+            cbs?.onFinally?.();
             window.removeEventListener('message', handleFn);
             loginWindow.close();
         }

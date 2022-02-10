@@ -12,7 +12,6 @@ import (
 	"regexp"
 	"sort"
 	"strconv"
-	"sync"
 	"text/template"
 	"time"
 
@@ -28,7 +27,6 @@ import (
 	"google.golang.org/api/option"
 
 	firebase "firebase.google.com/go/v4"
-	"firebase.google.com/go/v4/auth"
 	goNanoid "github.com/matoous/go-nanoid/v2"
 
 	"github.com/dghubble/oauth1"
@@ -41,30 +39,7 @@ import (
 	"github.com/patrickmn/go-cache"
 )
 
-type RegistrationTokensManager struct {
-	sync.Mutex
-	keys []string
-}
-
-func (m *RegistrationTokensManager) Add(key string) {
-	m.Unlock()
-	m.keys = append(m.keys, key)
-	m.Lock()
-}
-
-func (m *RegistrationTokensManager) Get(i int) string {
-	return m.keys[i]
-}
-
-func (m *RegistrationTokensManager) Delete(i int) {
-	m.Unlock()
-	m.keys = append(m.keys[:i], m.keys[i+1:]...)
-	m.Lock()
-}
-
-func (m *RegistrationTokensManager) Keys() []string {
-	return m.keys
-}
+type gotMessageKey struct{}
 
 var messagesPaginator = &Paginator{
 	OrderKey: "id",
@@ -95,25 +70,22 @@ func (gs Gifts) GetPriceByID(id int) float32 {
 
 type RecipientStats struct {
 	RecipientID       string `db:"recipient_id" json:"recipient_id"`
-	Department        string `db:"department" json:"department,omitempty"`
-	Sex               string `db:"sex" json:"sex,omitempty"`
 	MessagesCount     int    `db:"messages_count" json:"messages_count"`
 	GiftMessagesCount int    `db:"gift_messages_count" json:"gift_messages_count"`
 }
 
-type Recipients []*RecipientStats
-
-func (a Recipients) Len() int      { return len(a) }
-func (a Recipients) Swap(i, j int) { a[i], a[j] = a[j], a[i] }
-func (a Recipients) Less(i, j int) bool {
-	// TODO: fix sorting
-	if a[i].MessagesCount > a[j].MessagesCount {
-		return true
-	} else if a[i].GiftMessagesCount > a[j].GiftMessagesCount {
-		return true
-	}
-	return false
+type RecipientStats2 struct {
+	RecipientID string  `db:"recipient_id" json:"recipient_id"`
+	Department  string  `db:"department" json:"department"`
+	Sex         string  `db:"sex" json:"sex"`
+	TotalCoins  float32 `db:"-" json:"total_coins"`
 }
+
+type Recipients []*RecipientStats2
+
+func (a Recipients) Len() int           { return len(a) }
+func (a Recipients) Swap(i, j int)      { a[i], a[j] = a[j], a[i] }
+func (a Recipients) Less(i, j int) bool { return a[i].TotalCoins > a[j].TotalCoins }
 
 func (a Recipients) BySex(sex string) Recipients {
 	if len(sex) == 0 || sex == "all" {
@@ -129,11 +101,7 @@ func (a Recipients) BySex(sex string) Recipients {
 }
 
 func fetchRecipientRankings(db *sqlx.DB) (Recipients, error) {
-	baseQuery := func(queryName string) sq.SelectBuilder {
-		return sq.Select("recipient_id", "count(*) "+queryName).From("messages").Where(sq.Eq{"deleted_at": nil}).GroupBy("recipient_id")
-	}
-
-	recipientsMap := map[string]*RecipientStats{}
+	recipientsMap := map[string]*RecipientStats2{}
 
 	// get all associated_users data
 	rows, err := db.Query("SELECT associated_id, department, sex FROM associated_ids")
@@ -150,7 +118,7 @@ func fetchRecipientRankings(db *sqlx.DB) (Recipients, error) {
 		if len(associatedId) == 0 {
 			continue
 		} else if _, exists := recipientsMap[associatedId]; !exists {
-			recipientsMap[associatedId] = &RecipientStats{
+			recipientsMap[associatedId] = &RecipientStats2{
 				RecipientID: associatedId,
 			}
 		}
@@ -158,9 +126,9 @@ func fetchRecipientRankings(db *sqlx.DB) (Recipients, error) {
 		recipientsMap[associatedId].Sex = sex
 	}
 
-	// get number of gift message for each recipient
-	giftMessagesCountQuerySQL, gargs, _ := baseQuery("gift_messages_count").Where(sq.Eq{"has_gifts": true}).ToSql()
-	recipientsWithGiftsRows, err := db.Query(giftMessagesCountQuerySQL, gargs...)
+	// get gift id and it's associated recipient
+	giftMessagesCountQuerySQL := "SELECT recipient_id, gift_id FROM messages LEFT JOIN message_gifts mg on mg.message_id = messages.id"
+	recipientsWithGiftsRows, err := db.Query(giftMessagesCountQuerySQL)
 	if err != nil {
 		return nil, err
 	}
@@ -168,42 +136,24 @@ func fetchRecipientRankings(db *sqlx.DB) (Recipients, error) {
 
 	for recipientsWithGiftsRows.Next() {
 		var recipientId string
-		var giftMessagesCount int
-		recipientsWithGiftsRows.Scan(&recipientId, &giftMessagesCount)
+		giftId := 0
+
+		recipientsWithGiftsRows.Scan(&recipientId, &giftId)
 		if len(recipientId) == 0 {
 			continue
 		} else if _, exists := recipientsMap[recipientId]; !exists {
-			recipientsMap[recipientId] = &RecipientStats{
+			recipientsMap[recipientId] = &RecipientStats2{
 				RecipientID: recipientId,
 				Sex:         "unknown",
 				Department:  "Unknown",
 			}
 		}
-		recipientsMap[recipientId].GiftMessagesCount = giftMessagesCount
-	}
 
-	// get number of ordinary messages for each recipient
-	nongiftMessagesCountQuerySQL, nongArgs, _ := baseQuery("messages_count").Where(sq.Eq{"has_gifts": false}).ToSql()
-	recipientsWithoutGiftsRows, err := db.Query(nongiftMessagesCountQuerySQL, nongArgs...)
-	if err != nil {
-		return nil, err
-	}
-	defer recipientsWithoutGiftsRows.Close()
-
-	for recipientsWithoutGiftsRows.Next() {
-		var recipientId string
-		var messagesCount int
-		recipientsWithoutGiftsRows.Scan(&recipientId, &messagesCount)
-		if len(recipientId) == 0 {
-			continue
-		} else if _, exists := recipientsMap[recipientId]; !exists {
-			recipientsMap[recipientId] = &RecipientStats{
-				RecipientID: recipientId,
-				Sex:         "unknown",
-				Department:  "Unknown",
-			}
+		if giftId > 0 {
+			recipientsMap[recipientId].TotalCoins += giftList[giftId-1].Price
 		}
-		recipientsMap[recipientId].MessagesCount = messagesCount
+
+		recipientsMap[recipientId].TotalCoins += sendPrice
 	}
 
 	// sort and get results
@@ -217,11 +167,12 @@ func fetchRecipientRankings(db *sqlx.DB) (Recipients, error) {
 }
 
 type AssociatedUser struct {
-	UserID       string `db:"user_id" json:"user_id"`
-	AssociatedID string `db:"associated_id" json:"associated_id" validate:"required,numeric"`
-	TermsAgreed  bool   `db:"terms_agreed" json:"terms_agreed"`
-	Department   string `db:"department" json:"department" validate:"required"`
-	Sex          string `db:"sex" json:"sex" validate:"required"`
+	UserID       string     `db:"user_id" json:"user_id"`
+	AssociatedID string     `db:"associated_id" json:"associated_id" validate:"required,numeric"`
+	TermsAgreed  bool       `db:"terms_agreed" json:"terms_agreed"`
+	Department   string     `db:"department" json:"department" validate:"required"`
+	Sex          string     `db:"sex" json:"sex" validate:"required"`
+	LastActiveAt *time.Time `db:"last_active_at" json:"-"`
 }
 
 type UserConnection struct {
@@ -436,11 +387,6 @@ func main() {
 		CookieName: invitationCookieName,
 	}
 
-	// registration key manager
-	// this is for storing registration keys in firebase
-	// messaging for notifications
-	// registrationTokens := &RegistrationTokensManager{}
-
 	// middlewares
 	jsonOnly := middleware.AllowContentType("application/json")
 	appVerifyUser := verifyUser(firebaseApp)
@@ -479,38 +425,6 @@ func main() {
 		}
 	}))
 
-	// r.Post("/app/register_token", wrapHandler(func(rw http.ResponseWriter, r *http.Request) error {
-	// 	var parsedData struct {
-	// 		RegistrationToken string `json:"registration_token"`
-	// 	}
-
-	// 	if err := json.NewDecoder(r.Body).Decode(&parsedData); err != nil {
-	// 		return err
-	// 	}
-
-	// 	registrationTokens.Add(parsedData.RegistrationToken)
-	// 	client, err := firebaseApp.Messaging(r.Context())
-	// 	if err != nil {
-	// 		return err
-	// 	}
-
-	// 	response, err := client.Send(r.Context(), &messaging.Message{
-	// 		Data: map[string]string{
-	// 			"message": "Test",
-	// 		},
-	// 		Token: parsedData.RegistrationToken,
-	// 	})
-	// 	if err != nil {
-	// 		return err
-	// 	}
-
-	// 	fmt.Println("Successfully sent message: ", response)
-
-	// 	return jsonEncode(rw, map[string]string{
-	// 		"message": "ok",
-	// 	})
-	// }))
-
 	r.Get("/departments", wrapHandler(func(rw http.ResponseWriter, r *http.Request) error {
 		return jsonEncode(rw, collegeDepartments)
 	}))
@@ -533,7 +447,7 @@ func main() {
 			return nil
 		},
 	})).Get("/rankings", wrapHandler(func(rw http.ResponseWriter, r *http.Request) error {
-		pg := r.Context().Value("paginator").(*Paginator)
+		pg := getPaginatorFromReq(r)
 		cachedRankings, hasRankingsCached := cacher.Get("rankings")
 		var results Recipients
 		if !hasRankingsCached {
@@ -568,8 +482,8 @@ func main() {
 
 	getMessagesHandler := wrapHandler(func(rw http.ResponseWriter, rr *http.Request) error {
 		recipientId := chi.URLParam(rr, "recipientId")
-		pg := rr.Context().Value("paginator").(*Paginator)
-		searchRequest := rr.Context().Value("searchRequest").(*bleve.SearchRequest)
+		pg := getPaginatorFromReq(rr)
+		searchRequest := rr.Context().Value(searchRequestKey{}).(*bleve.SearchRequest)
 		if len(recipientId) != 0 {
 			matchRecipientQuery := bleve.NewTermQuery(recipientId)
 			matchRecipientQuery.SetField("recipient_id")
@@ -625,7 +539,7 @@ func main() {
 
 	customMsgQueryFilters := customFilters(map[string]FilterFunc{
 		"has_gift": func(r *http.Request, ctx context.Context, filter Filter) error {
-			searchReq := ctx.Value("searchRequest").(*bleve.SearchRequest)
+			searchReq := ctx.Value(searchRequestKey{}).(*bleve.SearchRequest)
 			hasGiftQuery := bleve.NewBoolFieldQuery(false)
 			hasGiftQuery.SetField("has_gifts")
 
@@ -668,7 +582,6 @@ func main() {
 		rw.Header().Set("Connection", "keep-alive")
 
 		existingEntriesChan := make(chan Message, 10)
-		f, _ := rw.(http.Flusher)
 
 		go func() {
 			mSql, mArgs, _ := sq.Select("id", "recipient_id", "content", "has_replied", "has_gifts", "created_at", "updated_at").
@@ -690,26 +603,14 @@ func main() {
 				existingEntriesChan <- msg
 			}
 		}()
-
 		defer close(existingEntriesChan)
-
-		encoder := json.NewEncoder(rw)
-		encodeData := func(rw http.ResponseWriter, f http.Flusher, msg Message) {
-			fmt.Fprint(rw, "data: ")
-			if err := encoder.Encode(msg); err != nil {
-				log.Println(err)
-				fmt.Fprintf(rw, "{}")
-			}
-			fmt.Fprint(rw, "\n\n")
-			f.Flush()
-		}
 
 		for {
 			select {
 			case entry := <-existingEntriesChan:
-				encodeData(rw, f, entry)
+				encodeDataSSE(rw, entry)
 			case entry2 := <-recentMessagesChan:
-				encodeData(rw, f, entry2)
+				encodeDataSSE(rw, entry2)
 			case <-r.Context().Done():
 				return
 			}
@@ -729,8 +630,8 @@ func main() {
 	}))
 	r.With(jsonOnly, appVerifyUser, appCheckBalance).
 		Post("/messages", wrapHandler(func(rw http.ResponseWriter, r *http.Request) error {
-			token := r.Context().Value("authToken").(*auth.Token)
-			authClient := r.Context().Value("authClient").(*auth.Client)
+			token := getAuthTokenByReq(r)
+			authClient := getAuthClientByReq(r)
 
 			var submittedMsg RawMessage
 			if err := json.NewDecoder(r.Body).Decode(&submittedMsg); err != nil {
@@ -792,8 +693,6 @@ func main() {
 				return err
 			}
 
-			sendPrice := float32(150.0)
-
 			hasMoney := false
 			for _, giftId := range submittedMsg.GiftIDs {
 				giftPrice := giftList.GetPriceByID(giftId)
@@ -812,46 +711,45 @@ func main() {
 				tx,
 			)
 			if err != nil {
-				log.Println(tx.Rollback())
+				passivePrintError(tx.Rollback())
 				return err
 			}
 
 			res, err := tx.NamedExec("INSERT INTO messages (id, recipient_id, content, submitter_user_id, has_gifts) VALUES (:id, :recipient_id, :content, :submitter_user_id, :has_gifts)", &submittedMsg)
 			if err != nil {
-				log.Println(tx.Rollback())
+				passivePrintError(tx.Rollback())
 				return err
 			}
 
 			if err := wrapSqlResult(res); err != nil {
-				log.Println(tx.Rollback())
+				passivePrintError(tx.Rollback())
 				return err
 			}
 
-			// TODO: support for purchasing gifts
 			for _, giftId := range submittedMsg.GiftIDs {
 				if res, err := tx.Exec("INSERT INTO message_gifts (message_id, gift_id) VALUES (?, ?)", submittedMsg.ID, giftId); err != nil {
-					log.Println(tx.Rollback())
+					passivePrintError(tx.Rollback())
 					return err
 				} else if err := wrapSqlResult(res); err != nil {
-					log.Println(tx.Rollback())
+					passivePrintError(tx.Rollback())
 					return err
 				}
 			}
 
 			recipientUser, getUserErr := getUserBySID(db, authClient, submittedMsg.RecipientID)
 			if getUserErr != nil {
-				log.Println(err)
+				passivePrintError(err)
 			}
 
 			// give the money to the person
 			if hasMoney {
-				if err := b.AddBalanceTo(
+				if _, err := b.AddBalanceTo(
 					recipientUser.UID,
 					moneyGift.Price,
 					fmt.Sprintf("Money gift from message %s", submittedMsg.ID),
 					tx,
 				); err != nil {
-					log.Println(err)
+					passivePrintError(err)
 				}
 			}
 
@@ -860,7 +758,7 @@ func main() {
 			}
 
 			// save to search engine
-			if err := UpsertEntry(messagesSearchIndex, submittedMsg.ID, struct {
+			passivePrintError(UpsertEntry(messagesSearchIndex, submittedMsg.ID, struct {
 				MessageID   string    `db:"id" json:"-"`
 				RecipientID string    `db:"recipient_id" json:"recipient_id"`
 				CreatedAt   time.Time `db:"created_at" json:"created_at"`
@@ -872,9 +770,7 @@ func main() {
 				CreatedAt:   submittedMsg.CreatedAt,
 				UpdatedAt:   submittedMsg.UpdatedAt,
 				HasGifts:    submittedMsg.HasGifts,
-			}); err != nil {
-				log.Println(err)
-			}
+			}))
 
 			// send email to recipient if available
 			// ignore the errors, just pass through
@@ -891,15 +787,14 @@ func main() {
 				}
 
 				// send the mail within n minutes.
-				if err := notifier.Notify(); err != nil {
-					log.Println(err)
-				}
+				passivePrintError(notifier.Notify())
 			}
 
 			if !submittedMsg.HasGifts {
 				recentMessagesChan <- submittedMsg.Message
 			}
 
+			defer passivePrintError(updateUserLastActive(db, token.UID))
 			return jsonEncode(rw, map[string]interface{}{
 				"message":         "Message created successfully",
 				"current_balance": currentBalance,
@@ -917,22 +812,22 @@ func main() {
 			messageId := chi.URLParam(rr, "messageId")
 			message := RawMessage{}
 			if err := db.Get(&message, "SELECT * FROM messages WHERE id = ? AND recipient_id = ? AND deleted_at IS NULL", messageId, recipientId); err != nil {
-				log.Println(err)
+				passivePrintError(err)
 				r.NotFoundHandler().ServeHTTP(rw, rr)
 				return
 			}
 
 			if err := db.Select(&message.GiftIDs, "SELECT gift_id FROM message_gifts WHERE message_id = ?", messageId); err != nil {
-				log.Println(err)
+				passivePrintError(err)
 			}
 
-			newCtx := context.WithValue(rr.Context(), "gotMessage", message)
+			newCtx := context.WithValue(rr.Context(), gotMessageKey{}, message)
 			next.ServeHTTP(rw, rr.WithContext(newCtx))
 		})
 	}
 
 	r.With(getRawMessage).Get("/messages/{recipientId}/{messageId}", wrapHandler(func(rw http.ResponseWriter, rr *http.Request) error {
-		message := rr.Context().Value("gotMessage").(RawMessage)
+		message := rr.Context().Value(gotMessageKey{}).(RawMessage)
 
 		// generate image if ?image query
 		if rr.URL.Query().Has("image") {
@@ -990,8 +885,8 @@ func main() {
 	}))
 
 	r.With(appVerifyUser, getRawMessage).Delete("/messages/{recipientId}/{messageId}", wrapHandler(func(rw http.ResponseWriter, r *http.Request) error {
-		token := r.Context().Value("authToken").(*auth.Token)
-		message := r.Context().Value("gotMessage").(RawMessage)
+		token := getAuthTokenByReq(r)
+		message := r.Context().Value(gotMessageKey{}).(RawMessage)
 		// timeToSend := emailTemplates["message"].TimeToSend()
 		//  || time.Since(message.CreatedAt) >= timeToSend
 
@@ -1018,6 +913,7 @@ func main() {
 		}
 
 		cacher.Delete(fmt.Sprintf("image/%s", message.ID))
+		defer passivePrintError(updateUserLastActive(db, token.UID))
 		return jsonEncode(rw, map[string]string{
 			"message": "message deleted successfully",
 		})
@@ -1026,11 +922,11 @@ func main() {
 	r.With(jsonOnly, appVerifyUser, getRawMessage).
 		Post("/messages/{recipientId}/{messageId}/reply", wrapHandler(func(rw http.ResponseWriter, rr *http.Request) error {
 			// retrieve message
-			message := rr.Context().Value("gotMessage").(RawMessage)
+			message := rr.Context().Value(gotMessageKey{}).(RawMessage)
 
 			// retrieve token
-			token := rr.Context().Value("authToken").(*auth.Token)
-			authClient := rr.Context().Value("authClient").(*auth.Client)
+			token := getAuthTokenByReq(rr)
+			authClient := getAuthClientByReq(rr)
 
 			// retrieve connections
 			connections := getUserConnections(db, token.UID)
@@ -1044,10 +940,20 @@ func main() {
 			}
 
 			// decode reply payload
-			var reply MessageReply
-			if err := json.NewDecoder(rr.Body).Decode(&reply); err != nil {
+			var submittedData struct {
+				Reply   MessageReply `json:"reply"`
+				Options struct {
+					PostToTwitter bool `json:"post_to_twitter"`
+					PostToEmail   bool `json:"post_to_email"`
+				} `json:"options"`
+			}
+
+			if err := json.NewDecoder(rr.Body).Decode(&submittedData); err != nil {
 				return err
-			} else if err := checkProfanity(reply.Content); err != nil {
+			}
+
+			reply := submittedData.Reply
+			if err := checkProfanity(reply.Content); err != nil {
 				return err
 			} else if err := validator.Struct(&reply); err != nil {
 				return wrapValidationError(rw, err)
@@ -1064,31 +970,35 @@ func main() {
 				tx,
 			)
 			if err != nil {
-				log.Println(tx.Rollback())
+				passivePrintError(tx.Rollback())
 				return err
 			}
 
 			// TODO: add toll fees for twitter, e-mail notifiers
-			var notifier Notifier
-			if twitterIdx, hasTwitter := isConnectedTo(connections, "twitter"); hasTwitter {
+			notifier := MultiNotifier{[]Notifier{}}
+			if twitterIdx, hasTwitter := isConnectedTo(connections, "twitter"); submittedData.Options.PostToTwitter && hasTwitter {
 				imageData, err := imageRenderer.Render(imageTypeTwitter, message.Message)
 				if err != nil {
 					return err
 				}
 
-				notifier = &TwitterNotifier{
+				notifier.Add(&TwitterNotifier{
 					Connection:  connections[twitterIdx],
 					ImageData:   bytes.NewReader(imageData),
 					TextContent: reply.Content,
-				}
-			} else if _, hasEmail := isConnectedTo(connections, "email"); hasEmail {
+					Hashtag:     twHashTag,
+					Link:        fmt.Sprintf("%s/wall/%s/%s", frontendUrl, message.RecipientID, message.ID),
+				})
+			}
+
+			if _, hasEmail := isConnectedTo(connections, "email"); submittedData.Options.PostToEmail && hasEmail {
 				// get sender email
 				senderEmail, err := getUserEmailByUID(authClient, message.UID)
 				if err != nil {
 					return err
 				}
 
-				notifier = &EmailNotifier{
+				notifier.Add(&EmailNotifier{
 					Client:   postalOfficeClient,
 					Template: emailTemplates["reply"],
 					Context: &MailSenderContext{
@@ -1097,30 +1007,25 @@ func main() {
 						MessageID:   message.ID,
 						FrontendURL: frontendUrl,
 					},
-				}
-			} else {
-				// just to be sure
-				return noConnectionErr
+				})
 			}
 
-			if err := notifier.Notify(); err != nil {
-				// dont let notifier errors stop the process.
-				log.Println(err)
-			}
+			// dont let notifier errors stop the process.
+			passivePrintError(notifier.Notify())
 
 			if updateRes, err := tx.NamedExec("INSERT INTO message_replies (message_id, content) VALUES (:message_id, :content)", &reply); err != nil {
-				defer log.Println(tx.Rollback())
+				defer passivePrintError(tx.Rollback())
 				return err
 			} else if err := wrapSqlResult(updateRes); err != nil {
-				defer log.Println(tx.Rollback())
+				defer passivePrintError(tx.Rollback())
 				return err
 			}
 
 			if res, err := tx.Exec("UPDATE messages SET has_replied = true WHERE id = ?", message.ID); err != nil {
-				defer log.Println(tx.Rollback())
+				defer passivePrintError(tx.Rollback())
 				return err
 			} else if err := wrapSqlResult(res); err != nil {
-				defer log.Println(tx.Rollback())
+				defer passivePrintError(tx.Rollback())
 				return err
 			}
 
@@ -1128,10 +1033,40 @@ func main() {
 				return err
 			}
 
+			defer passivePrintError(updateUserLastActive(db, token.UID))
 			return jsonEncode(rw, map[string]interface{}{
 				"message":         "reply success",
 				"current_balance": currentBalance,
 			})
+		}))
+
+	r.With(jsonOnly, appVerifyUser, getRawMessage).
+		Delete("/messages/{recipientId}/{messageId}/reply", wrapHandler(func(rw http.ResponseWriter, r *http.Request) error {
+			token := getAuthTokenByReq(r)
+			tx, err := db.BeginTxx(r.Context(), &sql.TxOptions{})
+			if err != nil {
+				return err
+			}
+
+			messageId := chi.URLParam(r, "messageId")
+			if res, err := tx.Exec("DELETE FROM message_replies WHERE message_id = ?", messageId); err != nil {
+				return err
+			} else if err := wrapSqlResult(res); err != nil {
+				return err
+			}
+
+			if res, err := tx.Exec("UPDATE messages SET has_replied = false WHERE id = ?", messageId); err != nil {
+				return err
+			} else if err := wrapSqlResult(res); err != nil {
+				return err
+			}
+
+			if err := tx.Commit(); err != nil {
+				return err
+			}
+
+			defer passivePrintError(updateUserLastActive(db, token.UID))
+			return jsonEncode(rw, map[string]string{"message": "reply deleted successfully."})
 		}))
 
 	r.With(appVerifyUser).
@@ -1154,9 +1089,9 @@ func main() {
 			})
 		}))
 
-	r.With(appVerifyUser).
+	r.With(jsonOnly, appVerifyUser).
 		Patch("/user/info", wrapHandler(func(rw http.ResponseWriter, r *http.Request) error {
-			token := r.Context().Value("authToken").(*auth.Token)
+			token := getAuthTokenByReq(r)
 			updatedAssocInfo := &AssociatedUser{}
 
 			if err := json.NewDecoder(r.Body).Decode(updatedAssocInfo); err != nil {
@@ -1173,15 +1108,36 @@ func main() {
 			} else if err := wrapSqlResult(res); err != nil {
 				return err
 			}
-
+			defer passivePrintError(updateUserLastActive(db, token.UID))
 			return jsonEncode(rw, map[string]string{
 				"message": "user details updated successfully",
 			})
 		}))
 
+	r.With(appVerifyUser).Patch("/user/session", wrapHandler(func(rw http.ResponseWriter, r *http.Request) error {
+		token := getAuthTokenByReq(r)
+
+		// if user is already registered, get idle time
+		if gotAssociatedUser, err := getAssociatedUserBy(db, sq.Eq{"user_id": token.UID}); err == nil {
+			if gotAssociatedUser.LastActiveAt != nil {
+				// convert idle time to virtual money
+				receipt, err := b.ConvertIdleTime(token.UID, *gotAssociatedUser.LastActiveAt)
+				if receipt != nil {
+					// TODO: notify user
+				} else if err != nil {
+					passivePrintError(err)
+				}
+			}
+
+			passivePrintError(updateUserLastActive(db, token.UID))
+		}
+
+		return jsonEncode(rw, map[string]string{"message": "ok"})
+	}))
+
 	r.With(appVerifyUser).
 		Post("/user/session", wrapHandler(func(rw http.ResponseWriter, r *http.Request) error {
-			token := r.Context().Value("authToken").(*auth.Token)
+			token := getAuthTokenByReq(r)
 			session, _ := store.Get(r, sessionName)
 			session.Values["uid"] = token.UID
 			if err := session.Save(r, rw); err != nil {
@@ -1221,7 +1177,7 @@ func main() {
 	}))
 
 	r.With(appVerifyUser).Get("/user/invitations", wrapHandler(func(rw http.ResponseWriter, r *http.Request) error {
-		token := r.Context().Value("authToken").(*auth.Token)
+		token := getAuthTokenByReq(r)
 		invitations, err := invSys.GetInvitationsByUID(token.UID)
 		if err != nil {
 			return err
@@ -1230,7 +1186,7 @@ func main() {
 	}))
 
 	r.With(appVerifyUser).Post("/user/invitations/generate", wrapHandler(func(rw http.ResponseWriter, r *http.Request) error {
-		token := r.Context().Value("authToken").(*auth.Token)
+		token := getAuthTokenByReq(r)
 		if err := invSys.CheckEligibilityByUID(token.UID); err != nil {
 			return err
 		}
@@ -1269,8 +1225,8 @@ func main() {
 		TableName: virtualTransactionsTableName,
 	})).
 		Get("/user/transactions", wrapHandler(func(rw http.ResponseWriter, r *http.Request) error {
-			token := r.Context().Value("authToken").(*auth.Token)
-			pg := r.Context().Value("paginator").(*Paginator)
+			token := getAuthTokenByReq(r)
+			pg := getPaginatorFromReq(r)
 			query := sq.Select("*").From(virtualTransactionsTableName).Where(sq.Eq{"user_id": token.UID})
 
 			resp, err := pg.Load(&DatabasePaginatorSource{
@@ -1291,13 +1247,30 @@ func main() {
 			return jsonEncode(rw, resp)
 		}))
 
+	r.With(jsonOnly, appVerifyUser).Post("/user/cheque/deposit", wrapHandler(func(rw http.ResponseWriter, r *http.Request) error {
+		var parsedData struct {
+			ChequeID string `json:"cheque_id"`
+		}
+
+		if err := json.NewDecoder(r.Body).Decode(&parsedData); err != nil {
+			return err
+		}
+
+		token := getAuthTokenByReq(r)
+		if err := b.DepositChequeByID(parsedData.ChequeID, token.UID); err != nil {
+			return err
+		}
+
+		return jsonEncode(rw, map[string]string{
+			"message": "cheque deposited successfully",
+		})
+	}))
+
 	r.With(appVerifyUser).
 		Get("/user/info", wrapHandler(func(rw http.ResponseWriter, r *http.Request) error {
-			token := r.Context().Value("authToken").(*auth.Token)
+			token := getAuthTokenByReq(r)
 			vWallet, err := b.GetWalletByUID(token.UID)
-			if err != nil {
-				log.Println(err)
-			}
+			passivePrintError(err)
 
 			associatedData, err := getAssociatedUserBy(db, sq.Eq{"user_id": token.UID})
 			if err != nil {
@@ -1322,8 +1295,8 @@ func main() {
 	r.With(jsonOnly, appVerifyUser).
 		Post("/user/setup", wrapHandler(func(rw http.ResponseWriter, r *http.Request) error {
 			shouldDenyService := false
-			token := r.Context().Value("authToken").(*auth.Token)
-			authClient := r.Context().Value("authClient").(*auth.Client)
+			token := getAuthTokenByReq(r)
+			authClient := getAuthClientByReq(r)
 			submittedData := AssociatedUser{}
 			if err := json.NewDecoder(r.Body).Decode(&submittedData); err != nil {
 				return err
@@ -1395,7 +1368,7 @@ func main() {
 			}
 
 			// initialize virtual wallet
-			if err := b.AddInitialBalanceTo(token.UID, tx); err != nil {
+			if _, err := b.AddInitialBalanceTo(token.UID, tx); err != nil {
 				if err := tx.Rollback(); err != nil {
 					log.Println(err)
 				}
@@ -1465,8 +1438,8 @@ func main() {
 	}, htmlEncoder))
 
 	r.With(appVerifyUser).Post("/user/connect_email", wrapHandler(func(rw http.ResponseWriter, r *http.Request) error {
-		token := r.Context().Value("authToken").(*auth.Token)
-		authClient := r.Context().Value("authClient").(*auth.Client)
+		token := getAuthTokenByReq(r)
+		authClient := getAuthClientByReq(r)
 		userEmail, err := getUserEmailByUID(authClient, token.UID)
 		if err != nil {
 			return err
@@ -1479,7 +1452,7 @@ func main() {
 			TokenSecret: "",
 		}
 
-		res, err := db.NamedExec("INSERT INTO user_connections (user_id, provider, token, token_secret) VALUES (:user_id, :provider, :token, :token_secret)", &newEmailConnection)
+		res, err := db.NamedExec("INSERT INTO user_connections_new (user_id, provider, token, token_secret) VALUES (:user_id, :provider, :token, :token_secret)", &newEmailConnection)
 		if err != nil {
 			return err
 		}
@@ -1489,6 +1462,7 @@ func main() {
 		}
 
 		connections := getUserConnections(db, token.UID)
+		defer passivePrintError(updateUserLastActive(db, token.UID))
 		return jsonEncode(rw, map[string]interface{}{
 			"message":          "e-mail connected successfully",
 			"user_connections": connections,
@@ -1528,7 +1502,7 @@ func main() {
 			TokenSecret: token.TokenSecret,
 		}
 
-		res, err := db.NamedExec("INSERT INTO user_connections (user_id, provider, token, token_secret) VALUES (:user_id, :provider, :token, :token_secret)", &newTwitterConnection)
+		res, err := db.NamedExec("INSERT INTO user_connections_new (user_id, provider, token, token_secret) VALUES (:user_id, :provider, :token, :token_secret)", &newTwitterConnection)
 		if err != nil {
 			return err
 		}
@@ -1537,12 +1511,25 @@ func main() {
 			return err
 		}
 
-		scriptJs := `<script type="text/javascript">window.opener.postMessage({message:'twitter connect success', user_connections:[{provider:'twitter'}]}, '` + frontendUrl + `')</script>`
-		return htmlEncode(rw, "<p>success</p>"+scriptJs)
+		buf := &bytes.Buffer{}
+		if err := json.NewEncoder(buf).Encode(getUserConnections(db, uid)); err != nil {
+			passivePrintError(err)
+			buf.WriteString("[]")
+		}
+
+		scriptJs := fmt.Sprintf(
+			`<p>success</p>
+<script type="text/javascript">
+window.opener.postMessage({message:'twitter connect success',user_connections:%s}, '%s')
+</script>`,
+			buf.String(),
+			frontendUrl,
+		)
+		return htmlEncode(rw, scriptJs)
 	}, htmlEncoder))
 
 	r.With(appVerifyUser).Delete("/user/connections/{connectionName}", wrapHandler(func(rw http.ResponseWriter, r *http.Request) error {
-		token := r.Context().Value("authToken").(*auth.Token)
+		token := getAuthTokenByReq(r)
 		connectionName := chi.URLParam(r, "connectionName")
 
 		// retrieve connections
@@ -1554,20 +1541,21 @@ func main() {
 			}
 		}
 
-		if res, err := db.Exec("DELETE FROM user_connections WHERE user_id = ? AND provider = ?", token.UID, connectionName); err != nil {
+		if res, err := db.Exec("DELETE FROM user_connections_new WHERE user_id = ? AND provider = ?", token.UID, connectionName); err != nil {
 			return err
 		} else if err := wrapSqlResult(res); err != nil {
 			return err
 		}
 
+		defer passivePrintError(updateUserLastActive(db, token.UID))
 		return jsonEncode(rw, map[string]string{
 			"message": "user third-party disconnection success",
 		})
 	}))
 
-	r.With(appVerifyUser).Post("/user/delete", wrapHandler(func(rw http.ResponseWriter, r *http.Request) error {
-		authClient := r.Context().Value("authClient").(*auth.Client)
-		token := r.Context().Value("authToken").(*auth.Token)
+	r.With(jsonOnly, appVerifyUser).Post("/user/delete", wrapHandler(func(rw http.ResponseWriter, r *http.Request) error {
+		authClient := getAuthClientByReq(r)
+		token := getAuthTokenByReq(r)
 
 		var confirmationData struct {
 			InputSID string `json:"input_sid"`
@@ -1599,13 +1587,13 @@ func main() {
 			}
 		}
 
-		// delete from associated_ids and user_connections
+		// delete from associated_ids and user_connections_new
 		tx, err := db.BeginTxx(r.Context(), &sql.TxOptions{})
 		if err != nil {
 			return err
 		}
 
-		for _, tableName := range []string{"user_connections", "virtual_wallets", "associated_ids"} {
+		for _, tableName := range []string{"user_connections_new", "virtual_wallets", "associated_ids"} {
 			if deleteSql, deleteArgs, err := sq.Delete(tableName).Where(sq.Eq{"user_id": token.UID}).ToSql(); err != nil {
 				return err
 			} else if res, err := tx.Exec(deleteSql, deleteArgs...); err != nil {
@@ -1615,19 +1603,19 @@ func main() {
 					return err
 				}
 			} else if err := wrapSqlResult(res); err != nil {
-				return err
+				passivePrintError(err)
+				continue
 			}
 		}
 
 		if err := tx.Commit(); err != nil {
-			if err := tx.Rollback(); err != nil {
-				log.Println(err)
-			}
+			passivePrintError(tx.Rollback())
 			return err
 		} else if err := authClient.DeleteUser(r.Context(), token.UID); err != nil {
 			return err
 		}
 
+		defer passivePrintError(updateUserLastActive(db, token.UID))
 		return jsonEncode(rw, map[string]interface{}{
 			"message": "user deleted successfully",
 		})

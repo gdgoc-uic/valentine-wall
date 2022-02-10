@@ -14,6 +14,8 @@ import (
 	"github.com/jmoiron/sqlx"
 )
 
+type paginatorCtxKey struct{}
+
 type PaginatedLinks struct {
 	First    string  `json:"first"`
 	Last     string  `json:"last"`
@@ -123,7 +125,7 @@ func pagination(pg *Paginator) func(http.Handler) http.Handler {
 				return nil
 			}
 
-			pg := ctx.Value("paginator").(*Paginator)
+			pg := ctx.Value(paginatorCtxKey{}).(*Paginator)
 			splitted := strings.Split(f.Value, ",")
 			lastIndex := len(splitted) - 1
 			if len(splitted) > 2 {
@@ -149,7 +151,7 @@ func pagination(pg *Paginator) func(http.Handler) http.Handler {
 				return nil
 			}
 
-			pg := ctx.Value("paginator").(*Paginator)
+			pg := ctx.Value(paginatorCtxKey{}).(*Paginator)
 			limitCount, err := strconv.Atoi(f.Value)
 			if err != nil {
 				return &ResponseError{
@@ -166,7 +168,7 @@ func pagination(pg *Paginator) func(http.Handler) http.Handler {
 				return nil
 			}
 
-			pg := ctx.Value("paginator").(*Paginator)
+			pg := ctx.Value(paginatorCtxKey{}).(*Paginator)
 			pageNumber, err := strconv.Atoi(f.Value)
 			if err != nil {
 				return &ResponseError{
@@ -182,7 +184,7 @@ func pagination(pg *Paginator) func(http.Handler) http.Handler {
 
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(rw http.ResponseWriter, r *http.Request) {
-			ctx := context.WithValue(r.Context(), "paginator", pg.Copy(r.URL, 1, 10, "asc"))
+			ctx := context.WithValue(r.Context(), paginatorCtxKey{}, pg.Copy(r.URL, 1, 10, "asc"))
 			filterMiddleware(next).ServeHTTP(rw, r.WithContext(ctx))
 		})
 	}
@@ -319,4 +321,8 @@ func (src *ArrayPaginatorSource) Fetch(page, limit int64, orderKey, order string
 		j++
 	}
 	return slice.Interface(), slice.Len(), nil
+}
+
+func getPaginatorFromReq(r *http.Request) *Paginator {
+	return r.Context().Value(paginatorCtxKey{}).(*Paginator)
 }
