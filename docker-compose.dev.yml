@@ -1,4 +1,8 @@
 services:
+  admin:
+    ports:
+      - '3001:8080'
+
   headless_chrome:
     ports:
       - '5000:3000'

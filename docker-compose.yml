@@ -1,4 +1,13 @@
 services:
+  admin:
+    container_name: admin
+    image: nocodb/nocodb
+    networks:
+      - backend
+    volumes:
+      - ./admin/_data:/usr/app/data
+      - ./backend/_data:/usr/app/data/backend
+
   headless_chrome:
     container_name: headless_chrome
     image: browserless/chrome
