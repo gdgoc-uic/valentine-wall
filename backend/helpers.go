@@ -8,6 +8,7 @@ import (
 	"log"
 	"net/http"
 	"strings"
+	"time"
 
 	firebase "firebase.google.com/go/v4"
 	"firebase.google.com/go/v4/auth"
@@ -283,6 +284,18 @@ func getAssociatedUserBy(db *sqlx.DB, pred Predicate) (*AssociatedUser, error) {
 		return nil, err
 	}
 	return associatedData, nil
+}
+
+func updateUserLastActive(db *sqlx.DB, uid string) error {
+	if res, err := db.Exec(
+		"UPDATE associated_ids SET last_active_at = ? WHERE user_id = ?",
+		time.Now(), uid,
+	); err != nil {
+		return err
+	} else if err := wrapSqlResult(res); err != nil {
+		return err
+	}
+	return nil
 }
 
 func getRecipientStatsBySID(index bleve.Index, sid string) (*RecipientStats, error) {

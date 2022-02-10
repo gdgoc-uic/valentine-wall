@@ -184,6 +184,14 @@ export function createStore() {
             dispatch('getUserInfo')
           ]);
 
+          // it should not affect the whole flow just in case
+          // updateLastActiveAt won't go through
+          try {
+            await dispatch('updateLastActiveAt');
+          } catch (e) {
+            console.error(e);
+          }
+
           setUserId(analytics!, user.uid);
           setUserProperties(analytics!, { account_type: 'student' });
         } catch (e) {
@@ -240,6 +248,9 @@ export function createStore() {
       async getDepartmentList({ commit, getters }) {
         const { data: json } = await getters.apiClient.get('/departments');
         commit('SET_DEPARTMENT_LIST', json);
+      },
+      async updateLastActiveAt({ getters }) {
+        await getters.apiClient.patch('/user/session');
       }
     }
   })

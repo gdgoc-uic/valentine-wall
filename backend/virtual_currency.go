@@ -19,12 +19,13 @@ import (
 /*
 TODO:
 - Earn via share links
-- Earn via last idle session computation
 - Admin API
+- Live notifications of transaction
 
 ADDED:
 - Earn via referral/invitation links
 - Earn via cheques (contests, etc.)
+- Earn via last idle session computation
 */
 
 type VirtualWallet struct {
@@ -228,6 +229,26 @@ func (b *VirtualBank) DeductBalanceTo(uid string, amount float32, desc string, t
 	}
 
 	return vWallet.Balance - amount, nil
+}
+
+func (b *VirtualBank) ConvertIdleTime(uid string, lastActiveAt time.Time) (*VirtualTransaction, error) {
+	// compute by the minute
+	// 20 * (total idle time / 10 minutes)
+	idleTime := time.Since(lastActiveAt)
+	quotientMinutes := math.Floor(idleTime.Minutes() / 10)
+
+	// player should be atleast 10 minutes in order to earn
+	if quotientMinutes < 10 {
+		return nil, nil
+	}
+
+	coinsToEarn := 20 * quotientMinutes
+	tx, err := b.DB.BeginTxx(context.Background(), &sql.TxOptions{})
+	if err != nil {
+		return nil, err
+	}
+
+	return b.AddBalanceTo(uid, float32(coinsToEarn), "Idle time earning", tx)
 }
 
 func (b *VirtualBank) GenerateCheque(toUID string, amount float32) (*Cheque, error) {

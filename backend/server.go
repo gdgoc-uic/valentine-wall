@@ -192,11 +192,12 @@ func fetchRecipientRankings(db *sqlx.DB) (Recipients, error) {
 }
 
 type AssociatedUser struct {
-	UserID       string `db:"user_id" json:"user_id"`
-	AssociatedID string `db:"associated_id" json:"associated_id" validate:"required,numeric"`
-	TermsAgreed  bool   `db:"terms_agreed" json:"terms_agreed"`
-	Department   string `db:"department" json:"department" validate:"required"`
-	Sex          string `db:"sex" json:"sex" validate:"required"`
+	UserID       string     `db:"user_id" json:"user_id"`
+	AssociatedID string     `db:"associated_id" json:"associated_id" validate:"required,numeric"`
+	TermsAgreed  bool       `db:"terms_agreed" json:"terms_agreed"`
+	Department   string     `db:"department" json:"department" validate:"required"`
+	Sex          string     `db:"sex" json:"sex" validate:"required"`
+	LastActiveAt *time.Time `db:"last_active_at" json:"-"`
 }
 
 type UserConnection struct {
@@ -834,6 +835,7 @@ func main() {
 				recentMessagesChan <- submittedMsg.Message
 			}
 
+			defer passivePrintError(updateUserLastActive(db, token.UID))
 			return jsonEncode(rw, map[string]interface{}{
 				"message":         "Message created successfully",
 				"current_balance": currentBalance,
@@ -952,6 +954,7 @@ func main() {
 		}
 
 		cacher.Delete(fmt.Sprintf("image/%s", message.ID))
+		defer passivePrintError(updateUserLastActive(db, token.UID))
 		return jsonEncode(rw, map[string]string{
 			"message": "message deleted successfully",
 		})
@@ -1060,6 +1063,7 @@ func main() {
 				return err
 			}
 
+			defer passivePrintError(updateUserLastActive(db, token.UID))
 			return jsonEncode(rw, map[string]interface{}{
 				"message":         "reply success",
 				"current_balance": currentBalance,
@@ -1105,11 +1109,32 @@ func main() {
 			} else if err := wrapSqlResult(res); err != nil {
 				return err
 			}
-
+			defer passivePrintError(updateUserLastActive(db, token.UID))
 			return jsonEncode(rw, map[string]string{
 				"message": "user details updated successfully",
 			})
 		}))
+
+	r.With(appVerifyUser).Patch("/user/session", wrapHandler(func(rw http.ResponseWriter, r *http.Request) error {
+		token := getAuthTokenByReq(r)
+
+		// if user is already registered, get idle time
+		if gotAssociatedUser, err := getAssociatedUserBy(db, sq.Eq{"user_id": token.UID}); err == nil {
+			if gotAssociatedUser.LastActiveAt != nil {
+				// convert idle time to virtual money
+				receipt, err := b.ConvertIdleTime(token.UID, *gotAssociatedUser.LastActiveAt)
+				if receipt != nil {
+					// TODO: notify user
+				} else if err != nil {
+					passivePrintError(err)
+				}
+			}
+
+			passivePrintError(updateUserLastActive(db, token.UID))
+		}
+
+		return jsonEncode(rw, map[string]string{"message": "ok"})
+	}))
 
 	r.With(appVerifyUser).
 		Post("/user/session", wrapHandler(func(rw http.ResponseWriter, r *http.Request) error {
@@ -1438,6 +1463,7 @@ func main() {
 		}
 
 		connections := getUserConnections(db, token.UID)
+		defer passivePrintError(updateUserLastActive(db, token.UID))
 		return jsonEncode(rw, map[string]interface{}{
 			"message":          "e-mail connected successfully",
 			"user_connections": connections,
@@ -1509,6 +1535,7 @@ func main() {
 			return err
 		}
 
+		defer passivePrintError(updateUserLastActive(db, token.UID))
 		return jsonEncode(rw, map[string]string{
 			"message": "user third-party disconnection success",
 		})
@@ -1576,6 +1603,7 @@ func main() {
 			return err
 		}
 
+		defer passivePrintError(updateUserLastActive(db, token.UID))
 		return jsonEncode(rw, map[string]interface{}{
 			"message": "user deleted successfully",
 		})
