@@ -8,8 +8,8 @@
       <form @submit.prevent="depositCheck">
         <div class="form-control">
           <div class="flex space-x-2">
-            <input placeholder="Cheque ID" name="cheque_id" type="text" class="input input-bordered flex-1" />
-            <button type="submit" class="btn btn-success">Submit</button>
+            <input placeholder="Cheque ID" name="cheque_id" :disabled="isProcessing" type="text" class="input input-bordered flex-1" />
+            <button type="submit" class="btn btn-success" :disabled="isProcessing">Submit</button>
           </div>
         </div>
       </form>
