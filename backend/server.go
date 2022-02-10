@@ -70,25 +70,22 @@ func (gs Gifts) GetPriceByID(id int) float32 {
 
 type RecipientStats struct {
 	RecipientID       string `db:"recipient_id" json:"recipient_id"`
-	Department        string `db:"department" json:"department,omitempty"`
-	Sex               string `db:"sex" json:"sex,omitempty"`
 	MessagesCount     int    `db:"messages_count" json:"messages_count"`
 	GiftMessagesCount int    `db:"gift_messages_count" json:"gift_messages_count"`
 }
 
-type Recipients []*RecipientStats
-
-func (a Recipients) Len() int      { return len(a) }
-func (a Recipients) Swap(i, j int) { a[i], a[j] = a[j], a[i] }
-func (a Recipients) Less(i, j int) bool {
-	// TODO: fix sorting
-	if a[i].MessagesCount > a[j].MessagesCount {
-		return true
-	} else if a[i].GiftMessagesCount > a[j].GiftMessagesCount {
-		return true
-	}
-	return false
+type RecipientStats2 struct {
+	RecipientID string  `db:"recipient_id" json:"recipient_id"`
+	Department  string  `db:"department" json:"department"`
+	Sex         string  `db:"sex" json:"sex"`
+	TotalCoins  float32 `db:"-" json:"total_coins"`
 }
+
+type Recipients []*RecipientStats2
+
+func (a Recipients) Len() int           { return len(a) }
+func (a Recipients) Swap(i, j int)      { a[i], a[j] = a[j], a[i] }
+func (a Recipients) Less(i, j int) bool { return a[i].TotalCoins > a[j].TotalCoins }
 
 func (a Recipients) BySex(sex string) Recipients {
 	if len(sex) == 0 || sex == "all" {
@@ -104,11 +101,7 @@ func (a Recipients) BySex(sex string) Recipients {
 }
 
 func fetchRecipientRankings(db *sqlx.DB) (Recipients, error) {
-	baseQuery := func(queryName string) sq.SelectBuilder {
-		return sq.Select("recipient_id", "count(*) "+queryName).From("messages").Where(sq.Eq{"deleted_at": nil}).GroupBy("recipient_id")
-	}
-
-	recipientsMap := map[string]*RecipientStats{}
+	recipientsMap := map[string]*RecipientStats2{}
 
 	// get all associated_users data
 	rows, err := db.Query("SELECT associated_id, department, sex FROM associated_ids")
@@ -125,7 +118,7 @@ func fetchRecipientRankings(db *sqlx.DB) (Recipients, error) {
 		if len(associatedId) == 0 {
 			continue
 		} else if _, exists := recipientsMap[associatedId]; !exists {
-			recipientsMap[associatedId] = &RecipientStats{
+			recipientsMap[associatedId] = &RecipientStats2{
 				RecipientID: associatedId,
 			}
 		}
@@ -133,9 +126,9 @@ func fetchRecipientRankings(db *sqlx.DB) (Recipients, error) {
 		recipientsMap[associatedId].Sex = sex
 	}
 
-	// get number of gift message for each recipient
-	giftMessagesCountQuerySQL, gargs, _ := baseQuery("gift_messages_count").Where(sq.Eq{"has_gifts": true}).ToSql()
-	recipientsWithGiftsRows, err := db.Query(giftMessagesCountQuerySQL, gargs...)
+	// get gift id and it's associated recipient
+	giftMessagesCountQuerySQL := "SELECT recipient_id, gift_id FROM messages LEFT JOIN message_gifts mg on mg.message_id = messages.id"
+	recipientsWithGiftsRows, err := db.Query(giftMessagesCountQuerySQL)
 	if err != nil {
 		return nil, err
 	}
@@ -143,42 +136,24 @@ func fetchRecipientRankings(db *sqlx.DB) (Recipients, error) {
 
 	for recipientsWithGiftsRows.Next() {
 		var recipientId string
-		var giftMessagesCount int
-		recipientsWithGiftsRows.Scan(&recipientId, &giftMessagesCount)
+		giftId := 0
+
+		recipientsWithGiftsRows.Scan(&recipientId, &giftId)
 		if len(recipientId) == 0 {
 			continue
 		} else if _, exists := recipientsMap[recipientId]; !exists {
-			recipientsMap[recipientId] = &RecipientStats{
+			recipientsMap[recipientId] = &RecipientStats2{
 				RecipientID: recipientId,
 				Sex:         "unknown",
 				Department:  "Unknown",
 			}
 		}
-		recipientsMap[recipientId].GiftMessagesCount = giftMessagesCount
-	}
 
-	// get number of ordinary messages for each recipient
-	nongiftMessagesCountQuerySQL, nongArgs, _ := baseQuery("messages_count").Where(sq.Eq{"has_gifts": false}).ToSql()
-	recipientsWithoutGiftsRows, err := db.Query(nongiftMessagesCountQuerySQL, nongArgs...)
-	if err != nil {
-		return nil, err
-	}
-	defer recipientsWithoutGiftsRows.Close()
-
-	for recipientsWithoutGiftsRows.Next() {
-		var recipientId string
-		var messagesCount int
-		recipientsWithoutGiftsRows.Scan(&recipientId, &messagesCount)
-		if len(recipientId) == 0 {
-			continue
-		} else if _, exists := recipientsMap[recipientId]; !exists {
-			recipientsMap[recipientId] = &RecipientStats{
-				RecipientID: recipientId,
-				Sex:         "unknown",
-				Department:  "Unknown",
-			}
+		if giftId > 0 {
+			recipientsMap[recipientId].TotalCoins += giftList[giftId-1].Price
 		}
-		recipientsMap[recipientId].MessagesCount = messagesCount
+
+		recipientsMap[recipientId].TotalCoins += sendPrice
 	}
 
 	// sort and get results
@@ -718,8 +693,6 @@ func main() {
 				return err
 			}
 
-			sendPrice := float32(150.0)
-
 			hasMoney := false
 			for _, giftId := range submittedMsg.GiftIDs {
 				giftPrice := giftList.GetPriceByID(giftId)
@@ -753,7 +726,6 @@ func main() {
 				return err
 			}
 
-			// TODO: support for purchasing gifts
 			for _, giftId := range submittedMsg.GiftIDs {
 				if res, err := tx.Exec("INSERT INTO message_gifts (message_id, gift_id) VALUES (?, ?)", submittedMsg.ID, giftId); err != nil {
 					passivePrintError(tx.Rollback())

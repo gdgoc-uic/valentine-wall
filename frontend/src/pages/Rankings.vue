@@ -24,13 +24,11 @@
                   <span class="block lg:hidden">Dept.</span>
                   <span class="hidden lg:block">Department</span>
                 </th>
-                <th class="w-1/4 text-lg text-center normal-case text-red-400">
-                  <span class="block lg:hidden">Msgs.</span>
-                  <span class="hidden lg:block">Messages</span>
-                </th>
-                <th class="w-1/4 text-lg text-center normal-case text-red-400">
-                  <span class="block lg:hidden">Gifts</span>
-                  <span class="hidden lg:block">Gift Messages</span>
+                <th class="w-1/4 text-lg text-center normal-case space-x-2 text-red-400">
+                  <div class="space-x-2 flex justify-center items-center">
+                    <span>Accumulated Coins</span>
+                    <icon-coin />
+                  </div>
                 </th>
               </tr>
             </thead>
@@ -38,8 +36,12 @@
               <tr :key="r.recipient_id" v-for="(r, i) in rankings" :class="{'border-b-2': i < rankings.length - 1}">
                 <td class="text-xl font-bold text-gray-700">#{{ i + 1 }}</td>
                 <td class="text-xl font-semibold text-gray-500">{{ r.department }}</td>
-                <td class="text-xl text-gray-500 text-center">{{ r.messages_count }}</td>
-                <td class="text-xl text-gray-500 text-center">{{ r.gift_messages_count }}</td>
+                <td class="text-xl text-gray-500 text-center">
+                  <div>
+                    <span class="text-rose-500 font-bold">{{ r.total_coins }}</span>
+                    <span class="text-2xl">ღ</span>
+                  </div>
+                </td>
               </tr>
             </tbody>
           </table>
@@ -58,11 +60,13 @@
 <script lang="ts">
 import PaginatedResponseHandler from "../components/PaginatedResponseHandler.vue";
 import PaginationLoadMoreButton from '../components/PaginationLoadMoreButton.vue';
+import IconCoin from '~icons/twemoji/coin';
 
 export default {
   components: { 
     PaginatedResponseHandler,
-    PaginationLoadMoreButton 
+    PaginationLoadMoreButton,
+    IconCoin
   },
   created() {
     this.endpoint = this.getRankingsEndpoint();

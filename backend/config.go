@@ -41,6 +41,8 @@ var postalOfficeAddress = "localhost:3350"
 var dataDirPath = filepath.Join(".", "_data")
 var invitationCookieName = "vw-invitation_ref"
 
+var sendPrice = float32(150.0)
+
 var validator = goValidator.New()
 var giftList = Gifts{
 	{1, "sunflower", "Sunflower", 350},
