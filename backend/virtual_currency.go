@@ -190,7 +190,7 @@ func (b *VirtualBank) AddTransaction(uid string, amount float32, desc string, tx
 	}
 
 	transactionSql := fmt.Sprintf(
-		"INSERT INTO %s VALUES (id, user_id, amount, description, created_at) VALUES (:id, :user_id, :amount, :description, :created_at)",
+		"INSERT INTO %s (id, user_id, amount, description, created_at) VALUES (:id, :user_id, :amount, :description, :created_at)",
 		virtualTransactionsTableName,
 	)
 
