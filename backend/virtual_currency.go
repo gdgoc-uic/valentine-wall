@@ -205,11 +205,21 @@ func (b *VirtualBank) DeductBalanceTo(uid string, amount float32, desc string, t
 	return vWallet.Balance - amount, nil
 }
 
+var virtualWalletKey = struct{}{}
+
+func getVirtualWalletFromReq(r *http.Request) *VirtualWallet {
+	vWallet, ok := r.Context().Value(virtualWalletKey).(*VirtualWallet)
+	if !ok {
+		return nil
+	}
+	return vWallet
+}
+
 func checkBalance(b *VirtualBank) func(http.Handler) http.Handler {
 	return func(next http.Handler) http.Handler {
 		return wrapHandler(func(rw http.ResponseWriter, r *http.Request) error {
-			token, ok := r.Context().Value("authToken").(*auth.Token)
-			if !ok {
+			token := getAuthTokenByReq(r)
+			if token == nil {
 				return &ResponseError{
 					StatusCode: http.StatusForbidden,
 					Message:    "Forbidden transaction.",
@@ -228,7 +238,7 @@ func checkBalance(b *VirtualBank) func(http.Handler) http.Handler {
 				}
 			}
 
-			ctx := context.WithValue(r.Context(), "virtualWallet", vWallet)
+			ctx := context.WithValue(r.Context(), virtualWalletKey, vWallet)
 			next.ServeHTTP(rw, r.WithContext(ctx))
 			return nil
 		})

@@ -27,7 +27,6 @@ import (
 	"google.golang.org/api/option"
 
 	firebase "firebase.google.com/go/v4"
-	"firebase.google.com/go/v4/auth"
 	goNanoid "github.com/matoous/go-nanoid/v2"
 
 	"github.com/dghubble/oauth1"
@@ -470,7 +469,7 @@ func main() {
 			return nil
 		},
 	})).Get("/rankings", wrapHandler(func(rw http.ResponseWriter, r *http.Request) error {
-		pg := r.Context().Value("paginator").(*Paginator)
+		pg := getPaginatorFromReq(r)
 		cachedRankings, hasRankingsCached := cacher.Get("rankings")
 		var results Recipients
 		if !hasRankingsCached {
@@ -505,8 +504,8 @@ func main() {
 
 	getMessagesHandler := wrapHandler(func(rw http.ResponseWriter, rr *http.Request) error {
 		recipientId := chi.URLParam(rr, "recipientId")
-		pg := rr.Context().Value("paginator").(*Paginator)
-		searchRequest := rr.Context().Value("searchRequest").(*bleve.SearchRequest)
+		pg := getPaginatorFromReq(rr)
+		searchRequest := rr.Context().Value(searchRequestKey).(*bleve.SearchRequest)
 		if len(recipientId) != 0 {
 			matchRecipientQuery := bleve.NewTermQuery(recipientId)
 			matchRecipientQuery.SetField("recipient_id")
@@ -666,8 +665,8 @@ func main() {
 	}))
 	r.With(jsonOnly, appVerifyUser, appCheckBalance).
 		Post("/messages", wrapHandler(func(rw http.ResponseWriter, r *http.Request) error {
-			token := r.Context().Value("authToken").(*auth.Token)
-			authClient := r.Context().Value("authClient").(*auth.Client)
+			token := getAuthTokenByReq(r)
+			authClient := getAuthClientByReq(r)
 
 			var submittedMsg RawMessage
 			if err := json.NewDecoder(r.Body).Decode(&submittedMsg); err != nil {
@@ -848,6 +847,8 @@ func main() {
 			})
 		}))
 
+	gotMessageKey := struct{}{}
+
 	getRawMessage := func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(rw http.ResponseWriter, rr *http.Request) {
 			recipientId := chi.URLParam(rr, "recipientId")
@@ -863,13 +864,13 @@ func main() {
 				log.Println(err)
 			}
 
-			newCtx := context.WithValue(rr.Context(), "gotMessage", message)
+			newCtx := context.WithValue(rr.Context(), gotMessageKey, message)
 			next.ServeHTTP(rw, rr.WithContext(newCtx))
 		})
 	}
 
 	r.With(getRawMessage).Get("/messages/{recipientId}/{messageId}", wrapHandler(func(rw http.ResponseWriter, rr *http.Request) error {
-		message := rr.Context().Value("gotMessage").(RawMessage)
+		message := rr.Context().Value(gotMessageKey).(RawMessage)
 
 		// generate image if ?image query
 		if rr.URL.Query().Has("image") {
@@ -927,8 +928,8 @@ func main() {
 	}))
 
 	r.With(appVerifyUser, getRawMessage).Delete("/messages/{recipientId}/{messageId}", wrapHandler(func(rw http.ResponseWriter, r *http.Request) error {
-		token := r.Context().Value("authToken").(*auth.Token)
-		message := r.Context().Value("gotMessage").(RawMessage)
+		token := getAuthTokenByReq(r)
+		message := r.Context().Value(gotMessageKey).(RawMessage)
 		// timeToSend := emailTemplates["message"].TimeToSend()
 		//  || time.Since(message.CreatedAt) >= timeToSend
 
@@ -963,11 +964,11 @@ func main() {
 	r.With(jsonOnly, appVerifyUser, getRawMessage).
 		Post("/messages/{recipientId}/{messageId}/reply", wrapHandler(func(rw http.ResponseWriter, rr *http.Request) error {
 			// retrieve message
-			message := rr.Context().Value("gotMessage").(RawMessage)
+			message := rr.Context().Value(gotMessageKey).(RawMessage)
 
 			// retrieve token
-			token := rr.Context().Value("authToken").(*auth.Token)
-			authClient := rr.Context().Value("authClient").(*auth.Client)
+			token := getAuthTokenByReq(rr)
+			authClient := getAuthClientByReq(rr)
 
 			// retrieve connections
 			connections := getUserConnections(db, token.UID)
@@ -1093,7 +1094,7 @@ func main() {
 
 	r.With(appVerifyUser).
 		Patch("/user/info", wrapHandler(func(rw http.ResponseWriter, r *http.Request) error {
-			token := r.Context().Value("authToken").(*auth.Token)
+			token := getAuthTokenByReq(r)
 			updatedAssocInfo := &AssociatedUser{}
 
 			if err := json.NewDecoder(r.Body).Decode(updatedAssocInfo); err != nil {
@@ -1118,7 +1119,7 @@ func main() {
 
 	r.With(appVerifyUser).
 		Post("/user/session", wrapHandler(func(rw http.ResponseWriter, r *http.Request) error {
-			token := r.Context().Value("authToken").(*auth.Token)
+			token := getAuthTokenByReq(r)
 			session, _ := store.Get(r, sessionName)
 			session.Values["uid"] = token.UID
 			if err := session.Save(r, rw); err != nil {
@@ -1158,7 +1159,7 @@ func main() {
 	}))
 
 	r.With(appVerifyUser).Get("/user/invitations", wrapHandler(func(rw http.ResponseWriter, r *http.Request) error {
-		token := r.Context().Value("authToken").(*auth.Token)
+		token := getAuthTokenByReq(r)
 		invitations, err := invSys.GetInvitationsByUID(token.UID)
 		if err != nil {
 			return err
@@ -1167,7 +1168,7 @@ func main() {
 	}))
 
 	r.With(appVerifyUser).Post("/user/invitations/generate", wrapHandler(func(rw http.ResponseWriter, r *http.Request) error {
-		token := r.Context().Value("authToken").(*auth.Token)
+		token := getAuthTokenByReq(r)
 		if err := invSys.CheckEligibilityByUID(token.UID); err != nil {
 			return err
 		}
@@ -1206,8 +1207,8 @@ func main() {
 		TableName: virtualTransactionsTableName,
 	})).
 		Get("/user/transactions", wrapHandler(func(rw http.ResponseWriter, r *http.Request) error {
-			token := r.Context().Value("authToken").(*auth.Token)
-			pg := r.Context().Value("paginator").(*Paginator)
+			token := getAuthTokenByReq(r)
+			pg := getPaginatorFromReq(r)
 			query := sq.Select("*").From(virtualTransactionsTableName).Where(sq.Eq{"user_id": token.UID})
 
 			resp, err := pg.Load(&DatabasePaginatorSource{
@@ -1230,7 +1231,7 @@ func main() {
 
 	r.With(appVerifyUser).
 		Get("/user/info", wrapHandler(func(rw http.ResponseWriter, r *http.Request) error {
-			token := r.Context().Value("authToken").(*auth.Token)
+			token := getAuthTokenByReq(r)
 			vWallet, err := b.GetWalletByUID(token.UID)
 			if err != nil {
 				log.Println(err)
@@ -1259,8 +1260,8 @@ func main() {
 	r.With(jsonOnly, appVerifyUser).
 		Post("/user/setup", wrapHandler(func(rw http.ResponseWriter, r *http.Request) error {
 			shouldDenyService := false
-			token := r.Context().Value("authToken").(*auth.Token)
-			authClient := r.Context().Value("authClient").(*auth.Client)
+			token := getAuthTokenByReq(r)
+			authClient := getAuthClientByReq(r)
 			submittedData := AssociatedUser{}
 			if err := json.NewDecoder(r.Body).Decode(&submittedData); err != nil {
 				return err
@@ -1402,8 +1403,8 @@ func main() {
 	}, htmlEncoder))
 
 	r.With(appVerifyUser).Post("/user/connect_email", wrapHandler(func(rw http.ResponseWriter, r *http.Request) error {
-		token := r.Context().Value("authToken").(*auth.Token)
-		authClient := r.Context().Value("authClient").(*auth.Client)
+		token := getAuthTokenByReq(r)
+		authClient := getAuthClientByReq(r)
 		userEmail, err := getUserEmailByUID(authClient, token.UID)
 		if err != nil {
 			return err
@@ -1479,7 +1480,7 @@ func main() {
 	}, htmlEncoder))
 
 	r.With(appVerifyUser).Delete("/user/connections/{connectionName}", wrapHandler(func(rw http.ResponseWriter, r *http.Request) error {
-		token := r.Context().Value("authToken").(*auth.Token)
+		token := getAuthTokenByReq(r)
 		connectionName := chi.URLParam(r, "connectionName")
 
 		// retrieve connections
@@ -1503,8 +1504,8 @@ func main() {
 	}))
 
 	r.With(appVerifyUser).Post("/user/delete", wrapHandler(func(rw http.ResponseWriter, r *http.Request) error {
-		authClient := r.Context().Value("authClient").(*auth.Client)
-		token := r.Context().Value("authToken").(*auth.Token)
+		authClient := getAuthClientByReq(r)
+		token := getAuthTokenByReq(r)
 
 		var confirmationData struct {
 			InputSID string `json:"input_sid"`

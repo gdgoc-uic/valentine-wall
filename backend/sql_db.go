@@ -89,12 +89,22 @@ type Predicate interface {
 	ToSql() (string, []interface{}, error)
 }
 
+var selectQueryKey = struct{}{}
+
+func getSelectQueryFromReq(r *http.Request) *sq.SelectBuilder {
+	sQuery, ok := r.Context().Value(selectQueryKey).(*sq.SelectBuilder)
+	if !ok {
+		return nil
+	}
+	return sQuery
+}
+
 func injectSelectQuery(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(rw http.ResponseWriter, r *http.Request) {
-		_, ok := r.Context().Value("selectQuery").(*sq.SelectBuilder)
+		_, ok := r.Context().Value(selectQueryKey).(*sq.SelectBuilder)
 		if !ok {
 			selectQuery := sq.Select()
-			ctx := context.WithValue(r.Context(), "selectQuery", &selectQuery)
+			ctx := context.WithValue(r.Context(), selectQueryKey, &selectQuery)
 			next.ServeHTTP(rw, r.WithContext(ctx))
 			return
 		}
