@@ -1229,6 +1229,25 @@ func main() {
 			return jsonEncode(rw, resp)
 		}))
 
+	r.With(jsonOnly, appVerifyUser).Post("/user/cheque/deposit", wrapHandler(func(rw http.ResponseWriter, r *http.Request) error {
+		var parsedData struct {
+			ChequeID string `json:"cheque_id"`
+		}
+
+		if err := json.NewDecoder(r.Body).Decode(&parsedData); err != nil {
+			return err
+		}
+
+		token := getAuthTokenByReq(r)
+		if err := b.DepositChequeByID(parsedData.ChequeID, token.UID); err != nil {
+			return err
+		}
+
+		return jsonEncode(rw, map[string]string{
+			"message": "cheque deposited successfully",
+		})
+	}))
+
 	r.With(appVerifyUser).
 		Get("/user/info", wrapHandler(func(rw http.ResponseWriter, r *http.Request) error {
 			token := getAuthTokenByReq(r)

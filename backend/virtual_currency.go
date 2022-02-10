@@ -17,11 +17,14 @@ import (
 )
 
 /*
-
 TODO:
-- Earn via referral/invitation links
 - Earn via share links
 - Earn via last idle session computation
+- Admin API
+
+ADDED:
+- Earn via referral/invitation links
+- Earn via cheques (contests, etc.)
 */
 
 type VirtualWallet struct {
@@ -37,8 +40,17 @@ type VirtualTransaction struct {
 	CreatedAt   time.Time `db:"created_at" json:"created_at"`
 }
 
+type Cheque struct {
+	ID          string    `db:"id" json:"id"`
+	UserID      string    `db:"user_id" json:"user_id"`
+	Amount      float32   `db:"amount" json:"amount"`
+	Description string    `db:"description" json:"description"`
+	CreatedAt   time.Time `db:"created_at" json:"created_at"`
+}
+
 const virtualTransactionsTableName = "virtual_transactions"
 const virtualWalletsTableName = "virtual_wallets"
+const chequesTableName = "cheques"
 
 type VirtualBank struct {
 	DB *sqlx.DB
@@ -205,6 +217,92 @@ func (b *VirtualBank) DeductBalanceTo(uid string, amount float32, desc string, t
 	return vWallet.Balance - amount, nil
 }
 
+func (b *VirtualBank) GenerateCheque(toUID string, amount float32) (*Cheque, error) {
+	id, _ := goNanoid.New()
+	timestamp := time.Now()
+	chequeDescription := "Deposit check"
+	res, err := b.DB.Exec(
+		"INSERT INTO cheques (id, user_id, amount, description, created_at) VALUES (?, ?, ?, ?, ?)",
+		id, toUID, amount, chequeDescription, timestamp,
+	)
+	if err != nil {
+		return nil, err
+	} else if err := wrapSqlResult(res); err != nil {
+		return nil, err
+	}
+
+	finalCheque := &Cheque{
+		ID:          id,
+		UserID:      toUID,
+		Amount:      amount,
+		Description: chequeDescription,
+		CreatedAt:   timestamp,
+	}
+
+	return finalCheque, nil
+}
+
+func (b *VirtualBank) GenerateChequeBySID(sid string, amount float32) (*Cheque, error) {
+	gotUser, err := getAssociatedUserBy(b.DB, sq.Eq{"associated_id": sid})
+	if err != nil {
+		return nil, err
+	}
+
+	return b.GenerateCheque(gotUser.UserID, amount)
+}
+
+func (b *VirtualBank) DepositChequeByID(chequeID string, recipientUID string) error {
+	if len(chequeID) == 0 {
+		return &ResponseError{
+			StatusCode: http.StatusBadRequest,
+			Message:    "Cheque ID is empty.",
+		}
+	} else if len(recipientUID) == 0 {
+		return &ResponseError{
+			WError:     fmt.Errorf("recipient uid is empty"),
+			StatusCode: http.StatusBadRequest,
+		}
+	}
+
+	// verify cheque
+	gotCheque := Cheque{}
+	if err := b.DB.Get(
+		&gotCheque,
+		"SELECT * FROM cheques WHERE id = ? AND user_id = ?",
+		chequeID, recipientUID,
+	); err != nil {
+		if err == sql.ErrNoRows {
+			return &ResponseError{
+				StatusCode: http.StatusNotFound,
+				Message:    "invalid cheque",
+			}
+		}
+		return err
+	}
+
+	// deposit cheque
+	tx, err := b.DB.BeginTxx(context.Background(), &sql.TxOptions{})
+	if err != nil {
+		return err
+	}
+
+	if err := b.AddBalanceTo(
+		gotCheque.UserID,
+		gotCheque.Amount,
+		gotCheque.Description,
+		tx,
+	); err != nil {
+		passivePrintError(tx.Rollback())
+		return err
+	}
+
+	if err := tx.Commit(); err != nil {
+		passivePrintError(tx.Rollback())
+		return err
+	}
+
+	return nil
+}
 
 type virtualWalletKey struct{}
 
