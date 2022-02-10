@@ -113,7 +113,7 @@ type authTokenKey struct{}
 type authClientKey struct{}
 
 func getAuthClientByReq(r *http.Request) *auth.Client {
-	cl, ok := r.Context().Value(authTokenKey{}).(*auth.Client)
+	cl, ok := r.Context().Value(authClientKey{}).(*auth.Client)
 	if !ok {
 		return nil
 	}
