@@ -1412,7 +1412,7 @@ func main() {
 			TokenSecret: "",
 		}
 
-		res, err := db.NamedExec("INSERT INTO user_connections (user_id, provider, token, token_secret) VALUES (:user_id, :provider, :token, :token_secret)", &newEmailConnection)
+		res, err := db.NamedExec("INSERT INTO user_connections_new (user_id, provider, token, token_secret) VALUES (:user_id, :provider, :token, :token_secret)", &newEmailConnection)
 		if err != nil {
 			return err
 		}
@@ -1462,7 +1462,7 @@ func main() {
 			TokenSecret: token.TokenSecret,
 		}
 
-		res, err := db.NamedExec("INSERT INTO user_connections (user_id, provider, token, token_secret) VALUES (:user_id, :provider, :token, :token_secret)", &newTwitterConnection)
+		res, err := db.NamedExec("INSERT INTO user_connections_new (user_id, provider, token, token_secret) VALUES (:user_id, :provider, :token, :token_secret)", &newTwitterConnection)
 		if err != nil {
 			return err
 		}
@@ -1471,8 +1471,21 @@ func main() {
 			return err
 		}
 
-		scriptJs := `<script type="text/javascript">window.opener.postMessage({message:'twitter connect success', user_connections:[{provider:'twitter'}]}, '` + frontendUrl + `')</script>`
-		return htmlEncode(rw, "<p>success</p>"+scriptJs)
+		buf := &bytes.Buffer{}
+		if err := json.NewEncoder(buf).Encode(getUserConnections(db, uid)); err != nil {
+			passivePrintError(err)
+			buf.WriteString("[]")
+		}
+
+		scriptJs := fmt.Sprintf(
+			`<p>success</p>
+<script type="text/javascript">
+window.opener.postMessage({message:'twitter connect success',user_connections:%s}, '%s')
+</script>`,
+			buf.String(),
+			frontendUrl,
+		)
+		return htmlEncode(rw, scriptJs)
 	}, htmlEncoder))
 
 	r.With(appVerifyUser).Delete("/user/connections/{connectionName}", wrapHandler(func(rw http.ResponseWriter, r *http.Request) error {
@@ -1488,7 +1501,7 @@ func main() {
 			}
 		}
 
-		if res, err := db.Exec("DELETE FROM user_connections WHERE user_id = ? AND provider = ?", token.UID, connectionName); err != nil {
+		if res, err := db.Exec("DELETE FROM user_connections_new WHERE user_id = ? AND provider = ?", token.UID, connectionName); err != nil {
 			return err
 		} else if err := wrapSqlResult(res); err != nil {
 			return err
@@ -1534,13 +1547,13 @@ func main() {
 			}
 		}
 
-		// delete from associated_ids and user_connections
+		// delete from associated_ids and user_connections_new
 		tx, err := db.BeginTxx(r.Context(), &sql.TxOptions{})
 		if err != nil {
 			return err
 		}
 
-		for _, tableName := range []string{"user_connections", "virtual_wallets", "associated_ids"} {
+		for _, tableName := range []string{"user_connections_new", "virtual_wallets", "associated_ids"} {
 			if deleteSql, deleteArgs, err := sq.Delete(tableName).Where(sq.Eq{"user_id": token.UID}).ToSql(); err != nil {
 				return err
 			} else if res, err := tx.Exec(deleteSql, deleteArgs...); err != nil {

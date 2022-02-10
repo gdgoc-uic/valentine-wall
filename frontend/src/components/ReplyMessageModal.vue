@@ -102,15 +102,16 @@ export default {
   methods: {
     openTwitterLogin() {
       let success: boolean = false;
-      try {
-        connectToTwitter(this.$store);
-        success = true;
-      } catch (e) {
-        success = false;
-        catchAndNotifyError(this, e);
-      } finally {
-        logEvent(analytics!, 'connect_twitter', { success });
-      }
+      connectToTwitter(this.$store, {
+        onSuccess: () => { success = true; },
+        onError: (e) => {
+          success = false;
+          catchAndNotifyError(this, e);
+        },
+        onFinally: () => {
+          logEvent(analytics!, 'connect_twitter', { success });
+        }
+      });
     },
     async skipLogin() {
       let success: boolean = false;

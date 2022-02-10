@@ -243,7 +243,7 @@ func checkProfanity(content string) error {
 
 func getUserConnections(db *sqlx.DB, uid string) []UserConnection {
 	connections := []UserConnection{}
-	if err := db.Select(&connections, "SELECT * FROM user_connections WHERE user_id = ?", uid); err != nil {
+	if err := db.Select(&connections, "SELECT * FROM user_connections_new WHERE user_id = ?", uid); err != nil {
 		log.Println(err)
 		// return err
 	}
