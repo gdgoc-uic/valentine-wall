@@ -539,7 +539,7 @@ func main() {
 
 	customMsgQueryFilters := customFilters(map[string]FilterFunc{
 		"has_gift": func(r *http.Request, ctx context.Context, filter Filter) error {
-			searchReq := ctx.Value("searchRequest").(*bleve.SearchRequest)
+			searchReq := ctx.Value(searchRequestKey{}).(*bleve.SearchRequest)
 			hasGiftQuery := bleve.NewBoolFieldQuery(false)
 			hasGiftQuery.SetField("has_gifts")
 
