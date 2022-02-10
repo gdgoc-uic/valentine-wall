@@ -39,6 +39,8 @@ import (
 	"github.com/patrickmn/go-cache"
 )
 
+type gotMessageKey struct{}
+
 var messagesPaginator = &Paginator{
 	OrderKey: "id",
 }
@@ -505,7 +507,7 @@ func main() {
 	getMessagesHandler := wrapHandler(func(rw http.ResponseWriter, rr *http.Request) error {
 		recipientId := chi.URLParam(rr, "recipientId")
 		pg := getPaginatorFromReq(rr)
-		searchRequest := rr.Context().Value(searchRequestKey).(*bleve.SearchRequest)
+		searchRequest := rr.Context().Value(searchRequestKey{}).(*bleve.SearchRequest)
 		if len(recipientId) != 0 {
 			matchRecipientQuery := bleve.NewTermQuery(recipientId)
 			matchRecipientQuery.SetField("recipient_id")
@@ -847,8 +849,6 @@ func main() {
 			})
 		}))
 
-	gotMessageKey := struct{}{}
-
 	getRawMessage := func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(rw http.ResponseWriter, rr *http.Request) {
 			recipientId := chi.URLParam(rr, "recipientId")
@@ -864,13 +864,13 @@ func main() {
 				log.Println(err)
 			}
 
-			newCtx := context.WithValue(rr.Context(), gotMessageKey, message)
+			newCtx := context.WithValue(rr.Context(), gotMessageKey{}, message)
 			next.ServeHTTP(rw, rr.WithContext(newCtx))
 		})
 	}
 
 	r.With(getRawMessage).Get("/messages/{recipientId}/{messageId}", wrapHandler(func(rw http.ResponseWriter, rr *http.Request) error {
-		message := rr.Context().Value(gotMessageKey).(RawMessage)
+		message := rr.Context().Value(gotMessageKey{}).(RawMessage)
 
 		// generate image if ?image query
 		if rr.URL.Query().Has("image") {
@@ -929,7 +929,7 @@ func main() {
 
 	r.With(appVerifyUser, getRawMessage).Delete("/messages/{recipientId}/{messageId}", wrapHandler(func(rw http.ResponseWriter, r *http.Request) error {
 		token := getAuthTokenByReq(r)
-		message := r.Context().Value(gotMessageKey).(RawMessage)
+		message := r.Context().Value(gotMessageKey{}).(RawMessage)
 		// timeToSend := emailTemplates["message"].TimeToSend()
 		//  || time.Since(message.CreatedAt) >= timeToSend
 
@@ -964,7 +964,7 @@ func main() {
 	r.With(jsonOnly, appVerifyUser, getRawMessage).
 		Post("/messages/{recipientId}/{messageId}/reply", wrapHandler(func(rw http.ResponseWriter, rr *http.Request) error {
 			// retrieve message
-			message := rr.Context().Value(gotMessageKey).(RawMessage)
+			message := rr.Context().Value(gotMessageKey{}).(RawMessage)
 
 			// retrieve token
 			token := getAuthTokenByReq(rr)
@@ -1092,7 +1092,7 @@ func main() {
 			})
 		}))
 
-	r.With(appVerifyUser).
+	r.With(jsonOnly, appVerifyUser).
 		Patch("/user/info", wrapHandler(func(rw http.ResponseWriter, r *http.Request) error {
 			token := getAuthTokenByReq(r)
 			updatedAssocInfo := &AssociatedUser{}
@@ -1503,7 +1503,7 @@ func main() {
 		})
 	}))
 
-	r.With(appVerifyUser).Post("/user/delete", wrapHandler(func(rw http.ResponseWriter, r *http.Request) error {
+	r.With(jsonOnly, appVerifyUser).Post("/user/delete", wrapHandler(func(rw http.ResponseWriter, r *http.Request) error {
 		authClient := getAuthClientByReq(r)
 		token := getAuthTokenByReq(r)
 

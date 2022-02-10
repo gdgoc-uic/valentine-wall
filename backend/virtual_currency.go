@@ -205,10 +205,11 @@ func (b *VirtualBank) DeductBalanceTo(uid string, amount float32, desc string, t
 	return vWallet.Balance - amount, nil
 }
 
-var virtualWalletKey = struct{}{}
+
+type virtualWalletKey struct{}
 
 func getVirtualWalletFromReq(r *http.Request) *VirtualWallet {
-	vWallet, ok := r.Context().Value(virtualWalletKey).(*VirtualWallet)
+	vWallet, ok := r.Context().Value(virtualWalletKey{}).(*VirtualWallet)
 	if !ok {
 		return nil
 	}
@@ -238,7 +239,7 @@ func checkBalance(b *VirtualBank) func(http.Handler) http.Handler {
 				}
 			}
 
-			ctx := context.WithValue(r.Context(), virtualWalletKey, vWallet)
+			ctx := context.WithValue(r.Context(), virtualWalletKey{}, vWallet)
 			next.ServeHTTP(rw, r.WithContext(ctx))
 			return nil
 		})

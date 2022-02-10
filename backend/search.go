@@ -36,14 +36,14 @@ func DeleteEntry(index bleve.Index, id string) error {
 	return index.Delete(id)
 }
 
-var searchRequestKey = struct{}{}
+type searchRequestKey struct{}
 
 func injectSearchQuery(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(rw http.ResponseWriter, r *http.Request) {
-		_, ok := r.Context().Value(searchRequestKey).(*bleve.SearchRequest)
+		_, ok := r.Context().Value(searchRequestKey{}).(*bleve.SearchRequest)
 		if !ok {
 			searchReq := bleve.NewSearchRequest(bleve.NewConjunctionQuery())
-			ctx := context.WithValue(r.Context(), searchRequestKey, searchReq)
+			ctx := context.WithValue(r.Context(), searchRequestKey{}, searchReq)
 			next.ServeHTTP(rw, r.WithContext(ctx))
 		} else {
 			next.ServeHTTP(rw, r)

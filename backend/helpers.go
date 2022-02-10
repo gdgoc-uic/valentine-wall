@@ -108,11 +108,11 @@ func wrapHandler(handler func(http.ResponseWriter, *http.Request) error, encoder
 	})
 }
 
-var authTokenKey = struct{}{}
-var authClientKey = struct{}{}
+type authTokenKey struct{}
+type authClientKey struct{}
 
 func getAuthClientByReq(r *http.Request) *auth.Client {
-	cl, ok := r.Context().Value(authTokenKey).(*auth.Client)
+	cl, ok := r.Context().Value(authTokenKey{}).(*auth.Client)
 	if !ok {
 		return nil
 	}
@@ -120,7 +120,7 @@ func getAuthClientByReq(r *http.Request) *auth.Client {
 }
 
 func getAuthTokenByReq(r *http.Request) *auth.Token {
-	token, ok := r.Context().Value(authTokenKey).(*auth.Token)
+	token, ok := r.Context().Value(authTokenKey{}).(*auth.Token)
 	if !ok {
 		return nil
 	}
@@ -160,8 +160,8 @@ func verifyUser(firebaseApp *firebase.App) func(http.Handler) http.Handler {
 				return err
 			}
 
-			ctx := context.WithValue(r.Context(), authTokenKey, token)
-			ctxWithClient := context.WithValue(ctx, authClientKey, authClient)
+			ctx := context.WithValue(r.Context(), authTokenKey{}, token)
+			ctxWithClient := context.WithValue(ctx, authClientKey{}, authClient)
 			next.ServeHTTP(rw, r.WithContext(ctxWithClient))
 			return nil
 		})
