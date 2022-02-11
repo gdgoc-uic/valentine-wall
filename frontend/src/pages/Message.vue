@@ -242,7 +242,7 @@ export default {
     },
     permalink(): string {
       if (import.meta.env.SSR) {
-        return import.meta.env.BASE_URL + this.$route.fullPath;
+        return import.meta.env.VITE_FRONTEND_URL + this.$route.fullPath;
       } else {
         return window.location.href;
       }

@@ -1,13 +1,4 @@
 services:
-  admin:
-    container_name: admin
-    image: nocodb/nocodb
-    networks:
-      - backend
-    volumes:
-      - ./admin/_data:/usr/app/data
-      - ./backend/_data:/usr/app/data/backend
-
   headless_chrome:
     container_name: headless_chrome
     image: browserless/chrome
@@ -66,6 +57,7 @@ services:
       dockerfile: Dockerfile
       args:
         env: ${ENV}
+        frontend_url: ${FRONTEND_URL}
         backend_url: ${BACKEND_URL}
         firebase_api_key: ${FIREBASE_API_KEY}
         firebase_auth_domain: ${FIREBASE_AUTH_DOMAIN}

@@ -68,7 +68,7 @@ export default {
   computed: {
     invitationLink() {
       if (!this.gotInvitationCode) return '';
-      return import.meta.env.BASE_URL + '/invite/' + this.gotInvitationCode;
+      return import.meta.env.VITE_FRONTEND_URL + '/invite/' + this.gotInvitationCode;
     }
   },
   methods: {

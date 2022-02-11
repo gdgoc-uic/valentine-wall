@@ -14,13 +14,6 @@ services:
       - caddy_data:/data
     restart: unless-stopped
 
-  admin:
-    networks:
-      - caddy
-    labels:
-      caddy: ${ADMIN_BASE_DOMAIN}
-      caddy.reverse_proxy: "{{upstreams 8080}}"
-
   backend:
     networks:
       - caddy
