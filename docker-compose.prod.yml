@@ -18,7 +18,7 @@ services:
     networks:
       - caddy
     environment:
-      - DATABASE_URL=postgres://${POSTGRES_USER}:${POSTGRES_PASSWORD}@database:5432/${DATABASE_PREFIX}_${ENV}
+      - DATABASE_URL=postgres://${POSTGRES_USER}:${POSTGRES_PASSWORD}@database:4023/${DATABASE_PREFIX}_${ENV}
     labels:
       caddy: ${BASE_DOMAIN}
       caddy.handle_path: /api/*
