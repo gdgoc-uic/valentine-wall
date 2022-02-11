@@ -2,6 +2,7 @@ FROM node:16.13.2-alpine AS base-node
 WORKDIR /app
 
 ARG env
+ARG frontend_url
 ARG backend_url
 ARG firebase_api_key
 ARG firebase_auth_domain
@@ -11,6 +12,7 @@ ARG firebase_app_id
 ARG firebase_measurement_id
 ARG firebase_project_id
 
+ENV VITE_FRONTEND_URL=${frontend_url}
 ENV VITE_BACKEND_URL=${backend_url}
 ENV VITE_FIREBASE_API_KEY=${firebase_api_key}
 ENV VITE_FIREBASE_AUTH_DOMAIN=${firebase_auth_domain}
