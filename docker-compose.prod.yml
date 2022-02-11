@@ -1,4 +1,8 @@
 services:
+  database:
+    networks:
+      - caddy
+
   www:
     container_name: www
     image: lucaslorentz/caddy-docker-proxy:ci-alpine
