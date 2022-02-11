@@ -24,6 +24,7 @@ type CustomProfanityDictionary struct {
 // uninit'ed variables
 var databasePrefix = "valentine-wall"
 var databasePath string
+var databaseDriver string
 var baseUrl string
 var twitterOauth1Config *oauth1.Config
 var gAppCredPath string
@@ -135,7 +136,12 @@ func init() {
 		}
 	}
 
-	databasePath = configureDatabasePath(targetEnv)
+	if gotDatabaseUrl, exists := os.LookupEnv("DATABASE_URL"); exists {
+		databasePath = gotDatabaseUrl
+		databaseDriver = "postgres"
+	} else {
+		databaseDriver, databasePath = configureDatabasePath(targetEnv)
+	}
 
 	if gotProfanityListFilePath, exists := os.LookupEnv("PROFANITY_JSON_FILE_PATH"); exists {
 		var data []byte

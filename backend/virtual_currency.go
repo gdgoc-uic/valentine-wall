@@ -134,7 +134,7 @@ func (b *VirtualBank) AddInitialBalanceTo(uid string, tx *sqlx.Tx) (*VirtualTran
 		return nil, err
 	}
 
-	walletSql, walletArgs, _ := sq.Insert(virtualWalletsTableName).Columns("user_id", "balance").Values(uid, amount).ToSql()
+	walletSql, walletArgs, _ := psql.Insert(virtualWalletsTableName).Columns("user_id", "balance").Values(uid, amount).ToSql()
 	if res, err := tx.Exec(walletSql, walletArgs...); err != nil {
 		return nil, err
 	} else if err := wrapSqlResult(res); err != nil {
@@ -148,7 +148,7 @@ func (b *VirtualBank) GetWalletByUID(uid string) (*VirtualWallet, error) {
 	vWallet := &VirtualWallet{}
 	if err := b.DB.Get(
 		vWallet,
-		fmt.Sprintf("SELECT * FROM %s WHERE user_id = ?", virtualWalletsTableName),
+		fmt.Sprintf("SELECT * FROM %s WHERE user_id = $1", virtualWalletsTableName),
 		uid,
 	); err != nil {
 		return nil, err
@@ -169,7 +169,7 @@ func (b *VirtualBank) AddBalanceTo(uid string, amount float32, desc string, tx *
 		return nil, err
 	}
 
-	walletSql, walletArgs, _ := sq.Update(virtualWalletsTableName).Set("balance", vWallet.Balance+amount).Where(sq.Eq{"user_id": uid}).ToSql()
+	walletSql, walletArgs, _ := psql.Update(virtualWalletsTableName).Set("balance", vWallet.Balance+amount).Where(sq.Eq{"user_id": uid}).ToSql()
 	if res, err := tx.Exec(walletSql, walletArgs...); err != nil {
 		return nil, err
 	} else if err := wrapSqlResult(res); err != nil {
@@ -221,7 +221,7 @@ func (b *VirtualBank) DeductBalanceTo(uid string, amount float32, desc string, t
 		return 0, err
 	}
 
-	walletSql, walletArgs, _ := sq.Update(virtualWalletsTableName).Set("balance", vWallet.Balance-amount).Where(sq.Eq{"user_id": uid}).ToSql()
+	walletSql, walletArgs, _ := psql.Update(virtualWalletsTableName).Set("balance", vWallet.Balance-amount).Where(sq.Eq{"user_id": uid}).ToSql()
 	if res, err := tx.Exec(walletSql, walletArgs...); err != nil {
 		return 0, err
 	} else if err := wrapSqlResult(res); err != nil {
@@ -256,7 +256,7 @@ func (b *VirtualBank) GenerateCheque(toUID string, amount float32) (*Cheque, err
 	timestamp := time.Now()
 	chequeDescription := "Deposit check"
 	res, err := b.DB.Exec(
-		"INSERT INTO cheques (id, user_id, amount, description, created_at) VALUES (?, ?, ?, ?, ?)",
+		"INSERT INTO cheques (id, user_id, amount, description, created_at) VALUES ($1, $2, $3, $4, $6)",
 		id, toUID, amount, chequeDescription, timestamp,
 	)
 	if err != nil {
@@ -302,7 +302,7 @@ func (b *VirtualBank) DepositChequeByID(chequeID string, recipientUID string) er
 	gotCheque := Cheque{}
 	if err := b.DB.Get(
 		&gotCheque,
-		"SELECT * FROM cheques WHERE id = ? AND user_id = ?",
+		"SELECT * FROM cheques WHERE id = $1 AND user_id = $2",
 		chequeID, recipientUID,
 	); err != nil {
 		if err == sql.ErrNoRows {
