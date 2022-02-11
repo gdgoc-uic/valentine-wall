@@ -7,6 +7,8 @@ services:
       POSTGRES_USER: ${POSTGRES_USER:-root}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-root}
       POSTGRES_DB: ${DATABASE_PREFIX}_${ENV}
+    ports:
+      - '4023:5432'
     volumes:
       - ./backend/_data/pgdata:/var/lib/postgresql/data/
 
