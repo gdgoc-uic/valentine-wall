@@ -1,7 +1,6 @@
 package main
 
 import (
-	"context"
 	"database/sql"
 	"fmt"
 	"log"
@@ -104,7 +103,7 @@ func (sys *InvitationSystem) VerifyInvitationCode(invCode string) (*UserInvitati
 
 	if time.Now().After(gotInvitation.ExpiresAt) {
 		// destroy invitation after expiration
-		tx, err := sys.DB.BeginTxx(context.Background(), &sql.TxOptions{})
+		tx, err := sys.DB.Beginx()
 		if err == nil {
 			if err := sys.DestroyInvitation(gotInvitation.ID, tx); err != nil {
 				log.Println(err)
@@ -138,7 +137,7 @@ func (sys *InvitationSystem) UseInvitationFromReq(rw http.ResponseWriter, r *htt
 		return invErr
 	}
 
-	tx, err := sys.DB.BeginTxx(r.Context(), &sql.TxOptions{})
+	tx, err := sys.DB.Beginx()
 	if err != nil {
 		return err
 	}

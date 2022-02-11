@@ -688,7 +688,7 @@ func main() {
 				submittedMsg.HasGifts = true
 			}
 
-			tx, err := db.BeginTxx(r.Context(), &sql.TxOptions{})
+			tx, err := db.Beginx()
 			if err != nil {
 				return err
 			}
@@ -794,7 +794,6 @@ func main() {
 				recentMessagesChan <- submittedMsg.Message
 			}
 
-			defer passivePrintError(updateUserLastActive(db, token.UID))
 			return jsonEncode(rw, map[string]interface{}{
 				"message":         "Message created successfully",
 				"current_balance": currentBalance,
@@ -913,7 +912,6 @@ func main() {
 		}
 
 		cacher.Delete(fmt.Sprintf("image/%s", message.ID))
-		defer passivePrintError(updateUserLastActive(db, token.UID))
 		return jsonEncode(rw, map[string]string{
 			"message": "message deleted successfully",
 		})
@@ -1033,7 +1031,6 @@ func main() {
 				return err
 			}
 
-			defer passivePrintError(updateUserLastActive(db, token.UID))
 			return jsonEncode(rw, map[string]interface{}{
 				"message":         "reply success",
 				"current_balance": currentBalance,
@@ -1042,8 +1039,7 @@ func main() {
 
 	r.With(jsonOnly, appVerifyUser, getRawMessage).
 		Delete("/messages/{recipientId}/{messageId}/reply", wrapHandler(func(rw http.ResponseWriter, r *http.Request) error {
-			token := getAuthTokenByReq(r)
-			tx, err := db.BeginTxx(r.Context(), &sql.TxOptions{})
+			tx, err := db.Beginx()
 			if err != nil {
 				return err
 			}
@@ -1065,7 +1061,6 @@ func main() {
 				return err
 			}
 
-			defer passivePrintError(updateUserLastActive(db, token.UID))
 			return jsonEncode(rw, map[string]string{"message": "reply deleted successfully."})
 		}))
 
@@ -1108,7 +1103,6 @@ func main() {
 			} else if err := wrapSqlResult(res); err != nil {
 				return err
 			}
-			defer passivePrintError(updateUserLastActive(db, token.UID))
 			return jsonEncode(rw, map[string]string{
 				"message": "user details updated successfully",
 			})
@@ -1341,7 +1335,7 @@ func main() {
 
 			submittedData.UserID = token.UID
 
-			tx, err := db.BeginTxx(context.Background(), &sql.TxOptions{})
+			tx, err := db.Beginx()
 			if err != nil {
 				return err
 			}
@@ -1462,7 +1456,6 @@ func main() {
 		}
 
 		connections := getUserConnections(db, token.UID)
-		defer passivePrintError(updateUserLastActive(db, token.UID))
 		return jsonEncode(rw, map[string]interface{}{
 			"message":          "e-mail connected successfully",
 			"user_connections": connections,
@@ -1547,7 +1540,6 @@ window.opener.postMessage({message:'twitter connect success',user_connections:%s
 			return err
 		}
 
-		defer passivePrintError(updateUserLastActive(db, token.UID))
 		return jsonEncode(rw, map[string]string{
 			"message": "user third-party disconnection success",
 		})
@@ -1588,7 +1580,7 @@ window.opener.postMessage({message:'twitter connect success',user_connections:%s
 		}
 
 		// delete from associated_ids and user_connections_new
-		tx, err := db.BeginTxx(r.Context(), &sql.TxOptions{})
+		tx, err := db.Beginx()
 		if err != nil {
 			return err
 		}
@@ -1615,7 +1607,6 @@ window.opener.postMessage({message:'twitter connect success',user_connections:%s
 			return err
 		}
 
-		defer passivePrintError(updateUserLastActive(db, token.UID))
 		return jsonEncode(rw, map[string]interface{}{
 			"message": "user deleted successfully",
 		})

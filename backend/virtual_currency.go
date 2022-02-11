@@ -80,7 +80,7 @@ func (b *VirtualBank) AddInitialAmountToExistingAccounts(firebaseApp *firebase.A
 
 	iters := int(math.Ceil(float64(len(identifiers)) / 100))
 	added := 0
-	tx, err := b.DB.BeginTxx(context.Background(), &sql.TxOptions{})
+	tx, err := b.DB.Beginx()
 	if err != nil {
 		return err
 	}
@@ -243,7 +243,7 @@ func (b *VirtualBank) ConvertIdleTime(uid string, lastActiveAt time.Time) (*Virt
 	}
 
 	coinsToEarn := 20 * quotientMinutes
-	tx, err := b.DB.BeginTxx(context.Background(), &sql.TxOptions{})
+	tx, err := b.DB.Beginx()
 	if err != nil {
 		return nil, err
 	}
@@ -315,7 +315,7 @@ func (b *VirtualBank) DepositChequeByID(chequeID string, recipientUID string) er
 	}
 
 	// deposit cheque
-	tx, err := b.DB.BeginTxx(context.Background(), &sql.TxOptions{})
+	tx, err := b.DB.Beginx()
 	if err != nil {
 		return err
 	}
