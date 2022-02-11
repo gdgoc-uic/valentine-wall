@@ -39,6 +39,8 @@ import (
 	"github.com/patrickmn/go-cache"
 )
 
+var psql = sq.StatementBuilder.PlaceholderFormat(sq.Dollar)
+
 type gotMessageKey struct{}
 
 var messagesPaginator = &Paginator{
@@ -201,6 +203,7 @@ type Message struct {
 }
 
 var recentMessagesChan chan Message
+var messagesCol = []string{"id", "recipient_id", "content", "has_replied", "has_gifts", "created_at", "updated_at"}
 
 type RawMessage struct {
 	Message
@@ -249,7 +252,7 @@ func setupMessagesSearchIndex() (bleve.Index, error) {
 
 func importExistingMessages(db *sqlx.DB, index bleve.Index) error {
 	batch := index.NewBatch()
-	sqlQuery, _, err := sq.
+	sqlQuery, _, err := psql.
 		Select("id", "recipient_id", "created_at", "updated_at", "has_gifts").
 		Where(sq.Eq{"deleted_at": nil}).
 		From("messages").
@@ -505,12 +508,14 @@ func main() {
 					}
 					ids = append(ids, sq.Eq{"id": docMatch.ID})
 				}
-				querySql, queryArgs, err := sq.
-					Select("id", "recipient_id", "content", "has_replied", "has_gifts", "created_at", "updated_at").
-					From("messages").Where(sq.And{ids, sq.Eq{"deleted_at": nil}}).OrderBy(fmt.Sprintf("%s %s", pg.OrderKey, pg.Order)).ToSql()
+				querySql, queryArgs, err := psql.
+					Select(messagesCol...).
+					From("messages").Where(sq.And{ids, sq.Eq{"deleted_at": nil}}).
+					OrderBy(fmt.Sprintf("%s %s", pg.OrderKey, pg.Order)).ToSql()
 				if err != nil {
 					return nil, err
 				}
+
 				rows, err := db.Queryx(querySql, queryArgs...)
 				if err != nil {
 					return nil, err
@@ -584,7 +589,7 @@ func main() {
 		existingEntriesChan := make(chan Message, 10)
 
 		go func() {
-			mSql, mArgs, _ := sq.Select("id", "recipient_id", "content", "has_replied", "has_gifts", "created_at", "updated_at").
+			mSql, mArgs, _ := psql.Select(messagesCol...).
 				From("messages").Limit(10).OrderBy("created_at ASC").
 				Where(sq.And{sq.Eq{"deleted_at": nil, "has_gifts": false}, sq.LtOrEq{"created_at": time.Now()}}).ToSql()
 
@@ -651,7 +656,7 @@ func main() {
 			// make lastpostinfo an array in order to avoid false positive error
 			// when user posts for the first time
 			lastPostInfos := []Message{}
-			if err := db.Select(&lastPostInfos, "SELECT recipient_id, content, created_at FROM messages WHERE submitter_user_id = ? AND deleted_at IS NULL ORDER BY datetime(created_at) DESC LIMIT 1", submittedMsg.UID); err != nil {
+			if err := db.Select(&lastPostInfos, "SELECT recipient_id, content, created_at FROM messages WHERE submitter_user_id = $1 AND deleted_at IS NULL ORDER BY created_at DESC LIMIT 1", submittedMsg.UID); err != nil {
 				return err
 			}
 
@@ -688,7 +693,7 @@ func main() {
 				submittedMsg.HasGifts = true
 			}
 
-			tx, err := db.BeginTxx(r.Context(), &sql.TxOptions{})
+			tx, err := db.Beginx()
 			if err != nil {
 				return err
 			}
@@ -727,7 +732,7 @@ func main() {
 			}
 
 			for _, giftId := range submittedMsg.GiftIDs {
-				if res, err := tx.Exec("INSERT INTO message_gifts (message_id, gift_id) VALUES (?, ?)", submittedMsg.ID, giftId); err != nil {
+				if res, err := tx.Exec("INSERT INTO message_gifts (message_id, gift_id) VALUES ($1, $2)", submittedMsg.ID, giftId); err != nil {
 					passivePrintError(tx.Rollback())
 					return err
 				} else if err := wrapSqlResult(res); err != nil {
@@ -794,7 +799,6 @@ func main() {
 				recentMessagesChan <- submittedMsg.Message
 			}
 
-			defer passivePrintError(updateUserLastActive(db, token.UID))
 			return jsonEncode(rw, map[string]interface{}{
 				"message":         "Message created successfully",
 				"current_balance": currentBalance,
@@ -811,13 +815,13 @@ func main() {
 			recipientId := chi.URLParam(rr, "recipientId")
 			messageId := chi.URLParam(rr, "messageId")
 			message := RawMessage{}
-			if err := db.Get(&message, "SELECT * FROM messages WHERE id = ? AND recipient_id = ? AND deleted_at IS NULL", messageId, recipientId); err != nil {
+			if err := db.Get(&message, "SELECT * FROM messages WHERE id = $1 AND recipient_id = $2 AND deleted_at IS NULL", messageId, recipientId); err != nil {
 				passivePrintError(err)
 				r.NotFoundHandler().ServeHTTP(rw, rr)
 				return
 			}
 
-			if err := db.Select(&message.GiftIDs, "SELECT gift_id FROM message_gifts WHERE message_id = ?", messageId); err != nil {
+			if err := db.Select(&message.GiftIDs, "SELECT gift_id FROM message_gifts WHERE message_id = $1", messageId); err != nil {
 				passivePrintError(err)
 			}
 
@@ -866,7 +870,7 @@ func main() {
 		if isUserSenderOrReceiver {
 			if message.HasReplied {
 				// ignore error
-				if err := db.Get(reply, "SELECT * FROM message_replies WHERE message_id = ?", message.ID); err != nil {
+				if err := db.Get(reply, "SELECT * FROM message_replies WHERE message_id = $1", message.ID); err != nil {
 					log.Println(err)
 					respPayload["reply"] = nil
 				} else {
@@ -896,7 +900,7 @@ func main() {
 			}
 		}
 
-		res, err := db.Exec("UPDATE messages SET deleted_at = ? WHERE id = ?", time.Now(), message.ID)
+		res, err := db.Exec("UPDATE messages SET deleted_at = $1 WHERE id = $2", time.Now(), message.ID)
 		if err != nil {
 			return err
 		} else if err := wrapSqlResult(res); err != nil {
@@ -913,7 +917,6 @@ func main() {
 		}
 
 		cacher.Delete(fmt.Sprintf("image/%s", message.ID))
-		defer passivePrintError(updateUserLastActive(db, token.UID))
 		return jsonEncode(rw, map[string]string{
 			"message": "message deleted successfully",
 		})
@@ -1021,7 +1024,7 @@ func main() {
 				return err
 			}
 
-			if res, err := tx.Exec("UPDATE messages SET has_replied = true WHERE id = ?", message.ID); err != nil {
+			if res, err := tx.Exec("UPDATE messages SET has_replied = true WHERE id = $1", message.ID); err != nil {
 				defer passivePrintError(tx.Rollback())
 				return err
 			} else if err := wrapSqlResult(res); err != nil {
@@ -1033,7 +1036,6 @@ func main() {
 				return err
 			}
 
-			defer passivePrintError(updateUserLastActive(db, token.UID))
 			return jsonEncode(rw, map[string]interface{}{
 				"message":         "reply success",
 				"current_balance": currentBalance,
@@ -1042,20 +1044,19 @@ func main() {
 
 	r.With(jsonOnly, appVerifyUser, getRawMessage).
 		Delete("/messages/{recipientId}/{messageId}/reply", wrapHandler(func(rw http.ResponseWriter, r *http.Request) error {
-			token := getAuthTokenByReq(r)
-			tx, err := db.BeginTxx(r.Context(), &sql.TxOptions{})
+			tx, err := db.Beginx()
 			if err != nil {
 				return err
 			}
 
 			messageId := chi.URLParam(r, "messageId")
-			if res, err := tx.Exec("DELETE FROM message_replies WHERE message_id = ?", messageId); err != nil {
+			if res, err := tx.Exec("DELETE FROM message_replies WHERE message_id = $1", messageId); err != nil {
 				return err
 			} else if err := wrapSqlResult(res); err != nil {
 				return err
 			}
 
-			if res, err := tx.Exec("UPDATE messages SET has_replied = false WHERE id = ?", messageId); err != nil {
+			if res, err := tx.Exec("UPDATE messages SET has_replied = false WHERE id = $1", messageId); err != nil {
 				return err
 			} else if err := wrapSqlResult(res); err != nil {
 				return err
@@ -1065,7 +1066,6 @@ func main() {
 				return err
 			}
 
-			defer passivePrintError(updateUserLastActive(db, token.UID))
 			return jsonEncode(rw, map[string]string{"message": "reply deleted successfully."})
 		}))
 
@@ -1099,7 +1099,7 @@ func main() {
 			}
 
 			if res, err := db.Exec(
-				"UPDATE associated_ids SET department = ?, sex = ? WHERE user_id = ?",
+				"UPDATE associated_ids SET department = $1, sex = $2 WHERE user_id = $3",
 				updatedAssocInfo.Department,
 				updatedAssocInfo.Sex,
 				token.UID,
@@ -1108,7 +1108,6 @@ func main() {
 			} else if err := wrapSqlResult(res); err != nil {
 				return err
 			}
-			defer passivePrintError(updateUserLastActive(db, token.UID))
 			return jsonEncode(rw, map[string]string{
 				"message": "user details updated successfully",
 			})
@@ -1227,12 +1226,11 @@ func main() {
 		Get("/user/transactions", wrapHandler(func(rw http.ResponseWriter, r *http.Request) error {
 			token := getAuthTokenByReq(r)
 			pg := getPaginatorFromReq(r)
-			query := sq.Select("*").From(virtualTransactionsTableName).Where(sq.Eq{"user_id": token.UID})
-
+			query := psql.Select().From(virtualTransactionsTableName).Where(sq.Eq{"user_id": token.UID})
 			resp, err := pg.Load(&DatabasePaginatorSource{
 				DB:        db,
 				BaseQuery: query,
-				DataQuery: query,
+				DataQuery: query.Columns("*"),
 				Converter: func(r *sqlx.Rows) (interface{}, error) {
 					vtx := VirtualTransaction{}
 					if err := r.StructScan(&vtx); err != nil {
@@ -1341,7 +1339,7 @@ func main() {
 
 			submittedData.UserID = token.UID
 
-			tx, err := db.BeginTxx(context.Background(), &sql.TxOptions{})
+			tx, err := db.Beginx()
 			if err != nil {
 				return err
 			}
@@ -1462,7 +1460,6 @@ func main() {
 		}
 
 		connections := getUserConnections(db, token.UID)
-		defer passivePrintError(updateUserLastActive(db, token.UID))
 		return jsonEncode(rw, map[string]interface{}{
 			"message":          "e-mail connected successfully",
 			"user_connections": connections,
@@ -1541,13 +1538,12 @@ window.opener.postMessage({message:'twitter connect success',user_connections:%s
 			}
 		}
 
-		if res, err := db.Exec("DELETE FROM user_connections_new WHERE user_id = ? AND provider = ?", token.UID, connectionName); err != nil {
+		if res, err := db.Exec("DELETE FROM user_connections_new WHERE user_id = $1 AND provider = $2", token.UID, connectionName); err != nil {
 			return err
 		} else if err := wrapSqlResult(res); err != nil {
 			return err
 		}
 
-		defer passivePrintError(updateUserLastActive(db, token.UID))
 		return jsonEncode(rw, map[string]string{
 			"message": "user third-party disconnection success",
 		})
@@ -1588,13 +1584,13 @@ window.opener.postMessage({message:'twitter connect success',user_connections:%s
 		}
 
 		// delete from associated_ids and user_connections_new
-		tx, err := db.BeginTxx(r.Context(), &sql.TxOptions{})
+		tx, err := db.Beginx()
 		if err != nil {
 			return err
 		}
 
 		for _, tableName := range []string{"user_connections_new", "virtual_wallets", "associated_ids"} {
-			if deleteSql, deleteArgs, err := sq.Delete(tableName).Where(sq.Eq{"user_id": token.UID}).ToSql(); err != nil {
+			if deleteSql, deleteArgs, err := psql.Delete(tableName).Where(sq.Eq{"user_id": token.UID}).ToSql(); err != nil {
 				return err
 			} else if res, err := tx.Exec(deleteSql, deleteArgs...); err != nil {
 				if err == sql.ErrNoRows {
@@ -1615,7 +1611,6 @@ window.opener.postMessage({message:'twitter connect success',user_connections:%s
 			return err
 		}
 
-		defer passivePrintError(updateUserLastActive(db, token.UID))
 		return jsonEncode(rw, map[string]interface{}{
 			"message": "user deleted successfully",
 		})

@@ -1,7 +1,6 @@
 package main
 
 import (
-	"context"
 	"database/sql"
 	"fmt"
 	"log"
@@ -37,7 +36,7 @@ type InvitationSystem struct {
 
 func (sys *InvitationSystem) CheckEligibilityByUID(uid string) error {
 	invLinkCounts := 0
-	if rows, err := sys.DB.Query("SELECT count(*) FROM user_invitation_codes WHERE user_id = ?", uid); err == nil && rows.Next() {
+	if rows, err := sys.DB.Query("SELECT count(*) FROM user_invitation_codes WHERE user_id = $1", uid); err == nil && rows.Next() {
 		rows.Scan(&invLinkCounts)
 		rows.Close()
 	}
@@ -91,7 +90,7 @@ func (sys *InvitationSystem) Generate(uid string, maxUsers int) (string, error) 
 func (sys *InvitationSystem) VerifyInvitationCode(invCode string) (*UserInvitationCode, error) {
 	gotInvitation := &UserInvitationCode{}
 
-	if err := sys.DB.Get(gotInvitation, "SELECT * FROM user_invitation_codes WHERE id = ?", invCode); err != nil {
+	if err := sys.DB.Get(gotInvitation, "SELECT * FROM user_invitation_codes WHERE id = $1", invCode); err != nil {
 		if err == sql.ErrNoRows {
 			return nil, &ResponseError{
 				StatusCode: http.StatusNotFound,
@@ -104,7 +103,7 @@ func (sys *InvitationSystem) VerifyInvitationCode(invCode string) (*UserInvitati
 
 	if time.Now().After(gotInvitation.ExpiresAt) {
 		// destroy invitation after expiration
-		tx, err := sys.DB.BeginTxx(context.Background(), &sql.TxOptions{})
+		tx, err := sys.DB.Beginx()
 		if err == nil {
 			if err := sys.DestroyInvitation(gotInvitation.ID, tx); err != nil {
 				log.Println(err)
@@ -121,7 +120,7 @@ func (sys *InvitationSystem) VerifyInvitationCode(invCode string) (*UserInvitati
 }
 
 func (sys *InvitationSystem) DestroyInvitation(id string, tx *sqlx.Tx) error {
-	if res, err := tx.Exec("DELETE FROM user_invitation_Codes WHERE id = ?", id); err != nil {
+	if res, err := tx.Exec("DELETE FROM user_invitation_Codes WHERE id = $1", id); err != nil {
 		passivePrintError(tx.Rollback())
 		return err
 	} else if err := wrapSqlResult(res); err != nil {
@@ -138,7 +137,7 @@ func (sys *InvitationSystem) UseInvitationFromReq(rw http.ResponseWriter, r *htt
 		return invErr
 	}
 
-	tx, err := sys.DB.BeginTxx(r.Context(), &sql.TxOptions{})
+	tx, err := sys.DB.Beginx()
 	if err != nil {
 		return err
 	}
@@ -151,7 +150,7 @@ func (sys *InvitationSystem) UseInvitationFromReq(rw http.ResponseWriter, r *htt
 		}
 	} else {
 		// update invitation
-		if res, err := tx.Exec("UPDATE user_invitation_codes SET user_count = ? WHERE id = ?", inv.UserCount+1, inv.ID); err != nil {
+		if res, err := tx.Exec("UPDATE user_invitation_codes SET user_count = $1 WHERE id = $2", inv.UserCount+1, inv.ID); err != nil {
 			passivePrintError(tx.Rollback())
 			return err
 		} else if err := wrapSqlResult(res); err != nil {
@@ -213,7 +212,7 @@ func (sys *InvitationSystem) InjectToRequest(rw http.ResponseWriter, inv *UserIn
 
 func (sys *InvitationSystem) GetInvitationsByUID(uid string) ([]UserInvitationCode, error) {
 	invitations := []UserInvitationCode{}
-	if err := sys.DB.Select(&invitations, "SELECT * FROM user_invitation_codes WHERE user_id = ?", uid); err != nil {
+	if err := sys.DB.Select(&invitations, "SELECT * FROM user_invitation_codes WHERE user_id = $1", uid); err != nil {
 		if err == sql.ErrNoRows {
 			return invitations, nil
 		}

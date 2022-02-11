@@ -1,4 +1,15 @@
 services:
+  database:
+    container_name: database
+    image: postgres
+    restart: always
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-root}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-root}
+      POSTGRES_DB: ${DATABASE_PREFIX}_${ENV}
+    volumes:
+      - ./backend/_data/pgdata:/var/lib/postgresql/data/
+
   headless_chrome:
     container_name: headless_chrome
     image: browserless/chrome

@@ -243,7 +243,7 @@ func checkProfanity(content string) error {
 
 func getUserConnections(db *sqlx.DB, uid string) []UserConnection {
 	connections := []UserConnection{}
-	if err := db.Select(&connections, "SELECT * FROM user_connections_new WHERE user_id = ?", uid); err != nil {
+	if err := db.Select(&connections, "SELECT * FROM user_connections_new WHERE user_id = $1", uid); err != nil {
 		log.Println(err)
 		// return err
 	}
@@ -277,7 +277,7 @@ func getAssociatedUserByEmail(db *sqlx.DB, authClient *auth.Client, email string
 
 func getAssociatedUserBy(db *sqlx.DB, pred Predicate) (*AssociatedUser, error) {
 	associatedData := &AssociatedUser{}
-	sql, args, err := sq.Select("*").From("associated_ids").Where(pred).ToSql()
+	sql, args, err := psql.Select("*").From("associated_ids").Where(pred).ToSql()
 	if err != nil {
 		return nil, err
 	}
@@ -288,15 +288,21 @@ func getAssociatedUserBy(db *sqlx.DB, pred Predicate) (*AssociatedUser, error) {
 }
 
 func updateUserLastActive(db *sqlx.DB, uid string) error {
-	if res, err := db.Exec(
-		"UPDATE associated_ids SET last_active_at = ? WHERE user_id = ?",
+	tx, err := db.Beginx()
+	if err != nil {
+		return err
+	}
+
+	if res, err := tx.Exec(
+		"UPDATE associated_ids SET last_active_at = $1 WHERE user_id = $2",
 		time.Now(), uid,
 	); err != nil {
 		return err
 	} else if err := wrapSqlResult(res); err != nil {
 		return err
 	}
-	return nil
+
+	return tx.Commit()
 }
 
 func getRecipientStatsBySID(index bleve.Index, sid string) (*RecipientStats, error) {

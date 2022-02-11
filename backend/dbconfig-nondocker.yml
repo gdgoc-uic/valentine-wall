@@ -4,6 +4,6 @@ development:
   dir: migrations/
 
 production:
-  dialect: sqlite3
+  dialect: postgres
   datasource: _data/${DATABASE_PREFIX}_production.db
   dir: migrations/
