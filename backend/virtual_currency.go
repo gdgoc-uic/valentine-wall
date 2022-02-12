@@ -29,6 +29,7 @@ ADDED:
 */
 
 type VirtualWallet struct {
+	ID      string  `db:"id" json:"-"`
 	UserID  string  `db:"user_id" json:"-"`
 	Balance float32 `db:"balance" json:"balance"`
 }
@@ -65,7 +66,7 @@ func (b *VirtualBank) AddInitialAmountToExistingAccounts(firebaseApp *firebase.A
 		return err
 	}
 
-	rows, err := b.DB.Query("SELECT user_id from associated_ids")
+	rows, err := b.DB.Query("SELECT user_id from associated_users")
 	if err != nil {
 		return err
 	}
