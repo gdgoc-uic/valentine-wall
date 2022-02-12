@@ -127,6 +127,10 @@ func deleteJob(po *PostalOffice, uniqueId string) {
 }
 
 func (po *PostalOffice) NewJob(args *types.NewJobArgs, jobId *string) error {
+	if args.Payload == nil {
+		return fmt.Errorf("message is nil")
+	}
+
 	uid := args.UniqueID
 	if len(uid) == 0 {
 		uid, _ = goNanoid.New()

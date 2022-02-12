@@ -2,6 +2,10 @@ services:
   database:
     networks:
       - caddy
+    restart: always
+
+  postal_office:
+    restart: always
 
   www:
     container_name: www
@@ -27,6 +31,7 @@ services:
       caddy: ${BASE_DOMAIN}
       caddy.handle_path: /api/*
       caddy.handle_path.0_reverse_proxy: "{{upstreams 4000}}"
+    restart: always
 
   frontend:
     networks:
@@ -34,6 +39,7 @@ services:
     labels:
       caddy: ${BASE_DOMAIN}
       caddy.reverse_proxy: "{{upstreams 3000}}"
+    restart: always
 
 networks:
   caddy:
