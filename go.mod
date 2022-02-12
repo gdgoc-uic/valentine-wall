@@ -56,6 +56,7 @@ require (
 	github.com/modern-go/concurrent v0.0.0-20180228061459-e0a39a4cb421 // indirect
 	github.com/modern-go/reflect2 v0.0.0-20180701023420-4b7aa43c6742 // indirect
 	github.com/mschoch/smat v0.2.0 // indirect
+	github.com/newrelic/go-agent v3.15.2+incompatible // indirect
 	github.com/philhofer/fwd v1.0.0 // indirect
 	github.com/pkg/errors v0.8.1 // indirect
 	github.com/steveyen/gtreap v0.1.0 // indirect
@@ -92,6 +93,7 @@ require (
 	github.com/mailgun/mailgun-go/v4 v4.6.0
 	github.com/matoous/go-nanoid/v2 v2.0.0
 	github.com/mattn/go-sqlite3 v1.14.10
+	github.com/newrelic/go-agent/v3 v3.15.2
 	github.com/oleiade/lane v1.0.1
 	github.com/patrickmn/go-cache v2.1.0+incompatible
 	github.com/rubenv/sql-migrate v1.0.0
