@@ -71,6 +71,10 @@ func (gs Gifts) GetPriceByID(id int) float32 {
 	return 0
 }
 
+type ReturnedStringID struct {
+	ID string `db:"id"`
+}
+
 type RecipientStats struct {
 	RecipientID       string `db:"recipient_id" json:"recipient_id"`
 	MessagesCount     int    `db:"messages_count" json:"messages_count"`
@@ -107,7 +111,7 @@ func fetchRecipientRankings(db *sqlx.DB) (Recipients, error) {
 	recipientsMap := map[string]*RecipientStats2{}
 
 	// get all associated_users data
-	rows, err := db.Query("SELECT associated_id, department, sex FROM associated_ids")
+	rows, err := db.Query("SELECT associated_id, department, sex FROM associated_users")
 	if err != nil {
 		return nil, err
 	}
@@ -683,13 +687,6 @@ func main() {
 				return wrapValidationError(rw, err)
 			}
 
-			// generate ID
-			id, err := goNanoid.New()
-			if err != nil {
-				return err
-			}
-
-			submittedMsg.ID = id
 			if len(submittedMsg.GiftIDs) != 0 {
 				submittedMsg.HasGifts = true
 			}
@@ -725,13 +722,15 @@ func main() {
 				currentBalance = gotCurrentBalance
 
 				// insert message
-				if res, err := tx.NamedExec(
-					"INSERT INTO messages (id, recipient_id, content, submitter_user_id, has_gifts) VALUES (:id, :recipient_id, :content, :submitter_user_id, :has_gifts)",
+				if rows, err := tx.NamedQuery(
+					"INSERT INTO messages (recipient_id, content, submitter_user_id, has_gifts) VALUES (:recipient_id, :content, :submitter_user_id, :has_gifts) RETURNING id",
 					&submittedMsg,
 				); err != nil {
 					return err
-				} else if err := wrapSqlResult(res); err != nil {
+				} else if id, err := wrapSqlRowsAfterInsert(rows); err != nil {
 					return err
+				} else {
+					submittedMsg.ID = id
 				}
 
 				for _, giftId := range submittedMsg.GiftIDs {
@@ -1094,7 +1093,7 @@ func main() {
 			}
 
 			if res, err := db.Exec(
-				"UPDATE associated_ids SET department = $1, sex = $2 WHERE user_id = $3",
+				"UPDATE associated_users SET department = $1, sex = $2 WHERE user_id = $3",
 				updatedAssocInfo.Department,
 				updatedAssocInfo.Sex,
 				token.UID,
@@ -1335,7 +1334,7 @@ func main() {
 			submittedData.UserID = token.UID
 			if err := Transact(db, func(tx *sqlx.Tx) error {
 				if res, err := tx.NamedExec(
-					"INSERT INTO associated_ids (user_id, associated_id, terms_agreed, sex, department) VALUES (:user_id, :associated_id, :terms_agreed, :sex, :department)",
+					"INSERT INTO associated_users (user_id, associated_id, terms_agreed, sex, department) VALUES (:user_id, :associated_id, :terms_agreed, :sex, :department)",
 					&submittedData,
 				); err != nil {
 					return &ResponseError{
@@ -1563,7 +1562,7 @@ window.opener.postMessage({message:'twitter connect success',user_connections:%s
 
 		// delete from associated_ids and user_connections_new
 		if err := Transact(db, func(tx *sqlx.Tx) error {
-			for _, tableName := range []string{"user_connections_new", "virtual_wallets", "associated_ids"} {
+			for _, tableName := range []string{"user_connections_new", "virtual_wallets", "associated_users"} {
 				deleteSql, deleteArgs, _ := psql.Delete(tableName).Where(sq.Eq{"user_id": token.UID}).ToSql()
 				if res, err := tx.Exec(deleteSql, deleteArgs...); err != nil {
 					if err == sql.ErrNoRows {

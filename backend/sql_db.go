@@ -105,6 +105,24 @@ func initializeDb() *sqlx.DB {
 	return db
 }
 
+func wrapSqlRowsAfterInsert(rows *sqlx.Rows, customErrorMessage ...string) (string, error) {
+	defer rows.Close()
+	if !rows.Next() {
+		errMessage := "Unable to process your submission. Please try again."
+		if len(customErrorMessage) != 0 {
+			errMessage = customErrorMessage[0]
+		}
+		return "", &ResponseError{
+			StatusCode: http.StatusUnprocessableEntity,
+			Message:    errMessage,
+		}
+	} else {
+		var returnedId ReturnedStringID
+		rows.StructScan(&returnedId)
+		return returnedId.ID, nil
+	}
+}
+
 func wrapSqlResult(res sql.Result, customErrorMessage ...string) error {
 	rowsAffected, err := res.RowsAffected()
 	if err != nil {

@@ -300,7 +300,7 @@ func getAssociatedUserByEmail(db *sqlx.DB, authClient *auth.Client, email string
 
 func getAssociatedUserBy(db *sqlx.DB, pred Predicate) (*AssociatedUser, error) {
 	associatedData := &AssociatedUser{}
-	sql, args, err := psql.Select("*").From("associated_ids").Where(pred).ToSql()
+	sql, args, err := psql.Select("*").From("associated_users").Where(pred).ToSql()
 	if err != nil {
 		return nil, err
 	}
@@ -313,7 +313,7 @@ func getAssociatedUserBy(db *sqlx.DB, pred Predicate) (*AssociatedUser, error) {
 func updateUserLastActive(db *sqlx.DB, uid string) error {
 	return Transact(db, func(tx *sqlx.Tx) error {
 		if res, err := tx.Exec(
-			"UPDATE associated_ids SET last_active_at = $1 WHERE user_id = $2",
+			"UPDATE associated_users SET last_active_at = $1 WHERE user_id = $2",
 			time.Now(), uid,
 		); err != nil {
 			return err
