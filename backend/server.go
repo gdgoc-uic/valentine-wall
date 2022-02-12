@@ -396,7 +396,7 @@ func main() {
 
 	r := chi.NewRouter()
 	r.Use(middleware.Logger)
-	// r.Use(recoverer)
+	r.Use(recoverer)
 	r.Use(middleware.CleanPath)
 
 	// enable cors only on development or when frontend is not the same as base
