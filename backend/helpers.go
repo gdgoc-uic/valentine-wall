@@ -117,6 +117,12 @@ func wrapHandler(handler func(http.ResponseWriter, *http.Request) error, encoder
 					Message:    "Something went wrong.",
 				}
 			}
+
+			// record additional error
+			if txn != nil && respErr.WError != nil {
+				txn.NoticeError(respErr.WError)
+			}
+
 			writeRespError(rw, respErr, encoder...)
 		}
 	})
