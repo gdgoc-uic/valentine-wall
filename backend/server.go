@@ -710,7 +710,7 @@ func main() {
 				passivePrintError(err)
 			}
 
-			Transact(db, func(tx *sqlx.Tx) error {
+			if err := Transact(db, func(tx *sqlx.Tx) error {
 				// transact first before proceeding
 				gotCurrentBalance, err := b.DeductBalanceTo(
 					token.UID,
@@ -743,7 +743,9 @@ func main() {
 				}
 
 				return nil
-			})
+			}); err != nil {
+				return err
+			}
 
 			if err := Transact(db, func(tx *sqlx.Tx) error {
 				// give the money to the person
