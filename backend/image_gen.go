@@ -41,12 +41,12 @@ var nanumPenScript *truetype.Font
 func loadFont(path string) *truetype.Font {
 	fontData, err := os.ReadFile(path)
 	if err != nil {
-		log.Fatalln(err)
+		log.Panicln(err)
 	}
 
 	fontT, err := truetype.Parse(fontData)
 	if err != nil {
-		log.Fatalln(err)
+		log.Panicln(err)
 	}
 
 	return fontT

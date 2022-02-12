@@ -8,6 +8,7 @@ import (
 	"io"
 	"log"
 	"net/http"
+	"runtime/debug"
 	"strings"
 	"time"
 
@@ -15,6 +16,7 @@ import (
 	"firebase.google.com/go/v4/auth"
 	sq "github.com/Masterminds/squirrel"
 	"github.com/blevesearch/bleve"
+	"github.com/go-chi/chi/v5/middleware"
 	goValidator "github.com/go-playground/validator/v10"
 	"github.com/jmoiron/sqlx"
 	"github.com/newrelic/go-agent/v3/newrelic"
@@ -231,25 +233,30 @@ func checkProfanity(content string) error {
 	return nil
 }
 
-// func recoverer(next http.Handler) http.Handler {
-// 	return wrapHandler(func(w http.ResponseWriter, r *http.Request) error {
-// 		if rvr := recover(); rvr != nil && rvr != http.ErrAbortHandler {
-// 			logEntry := middleware.GetLogEntry(r)
-// 			if logEntry != nil {
-// 				logEntry.Panic(rvr, debug.Stack())
-// 			} else {
-// 				middleware.PrintPrettyStack(rvr)
-// 			}
+func recoverer(next http.Handler) http.Handler {
+	return wrapHandler(func(w http.ResponseWriter, r *http.Request) error {
+		if rvr := recover(); rvr != nil && rvr != http.ErrAbortHandler {
+			logEntry := middleware.GetLogEntry(r)
+			if logEntry != nil {
+				logEntry.Panic(rvr, debug.Stack())
+			} else {
+				middleware.PrintPrettyStack(rvr)
+			}
 
-// 			return &ResponseError{
-// 				StatusCode: http.StatusInternalServerError,
-// 			}
-// 		}
+			if err, ok := rvr.(error); ok {
+				return err
+			}
 
-// 		next.ServeHTTP(w, r)
-// 		return nil
-// 	})
-// }
+			return &ResponseError{
+				StatusCode: http.StatusInternalServerError,
+				Message:    "Something went wrong.",
+			}
+		}
+
+		next.ServeHTTP(w, r)
+		return nil
+	})
+}
 
 func getUserConnections(db *sqlx.DB, uid string) []UserConnection {
 	connections := []UserConnection{}
@@ -298,21 +305,17 @@ func getAssociatedUserBy(db *sqlx.DB, pred Predicate) (*AssociatedUser, error) {
 }
 
 func updateUserLastActive(db *sqlx.DB, uid string) error {
-	tx, err := db.Beginx()
-	if err != nil {
-		return err
-	}
-
-	if res, err := tx.Exec(
-		"UPDATE associated_ids SET last_active_at = $1 WHERE user_id = $2",
-		time.Now(), uid,
-	); err != nil {
-		return err
-	} else if err := wrapSqlResult(res); err != nil {
-		return err
-	}
-
-	return tx.Commit()
+	return Transact(db, func(tx *sqlx.Tx) error {
+		if res, err := tx.Exec(
+			"UPDATE associated_ids SET last_active_at = $1 WHERE user_id = $2",
+			time.Now(), uid,
+		); err != nil {
+			return err
+		} else if err := wrapSqlResult(res); err != nil {
+			return err
+		}
+		return nil
+	})
 }
 
 func getRecipientStatsBySID(index bleve.Index, sid string) (*RecipientStats, error) {
