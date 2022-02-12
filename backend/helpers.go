@@ -17,6 +17,7 @@ import (
 	"github.com/blevesearch/bleve"
 	goValidator "github.com/go-playground/validator/v10"
 	"github.com/jmoiron/sqlx"
+	"github.com/newrelic/go-agent/v3/newrelic"
 )
 
 func getStatusCode(statusCodes ...int) int {
@@ -96,16 +97,25 @@ func writeRespError(rw http.ResponseWriter, respErr *ResponseError, encoder ...R
 
 func wrapHandler(handler func(http.ResponseWriter, *http.Request) error, encoder ...ResponseEncoder) http.HandlerFunc {
 	return http.HandlerFunc(func(rw http.ResponseWriter, r *http.Request) {
+		var txn *newrelic.Transaction
+		if newrelicApp != nil {
+			txn = newrelicApp.StartTransaction(r.Method + " " + r.URL.Path)
+			defer txn.End()
+			rw = txn.SetWebResponse(rw)
+			txn.SetWebRequestHTTP(r)
+			r = newrelic.RequestWithTransactionContext(r, txn)
+		}
+
 		if err := handler(rw, r); err != nil {
-			if respErr, ok := err.(*ResponseError); ok {
-				writeRespError(rw, respErr, encoder...)
-			} else {
-				writeRespError(rw, &ResponseError{
+			respErr, ok := err.(*ResponseError)
+			if !ok {
+				respErr = &ResponseError{
 					StatusCode: http.StatusInternalServerError,
 					WError:     err,
 					Message:    "Something went wrong.",
-				}, encoder...)
+				}
 			}
+			writeRespError(rw, respErr, encoder...)
 		}
 	})
 }

@@ -173,4 +173,8 @@ func init() {
 	if gotInvitationCookieName, exists := os.LookupEnv("INVITATION_COOKIE_NAME"); exists {
 		invitationCookieName = gotInvitationCookieName
 	}
+
+	if targetEnv == "production" {
+		InitNewRelic()
+	}
 }
