@@ -305,21 +305,17 @@ func getAssociatedUserBy(db *sqlx.DB, pred Predicate) (*AssociatedUser, error) {
 }
 
 func updateUserLastActive(db *sqlx.DB, uid string) error {
-	tx, err := db.Beginx()
-	if err != nil {
-		return err
-	}
-
-	if res, err := tx.Exec(
-		"UPDATE associated_ids SET last_active_at = $1 WHERE user_id = $2",
-		time.Now(), uid,
-	); err != nil {
-		return err
-	} else if err := wrapSqlResult(res); err != nil {
-		return err
-	}
-
-	return tx.Commit()
+	return Transact(db, func(tx *sqlx.Tx) error {
+		if res, err := tx.Exec(
+			"UPDATE associated_ids SET last_active_at = $1 WHERE user_id = $2",
+			time.Now(), uid,
+		); err != nil {
+			return err
+		} else if err := wrapSqlResult(res); err != nil {
+			return err
+		}
+		return nil
+	})
 }
 
 func getRecipientStatsBySID(index bleve.Index, sid string) (*RecipientStats, error) {

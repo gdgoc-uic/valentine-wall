@@ -37,14 +37,14 @@ func (sl *SQLiteDB) Init(dbPath string) (*sqlx.DB, error) {
 	if _, err := os.Stat(dataDirPath); errors.Is(err, os.ErrNotExist) {
 		log.Printf("data directory not found. creating one...")
 		if err := os.Mkdir(dataDirPath, 0777); err != nil {
-			log.Fatalln(err)
+			log.Panicln(err)
 		}
 	}
 
 	if _, err := os.Stat(dbPath); errors.Is(err, os.ErrNotExist) {
 		log.Printf("database not found. creating one...")
 		if _, err := os.OpenFile(dbPath, os.O_CREATE|os.O_APPEND|os.O_WRONLY, 0777); err != nil {
-			log.Fatalln(err)
+			log.Panicln(err)
 		}
 	}
 
@@ -95,11 +95,11 @@ func runMigration(db *sqlx.DB) error {
 func initializeDb() *sqlx.DB {
 	db, err := dbDrivers[databaseDriver].Init(databasePath)
 	if err != nil {
-		log.Fatalln(err)
+		log.Panicln(err)
 	}
 
 	if err := runMigration(db); err != nil {
-		log.Fatalln(err)
+		log.Panicln(err)
 	}
 
 	return db
@@ -147,4 +147,21 @@ func injectSelectQuery(next http.Handler) http.Handler {
 		}
 		next.ServeHTTP(rw, r)
 	})
+}
+
+// https://stackoverflow.com/questions/16184238/database-sql-tx-detecting-commit-or-rollback
+func Transact(db *sqlx.DB, txFunc func(*sqlx.Tx) error) (err error) {
+	tx := db.MustBeginTx(context.Background(), &sql.TxOptions{})
+	defer func() {
+		if p := recover(); p != nil {
+			tx.Rollback()
+			panic(p) // re-throw panic after Rollback
+		} else if err != nil {
+			tx.Rollback() // err is non-nil; don't change it
+		} else {
+			err = tx.Commit() // err is nil; if Commit returns error update err
+		}
+	}()
+	err = txFunc(tx)
+	return err
 }

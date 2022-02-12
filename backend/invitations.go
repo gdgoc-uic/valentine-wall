@@ -3,7 +3,6 @@ package main
 import (
 	"database/sql"
 	"fmt"
-	"log"
 	"net/http"
 	"time"
 
@@ -102,17 +101,19 @@ func (sys *InvitationSystem) VerifyInvitationCode(invCode string) (*UserInvitati
 	}
 
 	if time.Now().After(gotInvitation.ExpiresAt) {
-		// destroy invitation after expiration
-		tx, err := sys.DB.Beginx()
-		if err == nil {
+		err := Transact(sys.DB, func(tx *sqlx.Tx) error {
+			// destroy invitation after expiration
 			if err := sys.DestroyInvitation(gotInvitation.ID, tx); err != nil {
-				log.Println(err)
+				return err
 			}
-		}
+			return nil
+		})
 
-		return nil, &ResponseError{
-			StatusCode: http.StatusNotFound,
-			Message:    "Invitation link provided is invalid or has expired.",
+		if err == nil {
+			return nil, &ResponseError{
+				StatusCode: http.StatusNotFound,
+				Message:    "Invitation link provided is invalid or has expired.",
+			}
 		}
 	}
 
@@ -121,13 +122,10 @@ func (sys *InvitationSystem) VerifyInvitationCode(invCode string) (*UserInvitati
 
 func (sys *InvitationSystem) DestroyInvitation(id string, tx *sqlx.Tx) error {
 	if res, err := tx.Exec("DELETE FROM user_invitation_Codes WHERE id = $1", id); err != nil {
-		passivePrintError(tx.Rollback())
 		return err
 	} else if err := wrapSqlResult(res); err != nil {
-		passivePrintError(tx.Rollback())
 		return err
 	}
-
 	return nil
 }
 
@@ -137,57 +135,45 @@ func (sys *InvitationSystem) UseInvitationFromReq(rw http.ResponseWriter, r *htt
 		return invErr
 	}
 
-	tx, err := sys.DB.Beginx()
-	if err != nil {
-		return err
-	}
-
 	// dispose invitation if new user count reaches max users
-	if inv.UserCount+1 == inv.MaxUsers {
-		// delete invitation
-		if err := sys.DestroyInvitation(inv.ID, tx); err != nil {
+	err := Transact(sys.DB, func(tx *sqlx.Tx) error {
+		if inv.UserCount+1 == inv.MaxUsers {
+			// delete invitation
+			return sys.DestroyInvitation(inv.ID, tx)
+		} else {
+			// update invitation
+			if res, err := tx.Exec("UPDATE user_invitation_codes SET user_count = $1 WHERE id = $2", inv.UserCount+1, inv.ID); err != nil {
+				return err
+			} else if err := wrapSqlResult(res); err != nil {
+				return err
+			}
+		}
+
+		// give money to origin user
+		if _, err := b.AddBalanceTo(inv.UserID, invitationMoney, "Invitation incentive", tx); err != nil {
 			return err
 		}
-	} else {
-		// update invitation
-		if res, err := tx.Exec("UPDATE user_invitation_codes SET user_count = $1 WHERE id = $2", inv.UserCount+1, inv.ID); err != nil {
-			passivePrintError(tx.Rollback())
-			return err
-		} else if err := wrapSqlResult(res); err != nil {
-			passivePrintError(tx.Rollback())
-			return err
-		}
-	}
 
-	// give money to origin user
-	if _, err := b.AddBalanceTo(inv.UserID, invitationMoney, "Invitation incentive", tx); err != nil {
-		passivePrintError(tx.Rollback())
+		// give money to newly-created user
+		_, err := b.AddBalanceTo(
+			signedUpUid, invitationMoney,
+			fmt.Sprintf("Accepted invitation from %s", signedUpUid), tx,
+		)
+
 		return err
-	}
-
-	// give money to newly-created user
-	if _, err := b.AddBalanceTo(
-		signedUpUid, invitationMoney,
-		fmt.Sprintf("Accepted invitation from %s", signedUpUid), tx,
-	); err != nil {
-		passivePrintError(tx.Rollback())
-		return err
-	}
-
-	if err := tx.Commit(); err != nil {
-		log.Println(tx.Rollback())
-		return err
-	}
-
-	// delete cookie after usage
-	http.SetCookie(rw, &http.Cookie{
-		Name:   sys.CookieName,
-		Value:  inv.ID,
-		MaxAge: -1,
-		Path:   "/",
 	})
 
-	return nil
+	if err == nil {
+		// delete cookie after usage
+		http.SetCookie(rw, &http.Cookie{
+			Name:   sys.CookieName,
+			Value:  inv.ID,
+			MaxAge: -1,
+			Path:   "/",
+		})
+	}
+
+	return err
 }
 
 func (sys *InvitationSystem) InvitationFromCookie(r *http.Request) (*UserInvitationCode, error) {

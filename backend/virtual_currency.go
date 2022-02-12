@@ -80,44 +80,38 @@ func (b *VirtualBank) AddInitialAmountToExistingAccounts(firebaseApp *firebase.A
 
 	iters := int(math.Ceil(float64(len(identifiers)) / 100))
 	added := 0
-	tx, err := b.DB.Beginx()
-	if err != nil {
-		return err
-	}
 
 	lastFirstNum := 0
 	lastLastNum := 100
 
-	for i := 1; i <= iters; i++ {
-		if idLen := len(identifiers); idLen < lastLastNum {
-			lastLastNum = idLen
-		}
-
-		results, err := authClient.GetUsers(context.Background(), identifiers[lastFirstNum:lastLastNum-1])
-		if err != nil {
-			return err
-		}
-
-		for _, user := range results.Users {
-			if user.UserMetadata.CreationTimestamp > accountCreated {
-				continue
+	Transact(b.DB, func(tx *sqlx.Tx) error {
+		for i := 1; i <= iters; i++ {
+			if idLen := len(identifiers); idLen < lastLastNum {
+				lastLastNum = idLen
 			}
 
-			if b.AddInitialBalanceTo(user.UID, tx); err != nil {
-				log.Println(tx.Rollback())
+			results, err := authClient.GetUsers(context.Background(), identifiers[lastFirstNum:lastLastNum-1])
+			if err != nil {
 				return err
-			} else {
-				added++
 			}
+
+			for _, user := range results.Users {
+				if user.UserMetadata.CreationTimestamp > accountCreated {
+					continue
+				}
+
+				if b.AddInitialBalanceTo(user.UID, tx); err != nil {
+					return err
+				} else {
+					added++
+				}
+			}
+
+			lastFirstNum, lastLastNum = lastLastNum+1, 100*(i+1)
 		}
 
-		lastFirstNum, lastLastNum = lastLastNum+1, 100*(i+1)
-	}
-
-	if err := tx.Commit(); err != nil {
-		log.Println(tx.Rollback())
-		return err
-	}
+		return nil
+	})
 
 	log.Printf("%d existing accounts were loaded with virtual coins\n", added)
 	return nil
@@ -242,13 +236,16 @@ func (b *VirtualBank) ConvertIdleTime(uid string, lastActiveAt time.Time) (*Virt
 		return nil, nil
 	}
 
+	var trans *VirtualTransaction
 	coinsToEarn := 20 * quotientMinutes
-	tx, err := b.DB.Beginx()
-	if err != nil {
-		return nil, err
-	}
-
-	return b.AddBalanceTo(uid, float32(coinsToEarn), "Idle time earning", tx)
+	err := Transact(b.DB, func(tx *sqlx.Tx) error {
+		gotTransaction, err := b.AddBalanceTo(uid, float32(coinsToEarn), "Idle time earning", tx)
+		if gotTransaction != nil {
+			trans = gotTransaction
+		}
+		return err
+	})
+	return trans, err
 }
 
 func (b *VirtualBank) GenerateCheque(toUID string, amount float32) (*Cheque, error) {
@@ -314,28 +311,16 @@ func (b *VirtualBank) DepositChequeByID(chequeID string, recipientUID string) er
 		return err
 	}
 
-	// deposit cheque
-	tx, err := b.DB.Beginx()
-	if err != nil {
+	return Transact(b.DB, func(tx *sqlx.Tx) error {
+		// deposit cheque
+		_, err := b.AddBalanceTo(
+			gotCheque.UserID,
+			gotCheque.Amount,
+			gotCheque.Description,
+			tx,
+		)
 		return err
-	}
-
-	if _, err := b.AddBalanceTo(
-		gotCheque.UserID,
-		gotCheque.Amount,
-		gotCheque.Description,
-		tx,
-	); err != nil {
-		passivePrintError(tx.Rollback())
-		return err
-	}
-
-	if err := tx.Commit(); err != nil {
-		passivePrintError(tx.Rollback())
-		return err
-	}
-
-	return nil
+	})
 }
 
 type virtualWalletKey struct{}

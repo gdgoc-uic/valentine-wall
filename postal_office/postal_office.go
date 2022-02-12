@@ -40,7 +40,7 @@ func init() {
 
 	if gotMaxJobs, exists := os.LookupEnv("MAX_JOBS"); exists {
 		if convertedMaxJobs, err := strconv.Atoi(gotMaxJobs); err != nil {
-			log.Fatalln(err)
+			log.Panicln(err)
 		} else {
 			maxJobs = convertedMaxJobs
 		}
@@ -48,7 +48,7 @@ func init() {
 
 	if gotPort, exists := os.LookupEnv("PORT"); exists {
 		if convertPort, err := strconv.Atoi(gotPort); err != nil {
-			log.Fatalln(err)
+			log.Panicln(err)
 		} else {
 			port = convertPort
 		}
@@ -291,7 +291,7 @@ func gracefulShutdown(po *PostalOffice) {
 		<-s
 		// clean up here
 		if err := savePendingJobs(po); err != nil {
-			log.Fatalln(err)
+			log.Panicln(err)
 		}
 		fmt.Println("Shutting down gracefully.")
 		os.Exit(0)

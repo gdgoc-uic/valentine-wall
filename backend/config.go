@@ -83,7 +83,7 @@ func loadCustomProfanityDetector(customDictionary *CustomProfanityDictionary) *g
 
 func init() {
 	// if err := godotenv.Load("./.server.env"); err != nil {
-	// 	log.Fatalln(err)
+	// 	log.Panicln(err)
 	// }
 
 	twitterOauth1Config = &oauth1.Config{
@@ -97,7 +97,7 @@ func init() {
 		var err error
 		serverPort, err = strconv.Atoi(gotPort)
 		if err != nil {
-			log.Fatalln(err)
+			log.Panicln(err)
 		}
 	}
 
@@ -110,7 +110,7 @@ func init() {
 	}
 
 	if len(gAppCredPath) == 0 {
-		log.Fatalln("path to firebase/google service account file is required")
+		log.Panicln("path to firebase/google service account file is required")
 	}
 
 	if gotFrontendUrl, exists := os.LookupEnv("FRONTEND_URL"); exists {
@@ -148,12 +148,12 @@ func init() {
 		var err error
 
 		if data, err = ioutil.ReadFile(gotProfanityListFilePath); err != nil {
-			log.Fatalln(err)
+			log.Panicln(err)
 		}
 
 		customDictionary := &CustomProfanityDictionary{}
 		if err := json.Unmarshal(data, customDictionary); err != nil {
-			log.Fatalln(err)
+			log.Panicln(err)
 		}
 
 		log.Println("loading custom profanity detector...")

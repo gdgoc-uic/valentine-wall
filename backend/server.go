@@ -252,14 +252,11 @@ func setupMessagesSearchIndex() (bleve.Index, error) {
 
 func importExistingMessages(db *sqlx.DB, index bleve.Index) error {
 	batch := index.NewBatch()
-	sqlQuery, _, err := psql.
+	sqlQuery, _, _ := psql.
 		Select("id", "recipient_id", "created_at", "updated_at", "has_gifts").
 		Where(sq.Eq{"deleted_at": nil}).
 		From("messages").
 		ToSql()
-	if err != nil {
-		return err
-	}
 
 	rows, err := db.Queryx(sqlQuery)
 	if err != nil {
@@ -315,7 +312,7 @@ func main() {
 		log.Println("loading image template...")
 		var err error
 		if htmlTemplates, err = htmlTemplate.ParseGlob("./templates/html/*.html.tpl"); err != nil {
-			log.Fatalln(err)
+			log.Panicln(err)
 		} else {
 			log.Printf("%d html templates have been loaded\n", len(htmlTemplates.Templates()))
 		}
@@ -345,7 +342,7 @@ func main() {
 	log.Println("compiling email regex...")
 	emailRegex, err := regexp.Compile(`\A[a-z]+_([0-9]+)@uic.edu.ph\z`)
 	if err != nil {
-		log.Fatalln(err)
+		log.Panicln(err)
 	}
 
 	// TODO:
@@ -359,7 +356,7 @@ func main() {
 	opt := option.WithCredentialsFile(gAppCredPath)
 	firebaseApp, err := firebase.NewApp(context.Background(), nil, opt)
 	if err != nil {
-		log.Fatalln(err)
+		log.Panicln(err)
 	}
 
 	// database
@@ -371,9 +368,9 @@ func main() {
 	log.Println("indexing existing messages to search database...")
 	messagesSearchIndex, err := setupMessagesSearchIndex()
 	if err != nil {
-		log.Fatalln(err)
+		log.Panicln(err)
 	} else if err := importExistingMessages(db, messagesSearchIndex); err != nil {
-		log.Fatalln(err)
+		log.Panicln(err)
 	}
 
 	// virtual currency system (aka virtual bank)
@@ -693,11 +690,6 @@ func main() {
 				submittedMsg.HasGifts = true
 			}
 
-			tx, err := db.Beginx()
-			if err != nil {
-				return err
-			}
-
 			hasMoney := false
 			for _, giftId := range submittedMsg.GiftIDs {
 				giftPrice := giftList.GetPriceByID(giftId)
@@ -708,58 +700,63 @@ func main() {
 				}
 			}
 
-			// transact first before proceeding
-			currentBalance, err := b.DeductBalanceTo(
-				token.UID,
-				sendPrice,
-				fmt.Sprintf("Send message to %s", submittedMsg.RecipientID),
-				tx,
-			)
-			if err != nil {
-				passivePrintError(tx.Rollback())
-				return err
-			}
-
-			res, err := tx.NamedExec("INSERT INTO messages (id, recipient_id, content, submitter_user_id, has_gifts) VALUES (:id, :recipient_id, :content, :submitter_user_id, :has_gifts)", &submittedMsg)
-			if err != nil {
-				passivePrintError(tx.Rollback())
-				return err
-			}
-
-			if err := wrapSqlResult(res); err != nil {
-				passivePrintError(tx.Rollback())
-				return err
-			}
-
-			for _, giftId := range submittedMsg.GiftIDs {
-				if res, err := tx.Exec("INSERT INTO message_gifts (message_id, gift_id) VALUES ($1, $2)", submittedMsg.ID, giftId); err != nil {
-					passivePrintError(tx.Rollback())
-					return err
-				} else if err := wrapSqlResult(res); err != nil {
-					passivePrintError(tx.Rollback())
-					return err
-				}
-			}
-
-			recipientUser, getUserErr := getUserBySID(db, authClient, submittedMsg.RecipientID)
-			if getUserErr != nil {
+			var currentBalance float32
+			recipientUser, gotUserErr := getUserBySID(db, authClient, submittedMsg.RecipientID)
+			if gotUserErr != nil {
 				passivePrintError(err)
 			}
 
-			// give the money to the person
-			if hasMoney {
-				if _, err := b.AddBalanceTo(
-					recipientUser.UID,
-					moneyGift.Price,
-					fmt.Sprintf("Money gift from message %s", submittedMsg.ID),
+			Transact(db, func(tx *sqlx.Tx) error {
+				// transact first before proceeding
+				gotCurrentBalance, err := b.DeductBalanceTo(
+					token.UID,
+					sendPrice,
+					fmt.Sprintf("Send message to %s", submittedMsg.RecipientID),
 					tx,
-				); err != nil {
-					passivePrintError(err)
+				)
+				if err != nil {
+					return err
 				}
-			}
 
-			if err := tx.Commit(); err != nil {
-				return err
+				currentBalance = gotCurrentBalance
+
+				// insert message
+				if res, err := tx.NamedExec(
+					"INSERT INTO messages (id, recipient_id, content, submitter_user_id, has_gifts) VALUES (:id, :recipient_id, :content, :submitter_user_id, :has_gifts)",
+					&submittedMsg,
+				); err != nil {
+					return err
+				} else if err := wrapSqlResult(res); err != nil {
+					return err
+				}
+
+				for _, giftId := range submittedMsg.GiftIDs {
+					if res, err := tx.Exec("INSERT INTO message_gifts (message_id, gift_id) VALUES ($1, $2)", submittedMsg.ID, giftId); err != nil {
+						return err
+					} else if err := wrapSqlResult(res); err != nil {
+						return err
+					}
+				}
+
+				return nil
+			})
+
+			if err := Transact(db, func(tx *sqlx.Tx) error {
+				// give the money to the person
+				if hasMoney && gotUserErr == nil {
+					if _, err := b.AddBalanceTo(
+						recipientUser.UID,
+						moneyGift.Price,
+						fmt.Sprintf("Money gift from message %s", submittedMsg.ID),
+						tx,
+					); err != nil {
+						return err
+					}
+				}
+
+				return nil
+			}); err != nil {
+				passivePrintError(err)
 			}
 
 			// save to search engine
@@ -779,7 +776,7 @@ func main() {
 
 			// send email to recipient if available
 			// ignore the errors, just pass through
-			if getUserErr == nil {
+			if gotUserErr == nil {
 				notifier := &EmailNotifier{
 					Client:   postalOfficeClient,
 					Template: emailTemplates["message"],
@@ -963,78 +960,73 @@ func main() {
 			}
 
 			reply.MessageID = message.ID
-			tx := db.MustBeginTx(context.Background(), &sql.TxOptions{})
+			var currentBalance float32
 
-			// transact first before proceeding
-			currentBalance, err := b.DeductBalanceTo(
-				token.UID,
-				150.0,
-				fmt.Sprintf("Reply message to %s", reply.MessageID),
-				tx,
-			)
-			if err != nil {
-				passivePrintError(tx.Rollback())
-				return err
-			}
+			Transact(db, func(tx *sqlx.Tx) error {
+				// transact first before proceeding
+				if gotCurrentBalance, err := b.DeductBalanceTo(
+					token.UID,
+					150.0,
+					fmt.Sprintf("Reply message to %s", reply.MessageID),
+					tx,
+				); err != nil {
+					return err
+				} else {
+					currentBalance = gotCurrentBalance
+				}
 
-			// TODO: add toll fees for twitter, e-mail notifiers
-			notifier := MultiNotifier{[]Notifier{}}
-			if twitterIdx, hasTwitter := isConnectedTo(connections, "twitter"); submittedData.Options.PostToTwitter && hasTwitter {
-				imageData, err := imageRenderer.Render(imageTypeTwitter, message.Message)
-				if err != nil {
+				if updateRes, err := tx.NamedExec("INSERT INTO message_replies (message_id, content) VALUES (:message_id, :content)", &reply); err != nil {
+					return err
+				} else if err := wrapSqlResult(updateRes); err != nil {
 					return err
 				}
 
-				notifier.Add(&TwitterNotifier{
-					Connection:  connections[twitterIdx],
-					ImageData:   bytes.NewReader(imageData),
-					TextContent: reply.Content,
-					Hashtag:     twHashTag,
-					Link:        fmt.Sprintf("%s/wall/%s/%s", frontendUrl, message.RecipientID, message.ID),
-				})
+				if res, err := tx.Exec("UPDATE messages SET has_replied = true WHERE id = $1", message.ID); err != nil {
+					return err
+				} else if err := wrapSqlResult(res); err != nil {
+					return err
+				}
+
+				return nil
+			})
+
+			notifier := MultiNotifier{[]Notifier{}}
+			if twitterIdx, hasTwitter := isConnectedTo(connections, "twitter"); submittedData.Options.PostToTwitter && hasTwitter {
+				imageData, err := imageRenderer.Render(imageTypeTwitter, message.Message)
+				if err == nil {
+					notifier.Add(&TwitterNotifier{
+						Connection:  connections[twitterIdx],
+						ImageData:   bytes.NewReader(imageData),
+						TextContent: reply.Content,
+						Hashtag:     twHashTag,
+						Link:        fmt.Sprintf("%s/wall/%s/%s", frontendUrl, message.RecipientID, message.ID),
+					})
+				} else {
+					log.Println(err)
+				}
 			}
 
 			if _, hasEmail := isConnectedTo(connections, "email"); submittedData.Options.PostToEmail && hasEmail {
 				// get sender email
 				senderEmail, err := getUserEmailByUID(authClient, message.UID)
-				if err != nil {
-					return err
+				if err == nil {
+					notifier.Add(&EmailNotifier{
+						Client:   postalOfficeClient,
+						Template: emailTemplates["reply"],
+						Context: &MailSenderContext{
+							Email:       senderEmail,
+							RecipientID: message.RecipientID,
+							MessageID:   message.ID,
+							FrontendURL: frontendUrl,
+						},
+					})
+				} else {
+					log.Println(err)
 				}
-
-				notifier.Add(&EmailNotifier{
-					Client:   postalOfficeClient,
-					Template: emailTemplates["reply"],
-					Context: &MailSenderContext{
-						Email:       senderEmail,
-						RecipientID: message.RecipientID,
-						MessageID:   message.ID,
-						FrontendURL: frontendUrl,
-					},
-				})
 			}
 
 			// dont let notifier errors stop the process.
 			passivePrintError(notifier.Notify())
-
-			if updateRes, err := tx.NamedExec("INSERT INTO message_replies (message_id, content) VALUES (:message_id, :content)", &reply); err != nil {
-				defer passivePrintError(tx.Rollback())
-				return err
-			} else if err := wrapSqlResult(updateRes); err != nil {
-				defer passivePrintError(tx.Rollback())
-				return err
-			}
-
-			if res, err := tx.Exec("UPDATE messages SET has_replied = true WHERE id = $1", message.ID); err != nil {
-				defer passivePrintError(tx.Rollback())
-				return err
-			} else if err := wrapSqlResult(res); err != nil {
-				defer passivePrintError(tx.Rollback())
-				return err
-			}
-
-			if err := tx.Commit(); err != nil {
-				return err
-			}
 
 			return jsonEncode(rw, map[string]interface{}{
 				"message":         "reply success",
@@ -1044,25 +1036,22 @@ func main() {
 
 	r.With(jsonOnly, appVerifyUser, getRawMessage).
 		Delete("/messages/{recipientId}/{messageId}/reply", wrapHandler(func(rw http.ResponseWriter, r *http.Request) error {
-			tx, err := db.Beginx()
-			if err != nil {
-				return err
-			}
-
 			messageId := chi.URLParam(r, "messageId")
-			if res, err := tx.Exec("DELETE FROM message_replies WHERE message_id = $1", messageId); err != nil {
-				return err
-			} else if err := wrapSqlResult(res); err != nil {
-				return err
-			}
+			if err := Transact(db, func(tx *sqlx.Tx) error {
+				if res, err := tx.Exec("DELETE FROM message_replies WHERE message_id = $1", messageId); err != nil {
+					return err
+				} else if err := wrapSqlResult(res); err != nil {
+					return err
+				}
 
-			if res, err := tx.Exec("UPDATE messages SET has_replied = false WHERE id = $1", messageId); err != nil {
-				return err
-			} else if err := wrapSqlResult(res); err != nil {
-				return err
-			}
+				if res, err := tx.Exec("UPDATE messages SET has_replied = false WHERE id = $1", messageId); err != nil {
+					return err
+				} else if err := wrapSqlResult(res); err != nil {
+					return err
+				}
 
-			if err := tx.Commit(); err != nil {
+				return nil
+			}); err != nil {
 				return err
 			}
 
@@ -1338,47 +1327,30 @@ func main() {
 			}
 
 			submittedData.UserID = token.UID
-
-			tx, err := db.Beginx()
-			if err != nil {
-				return err
-			}
-
-			if res, err := tx.NamedExec(
-				"INSERT INTO associated_ids (user_id, associated_id, terms_agreed, sex, department) VALUES (:user_id, :associated_id, :terms_agreed, :sex, :department)",
-				&submittedData,
-			); err != nil {
-				if err := tx.Rollback(); err != nil {
-					log.Println(err)
+			if err := Transact(db, func(tx *sqlx.Tx) error {
+				if res, err := tx.NamedExec(
+					"INSERT INTO associated_ids (user_id, associated_id, terms_agreed, sex, department) VALUES (:user_id, :associated_id, :terms_agreed, :sex, :department)",
+					&submittedData,
+				); err != nil {
+					return &ResponseError{
+						WError:     err,
+						StatusCode: http.StatusUnprocessableEntity,
+						Message:    "Failed to connect ID to user. Please try again.",
+					}
+				} else if err := wrapSqlResult(res, "Failed to connect ID to user. Please try again"); err != nil {
+					return err
 				}
 
+				// initialize virtual wallet
+				if _, err := b.AddInitialBalanceTo(token.UID, tx); err != nil {
+					return err
+				}
+				return nil
+			}); err != nil {
 				return &ResponseError{
 					WError:     err,
 					StatusCode: http.StatusUnprocessableEntity,
-					Message:    "Failed to connect ID to user. Please try again.",
-				}
-			} else if err := wrapSqlResult(res, "Failed to connect ID to user. Please try again"); err != nil {
-				if err := tx.Rollback(); err != nil {
-					log.Println(err)
-				}
-
-				return err
-			}
-
-			// initialize virtual wallet
-			if _, err := b.AddInitialBalanceTo(token.UID, tx); err != nil {
-				if err := tx.Rollback(); err != nil {
-					log.Println(err)
-				}
-
-				return err
-			}
-
-			if err := tx.Commit(); err != nil {
-				return &ResponseError{
-					WError:     err,
-					StatusCode: http.StatusUnprocessableEntity,
-					Message:    "Failed to connect ID to user. Please try again.",
+					Message:    "Something went wrong while saving your account. Please try again.",
 				}
 			}
 
@@ -1584,28 +1556,22 @@ window.opener.postMessage({message:'twitter connect success',user_connections:%s
 		}
 
 		// delete from associated_ids and user_connections_new
-		tx, err := db.Beginx()
-		if err != nil {
-			return err
-		}
-
-		for _, tableName := range []string{"user_connections_new", "virtual_wallets", "associated_ids"} {
-			if deleteSql, deleteArgs, err := psql.Delete(tableName).Where(sq.Eq{"user_id": token.UID}).ToSql(); err != nil {
-				return err
-			} else if res, err := tx.Exec(deleteSql, deleteArgs...); err != nil {
-				if err == sql.ErrNoRows {
+		if err := Transact(db, func(tx *sqlx.Tx) error {
+			for _, tableName := range []string{"user_connections_new", "virtual_wallets", "associated_ids"} {
+				deleteSql, deleteArgs, _ := psql.Delete(tableName).Where(sq.Eq{"user_id": token.UID}).ToSql()
+				if res, err := tx.Exec(deleteSql, deleteArgs...); err != nil {
+					if err == sql.ErrNoRows {
+						continue
+					} else {
+						return err
+					}
+				} else if err := wrapSqlResult(res); err != nil {
+					passivePrintError(err)
 					continue
-				} else {
-					return err
 				}
-			} else if err := wrapSqlResult(res); err != nil {
-				passivePrintError(err)
-				continue
 			}
-		}
-
-		if err := tx.Commit(); err != nil {
-			passivePrintError(tx.Rollback())
+			return nil
+		}); err != nil {
 			return err
 		} else if err := authClient.DeleteUser(r.Context(), token.UID); err != nil {
 			return err
@@ -1618,6 +1584,6 @@ window.opener.postMessage({message:'twitter connect success',user_connections:%s
 
 	log.Printf("Server opened on http://localhost:%d\n", serverPort)
 	if err := http.ListenAndServe(fmt.Sprintf(":%d", serverPort), r); err != nil {
-		log.Fatalln(err)
+		log.Panicln(err)
 	}
 }
