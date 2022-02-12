@@ -7,7 +7,6 @@ import (
 	"time"
 
 	"github.com/jmoiron/sqlx"
-	goNanoid "github.com/matoous/go-nanoid/v2"
 )
 
 /*
@@ -65,25 +64,23 @@ func (sys *InvitationSystem) Generate(uid string, maxUsers int) (string, error) 
 		}
 	}
 
-	newInvitationId, _ := goNanoid.New()
 	newInvCode := UserInvitationCode{
-		ID:        newInvitationId,
 		UserID:    uid,
 		MaxUsers:  maxUsers,
 		CreatedAt: time.Now(),
 		ExpiresAt: time.Now().Add(defaultInvitationExpiration),
 	}
 
-	if res, err := sys.DB.NamedExec(
-		"INSERT INTO user_invitation_codes (id, user_id, max_users, created_at, expires_at) VALUES (:id, :user_id, :max_users, :created_at, :expires_at)",
+	if rows, err := sys.DB.NamedQuery(
+		"INSERT INTO user_invitation_codes (user_id, max_users, created_at, expires_at) VALUES (:user_id, :max_users, :created_at, :expires_at) RETURNING id",
 		&newInvCode,
 	); err != nil {
 		return "", err
-	} else if err := wrapSqlResult(res); err != nil {
+	} else if newInvitationId, err := wrapSqlRowsAfterInsert(rows); err != nil {
 		return "", err
+	} else {
+		return newInvitationId, nil
 	}
-
-	return newInvitationId, nil
 }
 
 func (sys *InvitationSystem) VerifyInvitationCode(invCode string) (*UserInvitationCode, error) {

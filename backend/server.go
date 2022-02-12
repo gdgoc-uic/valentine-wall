@@ -71,6 +71,10 @@ func (gs Gifts) GetPriceByID(id int) float32 {
 	return 0
 }
 
+type ReturnedStringID struct {
+	ID string `db:"id"`
+}
+
 type RecipientStats struct {
 	RecipientID       string `db:"recipient_id" json:"recipient_id"`
 	MessagesCount     int    `db:"messages_count" json:"messages_count"`
@@ -683,13 +687,6 @@ func main() {
 				return wrapValidationError(rw, err)
 			}
 
-			// generate ID
-			id, err := goNanoid.New()
-			if err != nil {
-				return err
-			}
-
-			submittedMsg.ID = id
 			if len(submittedMsg.GiftIDs) != 0 {
 				submittedMsg.HasGifts = true
 			}
@@ -725,13 +722,15 @@ func main() {
 				currentBalance = gotCurrentBalance
 
 				// insert message
-				if res, err := tx.NamedExec(
-					"INSERT INTO messages (id, recipient_id, content, submitter_user_id, has_gifts) VALUES (:id, :recipient_id, :content, :submitter_user_id, :has_gifts)",
+				if rows, err := tx.NamedQuery(
+					"INSERT INTO messages (recipient_id, content, submitter_user_id, has_gifts) VALUES (:recipient_id, :content, :submitter_user_id, :has_gifts) RETURNING id",
 					&submittedMsg,
 				); err != nil {
 					return err
-				} else if err := wrapSqlResult(res); err != nil {
+				} else if id, err := wrapSqlRowsAfterInsert(rows); err != nil {
 					return err
+				} else {
+					submittedMsg.ID = id
 				}
 
 				for _, giftId := range submittedMsg.GiftIDs {

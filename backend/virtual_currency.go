@@ -13,7 +13,6 @@ import (
 	"firebase.google.com/go/v4/auth"
 	sq "github.com/Masterminds/squirrel"
 	"github.com/jmoiron/sqlx"
-	goNanoid "github.com/matoous/go-nanoid/v2"
 )
 
 /*
@@ -175,9 +174,7 @@ func (b *VirtualBank) AddBalanceTo(uid string, amount float32, desc string, tx *
 }
 
 func (b *VirtualBank) AddTransaction(uid string, amount float32, desc string, tx *sqlx.Tx) (*VirtualTransaction, error) {
-	id, _ := goNanoid.New()
 	newTransaction := &VirtualTransaction{
-		ID:          id,
 		UserID:      uid,
 		Amount:      amount,
 		Description: desc,
@@ -185,14 +182,16 @@ func (b *VirtualBank) AddTransaction(uid string, amount float32, desc string, tx
 	}
 
 	transactionSql := fmt.Sprintf(
-		"INSERT INTO %s (id, user_id, amount, description, created_at) VALUES (:id, :user_id, :amount, :description, :created_at)",
+		"INSERT INTO %s (user_id, amount, description, created_at) VALUES (:user_id, :amount, :description, :created_at) RETURNING id",
 		virtualTransactionsTableName,
 	)
 
-	if res, err := tx.NamedExec(transactionSql, newTransaction); err != nil {
+	if rows, err := tx.NamedQuery(transactionSql, newTransaction); err != nil {
 		return nil, err
-	} else if err := wrapSqlResult(res); err != nil {
+	} else if id, err := wrapSqlRowsAfterInsert(rows); err != nil {
 		return nil, err
+	} else {
+		newTransaction.ID = id
 	}
 
 	return newTransaction, nil
@@ -250,16 +249,15 @@ func (b *VirtualBank) ConvertIdleTime(uid string, lastActiveAt time.Time) (*Virt
 }
 
 func (b *VirtualBank) GenerateCheque(toUID string, amount float32) (*Cheque, error) {
-	id, _ := goNanoid.New()
 	timestamp := time.Now()
 	chequeDescription := "Deposit check"
-	res, err := b.DB.Exec(
-		"INSERT INTO cheques (id, user_id, amount, description, created_at) VALUES ($1, $2, $3, $4, $6)",
-		id, toUID, amount, chequeDescription, timestamp,
-	)
-	if err != nil {
+	var id string
+	if rows, err := b.DB.Queryx(
+		"INSERT INTO cheques (user_id, amount, description, created_at) VALUES ($1, $2, $3, $4, $6) RETURNING id",
+		toUID, amount, chequeDescription, timestamp,
+	); err != nil {
 		return nil, err
-	} else if err := wrapSqlResult(res); err != nil {
+	} else if id, err = wrapSqlRowsAfterInsert(rows); err != nil {
 		return nil, err
 	}
 
