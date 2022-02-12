@@ -27,6 +27,8 @@ services:
       - caddy
     environment:
       - DATABASE_URL=postgres://${POSTGRES_USER}:${POSTGRES_PASSWORD}@database:5432/${DATABASE_PREFIX}_${ENV}
+      - NEW_RELIC_APP_NAME=${NEW_RELIC_APP_NAME}
+      - NEW_RELIC_APP_LICENSE=${NEW_RELIC_APP_LICENSE}
     labels:
       caddy: ${BASE_DOMAIN}
       caddy.handle_path: /api/*
