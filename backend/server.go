@@ -24,6 +24,7 @@ import (
 	"github.com/go-chi/cors"
 	"github.com/gorilla/sessions"
 	"github.com/jmoiron/sqlx"
+	"github.com/newrelic/go-agent/v3/newrelic"
 	"google.golang.org/api/option"
 
 	firebase "firebase.google.com/go/v4"
@@ -579,6 +580,9 @@ func main() {
 	})
 
 	r.Get("/recent-messages", func(rw http.ResponseWriter, r *http.Request) {
+		tx := newrelic.FromContext(r.Context())
+		tx.Ignore()
+
 		rw.Header().Set("Content-Type", "text/event-stream")
 		rw.Header().Set("Cache-Control", "no-cache")
 		rw.Header().Set("Connection", "keep-alive")
