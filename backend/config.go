@@ -85,6 +85,9 @@ func init() {
 	// if err := godotenv.Load("./.server.env"); err != nil {
 	// 	log.Panicln(err)
 	// }
+	if targetEnv == "production" {
+		InitNewRelic()
+	}
 
 	twitterOauth1Config = &oauth1.Config{
 		ConsumerKey:    os.Getenv("TWITTER_CLIENT_ID"),
@@ -172,9 +175,5 @@ func init() {
 
 	if gotInvitationCookieName, exists := os.LookupEnv("INVITATION_COOKIE_NAME"); exists {
 		invitationCookieName = gotInvitationCookieName
-	}
-
-	if targetEnv == "production" {
-		InitNewRelic()
 	}
 }
