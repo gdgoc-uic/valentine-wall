@@ -48,6 +48,7 @@ require (
 	github.com/jackc/pgproto3/v2 v2.2.0 // indirect
 	github.com/jackc/pgservicefile v0.0.0-20200714003250-2b9c44734f2b // indirect
 	github.com/jackc/pgtype v1.10.0 // indirect
+	github.com/jackc/pgx v3.6.2+incompatible // indirect
 	github.com/josharian/intern v1.0.0 // indirect
 	github.com/json-iterator/go v1.1.10 // indirect
 	github.com/lann/builder v0.0.0-20180802200727-47ae307949d0 // indirect
@@ -58,7 +59,7 @@ require (
 	github.com/mschoch/smat v0.2.0 // indirect
 	github.com/newrelic/go-agent v3.15.2+incompatible // indirect
 	github.com/philhofer/fwd v1.0.0 // indirect
-	github.com/pkg/errors v0.8.1 // indirect
+	github.com/pkg/errors v0.9.1 // indirect
 	github.com/steveyen/gtreap v0.1.0 // indirect
 	github.com/tinylib/msgp v1.1.0 // indirect
 	github.com/willf/bitset v1.1.10 // indirect
@@ -94,10 +95,11 @@ require (
 	github.com/matoous/go-nanoid/v2 v2.0.0
 	github.com/mattn/go-sqlite3 v1.14.10
 	github.com/newrelic/go-agent/v3 v3.15.2
+	github.com/newrelic/go-agent/v3/integrations/nrpgx v1.0.0
 	github.com/oleiade/lane v1.0.1
 	github.com/patrickmn/go-cache v2.1.0+incompatible
 	github.com/rubenv/sql-migrate v1.0.0
-	golang.org/x/crypto v0.0.0-20210711020723-a769d52b0f97 // indirect
+	golang.org/x/crypto v0.0.0-20210813211128-0a44fdfbc16e // indirect
 	golang.org/x/sync v0.0.0-20210220032951-036812b2e83c
 	golang.org/x/sys v0.0.0-20220114195835-da31bd327af9 // indirect
 	golang.org/x/text v0.3.7 // indirect
