@@ -12,6 +12,7 @@ import (
 	sq "github.com/Masterminds/squirrel"
 	_ "github.com/jackc/pgx/v4/stdlib"
 	"github.com/jmoiron/sqlx"
+	_ "github.com/newrelic/go-agent/v3/integrations/nrpgx"
 	migrate "github.com/rubenv/sql-migrate"
 )
 
@@ -23,7 +24,11 @@ type PostgresDB struct{}
 
 func (sl *PostgresDB) Init(conn string) (*sqlx.DB, error) {
 	log.Printf("connecting to %s...\n", conn)
-	return sqlx.Open("pgx", conn)
+	dbDriver := "pgx"
+	if newrelicApp != nil {
+		dbDriver = "nrpgx"
+	}
+	return sqlx.Open(dbDriver, conn)
 }
 
 type SQLiteDB struct{}
