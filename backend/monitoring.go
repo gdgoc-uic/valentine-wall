@@ -20,6 +20,11 @@ func InitNewRelic() {
 		newrelicLicense = gotNewRelicLicense
 	}
 
+	if len(newrelicAppName) == 0 || len(newrelicLicense) == 0 {
+		log.Println("[InitNewRelic] both app name and license is required. skipping...")
+		return
+	}
+
 	app, err := newrelic.NewApplication(
 		newrelic.ConfigAppName(newrelicAppName),
 		newrelic.ConfigLicense(newrelicLicense),
