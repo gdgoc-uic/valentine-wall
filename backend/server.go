@@ -196,6 +196,14 @@ func (uc UserConnection) ToOauth1Token() *oauth1.Token {
 	}
 }
 
+type MessageSearchEntry struct {
+	MessageID   string    `db:"id" json:"-"`
+	RecipientID string    `db:"recipient_id" json:"recipient_id"`
+	CreatedAt   time.Time `db:"created_at" json:"created_at"`
+	UpdatedAt   time.Time `db:"updated_at" json:"updated_at"`
+	HasGifts    bool      `db:"has_gifts" json:"has_gifts"`
+}
+
 type Message struct {
 	ID          string `db:"id" json:"id"`
 	RecipientID string `db:"recipient_id" json:"recipient_id" validate:"required,min=6,max=12,numeric"`
@@ -270,14 +278,7 @@ func importExistingMessages(db *sqlx.DB, index bleve.Index) error {
 	defer rows.Close()
 
 	for rows.Next() {
-		var result struct {
-			MessageID   string    `db:"id" json:"-"`
-			RecipientID string    `db:"recipient_id" json:"recipient_id"`
-			CreatedAt   time.Time `db:"created_at" json:"created_at"`
-			UpdatedAt   time.Time `db:"updated_at" json:"updated_at"`
-			HasGifts    bool      `db:"has_gifts" json:"has_gifts"`
-		}
-
+		var result MessageSearchEntry
 		if err := rows.StructScan(&result); err != nil {
 			return err
 		} else if err := batch.Index(result.MessageID, result); err != nil {
@@ -765,13 +766,7 @@ func main() {
 			}
 
 			// save to search engine
-			passivePrintError(UpsertEntry(messagesSearchIndex, submittedMsg.ID, struct {
-				MessageID   string    `db:"id" json:"-"`
-				RecipientID string    `db:"recipient_id" json:"recipient_id"`
-				CreatedAt   time.Time `db:"created_at" json:"created_at"`
-				UpdatedAt   time.Time `db:"updated_at" json:"updated_at"`
-				HasGifts    bool      `db:"has_gifts" json:"has_gifts"`
-			}{
+			passivePrintError(UpsertEntry(messagesSearchIndex, submittedMsg.ID, MessageSearchEntry{
 				MessageID:   submittedMsg.ID,
 				RecipientID: submittedMsg.RecipientID,
 				CreatedAt:   submittedMsg.CreatedAt,
@@ -1396,6 +1391,14 @@ func main() {
 				"associated_id": submittedData.AssociatedID,
 			})
 		}))
+
+	// r.With(appVerifyUser).Get("/user/share_callback", wrapHandler(func(rw http.ResponseWriter, r *http.Request) error {
+	// 	queries := r.URL.Query()
+	// 	action := queries.Get("action")
+	// 	messageId := queries.Get("message_id")
+	// 	sharerUserId := queries.Get("sharer_user_id")
+
+	// }))
 
 	r.Get("/user/connect_twitter", wrapHandler(func(rw http.ResponseWriter, r *http.Request) error {
 		requestToken, _, err := twitterOauth1Config.RequestToken()
