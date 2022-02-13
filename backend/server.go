@@ -595,7 +595,7 @@ func main() {
 
 		go func() {
 			mSql, mArgs, _ := psql.Select(messagesCol...).
-				From("messages").Limit(10).OrderBy("created_at ASC").
+				From("messages").Limit(12).OrderBy("created_at ASC").
 				Where(sq.And{sq.Eq{"deleted_at": nil, "has_gifts": false}, sq.LtOrEq{"created_at": time.Now()}}).ToSql()
 
 			rows, err := db.Queryx(mSql, mArgs...)
