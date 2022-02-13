@@ -11,6 +11,9 @@ ARG firebase_messaging_sender_id
 ARG firebase_app_id
 ARG firebase_measurement_id
 ARG firebase_project_id
+ARG report_api_url
+ARG report_api_key
+ARG report_api_category_id_key
 
 ENV VITE_FRONTEND_URL=${frontend_url}
 ENV VITE_BACKEND_URL=${backend_url}
@@ -21,6 +24,9 @@ ENV VITE_FIREBASE_MESSAGING_SENDER_ID=${firebase_messaging_sender_id}
 ENV VITE_FIREBASE_APP_ID=${firebase_app_id}
 ENV VITE_FIREBASE_MEASUREMENT_ID=${firebase_measurement_id}
 ENV VITE_FIREBASE_PROJECT_ID=${firebase_project_id}
+ENV VITE_REPORT_API_URL=${report_api_url}
+ENV VITE_REPORT_API_KEY=${report_api_key}
+ENV VITE_REPORT_API_CATEGORY_ID_KEY=${report_api_category_id_key}
 
 COPY . .
 RUN npm install
