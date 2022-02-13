@@ -1,31 +1,15 @@
 <script lang="ts">
 import {
-  createElementBlock,
   defineComponent,
   onMounted,
   ref,
 } from "@vue/runtime-core";
 
 export default defineComponent({
-  name: "ClientOnly",
-  props: ["fallback", "placeholder", "placeholderTag", "fallbackTag"],
   setup(_, { slots }) {
-    const mounted = ref(false);
-    onMounted(() => {
-      mounted.value = true;
-    });
-    return (props: any) => {
-      if (mounted.value) {
-        return slots.default?.();
-      }
-      const slot = slots.fallback || slots.placeholder;
-      if (slot) {
-        return slot();
-      }
-      const fallbackStr = props.fallback || props.placeholder || "";
-      const fallbackTag = props.fallbackTag || props.placeholderTag || "span";
-      return createElementBlock(fallbackTag, null, fallbackStr);
-    };
-  },
+    const show = ref(false);
+    onMounted(() => { show.value = true; });
+    return () => (show.value && slots.default ? slots.default() : null)
+  }
 });
 </script>
