@@ -661,7 +661,7 @@ func main() {
 			// make lastpostinfo an array in order to avoid false positive error
 			// when user posts for the first time
 			lastPostInfos := []Message{}
-			if err := db.Select(&lastPostInfos, "SELECT recipient_id, content, created_at FROM messages WHERE submitter_user_id = $1 AND deleted_at IS NULL ORDER BY created_at DESC LIMIT 1", submittedMsg.UID); err != nil {
+			if err := db.Select(&lastPostInfos, "SELECT recipient_id, content, created_at FROM messages WHERE submitter_user_id = $1 AND deleted_at IS NULL ORDER BY created_at ASC LIMIT 1", submittedMsg.UID); err != nil {
 				return err
 			}
 
