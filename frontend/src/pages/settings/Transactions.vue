@@ -1,5 +1,5 @@
 <template>
-  <paginated-response-handler origin-endpoint="/user/transactions">
+  <paginated-response-handler origin-endpoint="/user/transactions?order=created_at,desc">
     <template #default="{ data: transactions, links, goto }">
       <table class="table w-full">
         <thead>
