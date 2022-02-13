@@ -76,20 +76,21 @@
             </div>
           </div>
 
-          <div v-if="message.has_replied && (reply && reply.content)" class="shadow-lg w-full bg-white rounded-lg p-12">
+          <div v-if="message.has_replied && (reply && reply.content)" class="shadow-lg w-full bg-white rounded-lg p-6 md:p-12">
             <p class="text-gray-500 mb-2">{{ message.recipient_id }} replied</p>
             <p class="text-2xl">{{ reply.content }}</p>
 
-            <!-- TODO: polish UI -->
-            <delete-dialog 
-              v-if="$store.state.user.associatedId == message.recipient_id" 
-              @confirm="onMessageReplyDeletion" v-slot="{ openDialog }">
-              <button 
-                @click="openDialog" class="btn space-x-2 flex items-center">
-                <icon-trash />
-                <span>Delete</span>
-              </button>
-            </delete-dialog>
+            <div class="flex items-end w-full">
+              <delete-dialog
+                v-if="$store.state.user.associatedId == message.recipient_id"
+                @confirm="onMessageReplyDeletion" v-slot="{ openDialog }">
+                <button
+                  @click="openDialog" class="btn btn-error space-x-2 mt-8 self-end flex items-center">
+                  <icon-trash />
+                  <span>Delete</span>
+                </button>
+              </delete-dialog>
+            </div>
           </div>
           <div v-else-if="!message.has_replied || !$store.getters.isLoggedIn" class="p-6 lg:p-8 bg-white rounded-xl shadow-lg">
             <div v-if="$store.state.user.associatedId == message.recipient_id"

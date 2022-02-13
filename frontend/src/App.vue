@@ -30,7 +30,7 @@
 
   <!-- ID Modal -->
   <portal>
-    <submit-id-modal v-if="!$store.state.user.associatedId && $store.getters.isLoggedIn" />
+    <setup-dialog v-if="!$store.state.user.associatedId && $store.getters.isLoggedIn" />
     <submit-message-modal
       :key="$route.fullPath" 
       :open="$store.state.isSendMessageModalOpen" 
@@ -63,7 +63,7 @@ import { auth } from "./firebase";
 import { HeadAttrs, useHead } from "@vueuse/head";
 
 import BasicAlert from "./components/BasicAlert.vue";
-import SubmitIDModal from "./components/SubmitIDModal.vue";
+import SetupDialog from "./components/SetupDialog.vue";
 import { useRoute } from "vue-router";
 import { getPageTitle } from "./router";
 import ClientOnly from "./components/ClientOnly.vue";
@@ -79,7 +79,7 @@ export default defineComponent({
   components: { 
     BasicAlert, 
     SubmitMessageModal,
-    SubmitIdModal: SubmitIDModal, 
+    SetupDialog: SetupDialog, 
     ClientOnly,
     Portal,
     Navbar,
