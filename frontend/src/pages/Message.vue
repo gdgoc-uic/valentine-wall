@@ -32,13 +32,15 @@
             <div class="flex space-x-2 px-8 py-4">
               <share-dialog 
                 :image-url="imageUrl"
-                :image-file-name="`${recipientId}-${messageId}.png`"
+                :image-file-name="`${message.recipient_id}-${message.id}.png`"
                 :permalink="permalink"
-                :title="$route.meta.pageTitle"
-                @copied="onCopyUrl"
+                :title="$route.meta.pageTitle($route)"
+                @success="onShareSuccess"
                 >
                 <template #default="{ openDialog }">
-                  <button @click="openDialog" class="hover:bg-gray-100 flex-1 lg:flex-none normal-case btn btn-md border-none space-x-2 bg-white text-gray-900">
+                  <button 
+                    @click="openDialog" 
+                    class="hover:bg-gray-100 flex-1 lg:flex-none normal-case btn btn-md border-none space-x-2 bg-white text-gray-900">
                     <icon-share class="text-gray-500" />
                     <span>Share</span>
                   </button>
@@ -46,7 +48,7 @@
               </share-dialog>
 
               <delete-dialog @confirm="onMessageDeletion">
-                <template #default="{ openDialog, closeDialog }">
+                <template #default="{ openDialog }">
                   <button
                     v-if="isDeletable"
                     @click="openDialog"
@@ -89,8 +91,12 @@
               </button>
             </delete-dialog>
           </div>
-          <div v-else-if="!message.has_replied && $store.state.user.associatedId == message.recipient_id" class="p-6 lg:p-12 bg-white rounded-xl shadow-lg">
-            <h2 class="font-bold text-2xl mb-4">Your reply</h2>
+          <div v-else-if="!message.has_replied || !$store.getters.isLoggedIn" class="p-6 lg:p-8 bg-white rounded-xl shadow-lg">
+            <div v-if="$store.state.user.associatedId == message.recipient_id"
+              class="flex space-x-2 items-center text-2xl">
+              <icon-reply class="text-pink-500 mb-4" />
+              <h2 class="font-bold mb-4">Your reply</h2>
+            </div>
             <reply-message-box @update:hasReplied="handleHasReplied" :message="message" />
           </div>
         </template>
@@ -175,8 +181,11 @@ export default {
     onReportSuccess() {
       this.reportDialogKey++;
     },
-    onShareSuccess() {
+    onShareSuccess(provider: string) {
       // share success
+      if (provider === 'clipboard') {
+        logEvent(analytics!, 'share', { method: 'copy-url', item_id: this.message.id });
+      }
     },
     onShareFailed(err: unknown) {
       console.error(err);
