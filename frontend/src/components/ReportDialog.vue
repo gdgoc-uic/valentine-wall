@@ -47,7 +47,7 @@
 </template>
 
 <script lang="ts">
-import { expandEndpoint } from '../client';
+import { expandReportApiEndpoint, headers } from '../report-api';
 import { catchAndNotifyError } from '../notify';
 import Modal from './Modal.vue';
 import Portal from './Portal.vue';
@@ -89,12 +89,6 @@ export default {
     }
   },
   computed: {
-    reportAPIHeaders() {
-      return {
-        'Content-Type': 'application/json',
-        'xc-token': import.meta.env.VITE_REPORT_API_KEY
-      };
-    },
     categoryIdKey() {
       return import.meta.env.VITE_REPORT_API_CATEGORY_ID_KEY;
     }
@@ -105,10 +99,7 @@ export default {
         this.isProcessing = true;
 
         if (this.categories.length === 0) {
-          const resp = await fetch(expandEndpoint(import.meta.env.VITE_REPORT_API_URL, '/ReportCategories'), {
-            headers: this.reportAPIHeaders,
-          });
-  
+          const resp = await fetch(expandReportApiEndpoint('/ReportCategories'), { headers });
           if (!resp.ok) {
             throw new Error('Unable to load categories. Please try again later.');
           }
@@ -140,9 +131,9 @@ export default {
           }
         });
 
-        const resp = await fetch(expandEndpoint(import.meta.env.VITE_REPORT_API_URL, '/Reports'), {
+        const resp = await fetch(expandReportApiEndpoint('/Reports'), {
           method: 'POST',
-          headers: this.reportAPIHeaders,
+          headers,
           body: JSON.stringify(payload)
         });
 
