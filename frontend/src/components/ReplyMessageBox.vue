@@ -1,11 +1,15 @@
 <template>
-  <div v-if="!$store.getters.isLoggedIn || $store.state.user.associatedId != message.recipient_id" class="flex flex-col justify-center text-center items-center">
-    <icon-reply-lock class="text-gray-500 text-9xl mb-4" />
-    <h3 class="text-2xl font-bold">Reply is locked.</h3>
-    <p class="text-gray-500 text-xl">Recipient can only reply to this message.</p>
+  <div 
+    v-if="!$store.getters.isLoggedIn || $store.state.user.associatedId != message.recipient_id" 
+    class="flex flex-col md:flex-row items-center">
+    <icon-reply-lock class="text-gray-500 text-6xl mb-4 md:mb-0" />
+    <div class="flex flex-col text-center items-center md:text-left md:items-start md:ml-4">
+      <h3 class="text-2xl font-bold">Reply feature is locked.</h3>
+      <p class="text-gray-500 text-xl">Recipient can only reply to this message.</p>
+    </div>
   </div>
 
-  <div v-else-if="$store.getters.isLoggedIn && message.has_replied" class="flex flex-col justify-center text-center items-center">
+  <div v-else-if="message.has_replied" class="flex flex-col justify-center text-center items-center">
     <icon-reply class="text-pink-500 text-9xl mb-4" />
     <h3 class="text-2xl font-bold">Already replied!</h3>
   </div>
