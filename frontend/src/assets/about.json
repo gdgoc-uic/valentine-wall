@@ -1,0 +1,76 @@
+{
+  "roles": [
+    "Quality Assurance",
+    "Backend",
+    "UI/UX",
+    "Beta Tester",
+    "Moderator",
+    "Project Manager",
+    "Infrastructure",
+    "Marketing",
+    "Relations",
+    "Frontend",
+    "Graphic Design"
+  ],
+  "org": [
+    "GDSC-UIC",
+    "CCS"
+  ],
+  "members": [
+    {
+      "name": "Al Gabriel Orig",
+      "org_id": 0,
+      "role_ids": [5, 0, 8]
+    },
+    {
+      "name": "Ned Palacios",
+      "org_id": 0,
+      "role_ids": [5, 1, 9, 2, 6]
+    },
+    {
+      "name": "Muslimin Ontong",
+      "org_id": 0,
+      "role_ids": [0, 9, 2, 4, 10]
+    },
+    {
+      "name": "Carlo Aranas",
+      "org_id": 1,
+      "role_ids": [9, 2, 10]
+    },
+    {
+      "name": "Khyle Montebon",
+      "org_id": 0,
+      "role_ids": [0, 4]
+    },
+    {
+      "name": "Andre Gonzales",
+      "org_id": 0,
+      "role_ids": [0, 7, 8]
+    },
+    {
+      "name": "Roxie Fernandez",
+      "org_id": 0,
+      "role_ids": [7, 4]
+    },
+    {
+      "name": "June Rian Bation",
+      "org_id": 0,
+      "role_ids": [0, 3, 4]
+    },
+    {
+      "name": "Rafael Delloson",
+      "org_id": 0,
+      "role_ids": [0, 3, 4]
+    }, 
+    {
+      "name": "Leah Llamorin",
+      "org_id": 0,
+      "role_ids": [4]
+    },
+    {
+      "name": "Joshua James Autor",
+      "org_id": 0,
+      "role_ids": [7, 4]
+    }
+  ]
+}

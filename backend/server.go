@@ -7,8 +7,10 @@ import (
 	"encoding/json"
 	"fmt"
 	htmlTemplate "html/template"
+	"io/ioutil"
 	"log"
 	"net/http"
+	"path/filepath"
 	"regexp"
 	"sort"
 	"strconv"
@@ -289,12 +291,24 @@ func importExistingMessages(db *sqlx.DB, index bleve.Index) error {
 	return index.Batch(batch)
 }
 
+func getTermsAndConditions() ([]byte, error) {
+	return ioutil.ReadFile(filepath.Join(dataDirPath, "terms-and-conditions.md"))
+}
+
+var registrationKeys = cache.New(30 * time.Minute, 10 * time.Minute)
+
 func main() {
 	var chromeCtx context.Context
 	var chromeCancel context.CancelFunc
 	htmlTemplates := &htmlTemplate.Template{}
 	recentMessagesChan = make(chan Message, 10)
 	defer close(recentMessagesChan)
+
+	// terms and conditions
+	tac, err := getTermsAndConditions()
+	if err != nil {
+		log.Panicln(err)
+	}
 
 	// cache
 	cacher := cache.New(1*time.Hour, 1*time.Minute)
@@ -430,6 +444,10 @@ func main() {
 			StatusCode: http.StatusMethodNotAllowed,
 		}
 	}))
+
+	r.Get("/terms-and-conditions", func(rw http.ResponseWriter, r *http.Request) {
+		rw.Write(tac)
+	})
 
 	r.Get("/departments", wrapHandler(func(rw http.ResponseWriter, r *http.Request) error {
 		return jsonEncode(rw, collegeDepartments)

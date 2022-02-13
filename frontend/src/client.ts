@@ -60,29 +60,30 @@ export function createAPIClient(defaultHeadersFn?: () => Record<string, any>): A
           ...this.defaultHeadersFn?.()
         }
       });
-    
+      
       const contentType = resp.headers.get('Content-Type');
-      if (contentType && contentType == 'application/json') {
-        const json = await resp.json();
-        if (!resp.ok) {
-          throw APIResponseError.fromResponseWithJson(resp, json);
-        }
-
-        return {
-          rawResponse: resp,
-          data: json
-        }
-      }
+      switch (contentType) {
+        case 'application/json':
+          const json = await resp.json();
+          if (!resp.ok) {
+            throw APIResponseError.fromResponseWithJson(resp, json);
+          }
     
-      const data = await resp.text();
-      if (!resp.ok) {
-        throw new APIResponseError(data, resp);
-      }
+          return {
+            rawResponse: resp,
+            data: json
+          }
+        default:
+          const content = await resp.text();
+          if (!resp.ok) {
+            throw new APIResponseError(content, resp);
+          }
 
-      return {
-        rawResponse: resp,
-        data
-      };
+          return {
+            rawResponse: resp,
+            data: content
+          };
+      }
     },
     get(endpoint: string, opts?: RequestInit) {
       return this.request(endpoint, { method: 'GET', ...opts });
