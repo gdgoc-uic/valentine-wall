@@ -57,10 +57,20 @@
                 </template>
               </delete-dialog>
 
-              <button @click="openReportModal = true" class="hover:bg-gray-100 flex-1 lg:flex-none normal-case btn btn-md border-none space-x-2 bg-white text-gray-900">
-                <icon-report class="text-gray-500" />
-                <span>Report</span>
-              </button>
+              <report-dialog 
+                :key="reportDialogKey"
+                @success="onReportSuccess"
+                :email="$store.getters.isLoggedIn ? $store.state.user.email : null" 
+                :message-id="message.id">
+                <template #default="{ openDialog }">
+                  <button 
+                    @click="openDialog" 
+                    class="hover:bg-gray-100 flex-1 lg:flex-none normal-case btn btn-md border-none space-x-2 bg-white text-gray-900">
+                    <icon-report class="text-gray-500" />
+                    <span>Report</span>
+                  </button>
+                </template>
+              </report-dialog>
             </div>
           </div>
 
@@ -123,6 +133,7 @@ import ResponseHandler from '../components/ResponseHandler.vue';
 import IconReport from '~icons/uil/exclamation-circle';
 import { fromNow, prettifyDateTime } from '../time_utils';
 import DeleteDialog from '../components/DeleteDialog.vue';
+import ReportDialog from '../components/ReportDialog.vue';
 
 export default {
   components: {
@@ -142,6 +153,7 @@ export default {
     Portal,
     ResponseHandler,
     DeleteDialog,
+    ReportDialog,
   },
   mounted() {
     if (this.$route.query.from) {
@@ -155,12 +167,13 @@ export default {
       reply: null as unknown as Record<string, any>,
       openReportModal: false,
       revealContent: false,
+      reportDialogKey: 1,
       authLoadingWatcher: null as unknown as WatchStopHandle
     }
   },
   methods: {
-    onCopyUrl() {
-      logEvent(analytics!, 'share', { method: 'copy-url', item_id: this.message.id });
+    onReportSuccess() {
+      this.reportDialogKey++;
     },
     onShareSuccess() {
       // share success

@@ -32,12 +32,20 @@ export class APIResponseError extends Error implements BaseResponse {
   }
 }
 
-export function expandAPIEndpoint(endpoint: string): string {
+export function expandEndpoint(url: string, endpoint: string): string {
+  if (url.length === 0) {
+    return endpoint;
+  }
+
   let finalEndpoint = endpoint;
-  if (backendUrl[backendUrl.length - 1] == '/' && finalEndpoint[0] == '/') {
+  if (url[url.length - 1] == '/' && finalEndpoint[0] == '/') {
     finalEndpoint = endpoint.substring(1);
   }
-  return backendUrl + finalEndpoint;
+  return url + finalEndpoint;
+}
+
+export function expandAPIEndpoint(endpoint: string): string {
+  return expandEndpoint(backendUrl, endpoint);
 }
 
 export function createAPIClient(defaultHeadersFn?: () => Record<string, any>): APIClient {
