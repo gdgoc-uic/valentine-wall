@@ -1104,6 +1104,7 @@ func main() {
 
 	r.With(appVerifyUser).Patch("/user/session", wrapHandler(func(rw http.ResponseWriter, r *http.Request) error {
 		token := getAuthTokenByReq(r)
+		shouldUpdate := true
 
 		// if user is already registered, get idle time
 		if gotAssociatedUser, err := getAssociatedUserBy(db, sq.Eq{"user_id": token.UID}); err == nil {
@@ -1114,10 +1115,14 @@ func main() {
 					// TODO: notify user
 				} else if err != nil {
 					passivePrintError(err)
+				} else {
+					shouldUpdate = false
 				}
 			}
 
-			passivePrintError(updateUserLastActive(db, token.UID))
+			if shouldUpdate {
+				passivePrintError(updateUserLastActive(db, token.UID))
+			}
 		}
 
 		return jsonEncode(rw, map[string]string{"message": "ok"})
