@@ -94,13 +94,17 @@ export default defineComponent({
       ],
       title: computed(() => getPageTitle(route)),
       meta: computed(() => {
+        let metaTags: HeadAttrs[] = [];
         if (route.meta.metaTags && route.meta.metaTags instanceof Function) {
-          return route.meta.metaTags(route);
+          metaTags = route.meta.metaTags(route);
+        } else if (Array.isArray(route.meta.metaTags)) {
+          metaTags = route.meta.metaTags;
         }
+
         return [
           { charset: 'UTF-8' },
           { name: 'viewport', content: 'width=device-width, initial-scale=1.0' },
-          ...(route.meta.metaTags as HeadAttrs[] ?? [])
+          ...metaTags
         ];
       }),
     });
