@@ -35,6 +35,7 @@
                 :image-file-name="`${message.recipient_id}-${message.id}.png`"
                 :permalink="permalink"
                 :title="$route.meta.pageTitle($route)"
+                :hashtags="['UICValentineWall']"
                 @success="onShareSuccess"
                 >
                 <template #default="{ openDialog }">
