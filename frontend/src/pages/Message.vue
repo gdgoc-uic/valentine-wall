@@ -9,7 +9,7 @@
         :endpoint="endpoint">
         <template #default="{ response: { data: { message, reply } } }">
           <div class="w-full bg-white rounded-xl divide-y-2 shadow-lg">
-            <div class="p-12">
+            <div class="p-6 lg:p-12">
               <div class="flex flex-col items-center text-center" v-if="hasGifts">
                 <div class="flex flex-row space-x-2 items-center justify-center">
                   <div :key="gift.uid" v-for="gift in gifts" class="p-8 bg-white border-gray-200 border rounded-full shadow-md">
@@ -30,32 +30,49 @@
             </div>
 
             <div class="flex space-x-2 px-8 py-4">
-              <template v-if="!$store.state.isAuthLoading && $store.getters.isLoggedIn">
-                <button 
-                  v-if="message.has_replied || $store.state.user.associatedId == message.recipient_id" 
-                  @click="openReplyModal = true" 
-                  :disabled="message.has_replied"
-                  class="flex-1 lg:flex-none normal-case btn btn-md border-none space-x-2 bg-white text-gray-900 hover:bg-gray-100">
-                  <icon-reply :class="[message.has_replied ? 'text-pink-500' : 'text-gray-500']" />
-                  <span>{{ message.has_replied ? 'Has replied' : 'Reply' }}</span>
-                </button>
-              </template>
+              <share-dialog 
+                :image-url="imageUrl"
+                :image-file-name="`${message.recipient_id}-${message.id}.png`"
+                :permalink="permalink"
+                :title="$route.meta.pageTitle($route)"
+                @success="onShareSuccess"
+                >
+                <template #default="{ openDialog }">
+                  <button 
+                    @click="openDialog" 
+                    class="hover:bg-gray-100 flex-1 lg:flex-none normal-case btn btn-md border-none space-x-2 bg-white text-gray-900">
+                    <icon-share class="text-gray-500" />
+                    <span>Share</span>
+                  </button>
+                </template>
+              </share-dialog>
 
-              <button @click="openShareModal = true" class="hover:bg-gray-100 flex-1 lg:flex-none normal-case btn btn-md border-none space-x-2 bg-white text-gray-900">
-                <icon-share class="text-gray-500" />
-                <span>Share</span>
-              </button>
+              <delete-dialog @confirm="onMessageDeletion">
+                <template #default="{ openDialog }">
+                  <button
+                    v-if="isDeletable"
+                    @click="openDialog"
+                    class="hover:bg-gray-100 flex-1 lg:flex-none normal-case btn btn-md border-none space-x-2 bg-white text-red-500">
+                    <icon-trash class="text-red-500" />
+                    <span>Delete</span>
+                  </button>
+                </template>
+              </delete-dialog>
 
-              <button v-if="isDeletable" @click="openDeleteModal = true" class="hover:bg-gray-100 flex-1 lg:flex-none normal-case btn btn-md border-none space-x-2 bg-white text-red-500">
-                <icon-trash class="text-red-500" />
-                <span>Delete</span>
-              </button>
-
-              <!-- TODO: add report link -->
-              <button class="hover:bg-gray-100 flex-1 lg:flex-none normal-case btn btn-md border-none space-x-2 bg-white text-gray-900">
-                <icon-report class="text-gray-500" />
-                <span>Report</span>
-              </button>
+              <report-dialog 
+                :key="reportDialogKey"
+                @success="onReportSuccess"
+                :email="$store.getters.isLoggedIn ? $store.state.user.email : null" 
+                :message-id="message.id">
+                <template #default="{ openDialog }">
+                  <button 
+                    @click="openDialog" 
+                    class="hover:bg-gray-100 flex-1 lg:flex-none normal-case btn btn-md border-none space-x-2 bg-white text-gray-900">
+                    <icon-report class="text-gray-500" />
+                    <span>Report</span>
+                  </button>
+                </template>
+              </report-dialog>
             </div>
           </div>
 
@@ -64,18 +81,23 @@
             <p class="text-2xl">{{ reply.content }}</p>
 
             <!-- TODO: polish UI -->
-            <button v-if="$store.state.user.associatedId == message.recipient_id" @click="deleteReply" class="btn space-x-2 flex items-center">
-              <icon-trash />
-              <span>Delete</span>
-            </button>
+            <delete-dialog 
+              v-if="$store.state.user.associatedId == message.recipient_id" 
+              @confirm="onMessageReplyDeletion" v-slot="{ openDialog }">
+              <button 
+                @click="openDialog" class="btn space-x-2 flex items-center">
+                <icon-trash />
+                <span>Delete</span>
+              </button>
+            </delete-dialog>
           </div>
-          <div v-else-if="!message.has_replied && $store.state.user.associatedId == message.recipient_id" class="p-12 bg-white rounded-xl shadow-lg">
-            <h2 class="font-bold text-2xl mb-4">Your reply</h2>
-            <reply-message-box
-              class="py-8"
-              @update:hasReplied="handleHasReplied" 
-              v-model:open="openReplyModal" 
-              :message="message" />
+          <div v-else-if="!message.has_replied || !$store.getters.isLoggedIn" class="p-6 lg:p-8 bg-white rounded-xl shadow-lg">
+            <div v-if="$store.state.user.associatedId == message.recipient_id"
+              class="flex space-x-2 items-center text-2xl">
+              <icon-reply class="text-pink-500 mb-4" />
+              <h2 class="font-bold mb-4">Your reply</h2>
+            </div>
+            <reply-message-box @update:hasReplied="handleHasReplied" :message="message" />
           </div>
         </template>
 
@@ -88,21 +110,6 @@
         </template>
       </response-handler>
     </div>
-
-    <portal>
-      <share-modal 
-        v-model:open="openShareModal" 
-        :recipient-id="$route.params.recipientId" 
-        :message-id="$route.params.messageId" 
-        :permalink="permalink" />
-      <modal v-model:open="openDeleteModal">
-        <p>Are you sure you want to delete this?</p>
-        <template #actions>
-          <button class="btn" @click="openDeleteModal = false">Cancel</button>
-          <button class="btn btn-error" @click="deleteMessage">Delete</button>
-        </template>
-      </modal>
-    </portal>
   </main>
 </template>
 
@@ -118,12 +125,12 @@ import IconShare from '~icons/uil/share-alt';
 import GiftIcon from '../components/GiftIcon.vue';
 
 import ReplyMessageBox from '../components/ReplyMessageBox.vue';
-import ShareModal from '../components/ShareModal.vue';
+import ShareDialog from '../components/ShareDialog.vue';
 import Modal from '../components/Modal.vue';
 
 import { logEvent } from '@firebase/analytics';
 import { analytics } from '../firebase';
-import { APIResponse, APIResponseError } from '../client';
+import { APIResponse, APIResponseError, expandAPIEndpoint } from '../client';
 import { catchAndNotifyError } from '../notify';
 import { Gift } from '../store';
 import { WatchStopHandle } from '@vue/runtime-core';
@@ -131,6 +138,8 @@ import Portal from '../components/Portal.vue';
 import ResponseHandler from '../components/ResponseHandler.vue';
 import IconReport from '~icons/uil/exclamation-circle';
 import { fromNow, prettifyDateTime } from '../time_utils';
+import DeleteDialog from '../components/DeleteDialog.vue';
+import ReportDialog from '../components/ReportDialog.vue';
 
 export default {
   components: {
@@ -144,11 +153,13 @@ export default {
     IconTrash,
     IconReport,
     ReplyMessageBox,
-    ShareModal,
+    ShareDialog,
     GiftIcon,
     Modal,
     Portal,
     ResponseHandler,
+    DeleteDialog,
+    ReportDialog,
   },
   mounted() {
     if (this.$route.query.from) {
@@ -160,14 +171,37 @@ export default {
       isDeletable: false,
       message: null as unknown as Record<string, any>,
       reply: null as unknown as Record<string, any>,
-      openReplyModal: false,
-      openDeleteModal: false,
-      openShareModal: false,
+      openReportModal: false,
       revealContent: false,
+      reportDialogKey: 1,
       authLoadingWatcher: null as unknown as WatchStopHandle
     }
   },
   methods: {
+    onReportSuccess() {
+      this.reportDialogKey++;
+    },
+    onShareSuccess(provider: string) {
+      // share success
+      if (provider === 'clipboard') {
+        logEvent(analytics!, 'share', { method: 'copy-url', item_id: this.message.id });
+      }
+    },
+    onShareFailed(err: unknown) {
+      console.error(err);
+    },
+    async onMessageDeletion(confirmed: boolean, closeDialog: Function) {
+      if (confirmed) {
+        await this.deleteMessage();
+      }
+      closeDialog();
+    },
+    async onMessageReplyDeletion(confirmed: boolean, closeDialog: Function) {
+      if (confirmed) {
+        await this.deleteReply();
+      }
+      closeDialog();
+    },
     async deleteMessage() {
       try {
         const { data: json } = await this.$client.delete(`/messages/${this.$route.params.recipientId}/${this.$route.params.messageId}`);
@@ -249,7 +283,10 @@ export default {
     },
     endpoint(): string {
       return `/messages/${this.$route.params.recipientId}/${this.$route.params.messageId}`;
-    }
+    },
+    imageUrl(): string {
+      return expandAPIEndpoint(this.endpoint + '?image');
+    },
   },
 }
 </script>

@@ -34,11 +34,14 @@ export interface State {
   isAuthLoading: boolean,
   isSendMessageModalOpen: boolean,
   isSetupModalOpen: boolean,
+  isWelcomeModalOpen: boolean,
   giftList: Gift[],
   departmentList: Record<string, string>[]
 }
 
 export const storeKey = 'vuex-store' as unknown as InjectionKey<Store<State>>;
+
+const firstTimeKey = '__vw_13042021';
 
 export function createStore() {
   return createVuexStore<State>({
@@ -57,6 +60,7 @@ export function createStore() {
         isAuthLoading: true,
         isSendMessageModalOpen: false,
         isSetupModalOpen: false,
+        isWelcomeModalOpen: false,
         giftList: [],
         departmentList: []
       }
@@ -106,6 +110,9 @@ export function createStore() {
       },
       SET_SEND_MESSAGE_MODAL_OPEN(state, payload: boolean) {
         state.isSendMessageModalOpen = payload;
+      },
+      SET_WELCOME_MODAL_OPEN(state, payload: boolean) {
+        state.isWelcomeModalOpen = payload;
       }
     },
   
@@ -251,6 +258,15 @@ export function createStore() {
       },
       async updateLastActiveAt({ getters }) {
         await getters.apiClient.patch('/user/session');
+      },
+      checkFirstTimeVisitor({ commit }) {
+        if (!localStorage.getItem(firstTimeKey)) {
+          commit('SET_WELCOME_MODAL_OPEN', true);
+        }
+      },
+      toggleWelcomeModal({ commit }) {
+        localStorage.setItem(firstTimeKey, '1');
+        commit('SET_WELCOME_MODAL_OPEN', false);
       }
     }
   })

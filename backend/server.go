@@ -196,6 +196,14 @@ func (uc UserConnection) ToOauth1Token() *oauth1.Token {
 	}
 }
 
+type MessageSearchEntry struct {
+	MessageID   string    `db:"id" json:"-"`
+	RecipientID string    `db:"recipient_id" json:"recipient_id"`
+	CreatedAt   time.Time `db:"created_at" json:"created_at"`
+	UpdatedAt   time.Time `db:"updated_at" json:"updated_at"`
+	HasGifts    bool      `db:"has_gifts" json:"has_gifts"`
+}
+
 type Message struct {
 	ID          string `db:"id" json:"id"`
 	RecipientID string `db:"recipient_id" json:"recipient_id" validate:"required,min=6,max=12,numeric"`
@@ -270,14 +278,7 @@ func importExistingMessages(db *sqlx.DB, index bleve.Index) error {
 	defer rows.Close()
 
 	for rows.Next() {
-		var result struct {
-			MessageID   string    `db:"id" json:"-"`
-			RecipientID string    `db:"recipient_id" json:"recipient_id"`
-			CreatedAt   time.Time `db:"created_at" json:"created_at"`
-			UpdatedAt   time.Time `db:"updated_at" json:"updated_at"`
-			HasGifts    bool      `db:"has_gifts" json:"has_gifts"`
-		}
-
+		var result MessageSearchEntry
 		if err := rows.StructScan(&result); err != nil {
 			return err
 		} else if err := batch.Index(result.MessageID, result); err != nil {
@@ -340,7 +341,7 @@ func main() {
 	emailTemplates := map[string]*TemplatedMailSender{
 		"reply":   newTemplatedMailSender(rawEmailTemplates.Lookup("reply.txt.tpl"), "Mr. Kupido", "Your message has received a reply!", 10*time.Second),
 		"message": newTemplatedMailSender(rawEmailTemplates.Lookup("message.txt.tpl"), "Mr. Kupido", "You received a new message!", 10*time.Second),
-		"welcome": newTemplatedMailSender(rawEmailTemplates.Lookup("welcome.txt.tpl"), "Mr. Kupido", "Welcome to UIC Valentine Wall 2021!", 10*time.Second),
+		"welcome": newTemplatedMailSender(rawEmailTemplates.Lookup("welcome.txt.tpl"), "Mr. Kupido", "Welcome to UIC Valentine Wall 2022!", 10*time.Second),
 	}
 
 	// email verification
@@ -595,7 +596,7 @@ func main() {
 
 		go func() {
 			mSql, mArgs, _ := psql.Select(messagesCol...).
-				From("messages").Limit(10).OrderBy("created_at ASC").
+				From("messages").Limit(12).OrderBy("created_at ASC").
 				Where(sq.And{sq.Eq{"deleted_at": nil, "has_gifts": false}, sq.LtOrEq{"created_at": time.Now()}}).ToSql()
 
 			rows, err := db.Queryx(mSql, mArgs...)
@@ -661,7 +662,7 @@ func main() {
 			// make lastpostinfo an array in order to avoid false positive error
 			// when user posts for the first time
 			lastPostInfos := []Message{}
-			if err := db.Select(&lastPostInfos, "SELECT recipient_id, content, created_at FROM messages WHERE submitter_user_id = $1 AND deleted_at IS NULL ORDER BY created_at DESC LIMIT 1", submittedMsg.UID); err != nil {
+			if err := db.Select(&lastPostInfos, "SELECT recipient_id, content, created_at FROM messages WHERE submitter_user_id = $1 AND deleted_at IS NULL ORDER BY created_at ASC LIMIT 1", submittedMsg.UID); err != nil {
 				return err
 			}
 
@@ -765,13 +766,7 @@ func main() {
 			}
 
 			// save to search engine
-			passivePrintError(UpsertEntry(messagesSearchIndex, submittedMsg.ID, struct {
-				MessageID   string    `db:"id" json:"-"`
-				RecipientID string    `db:"recipient_id" json:"recipient_id"`
-				CreatedAt   time.Time `db:"created_at" json:"created_at"`
-				UpdatedAt   time.Time `db:"updated_at" json:"updated_at"`
-				HasGifts    bool      `db:"has_gifts" json:"has_gifts"`
-			}{
+			passivePrintError(UpsertEntry(messagesSearchIndex, submittedMsg.ID, MessageSearchEntry{
 				MessageID:   submittedMsg.ID,
 				RecipientID: submittedMsg.RecipientID,
 				CreatedAt:   submittedMsg.CreatedAt,
@@ -1109,6 +1104,7 @@ func main() {
 
 	r.With(appVerifyUser).Patch("/user/session", wrapHandler(func(rw http.ResponseWriter, r *http.Request) error {
 		token := getAuthTokenByReq(r)
+		shouldUpdate := true
 
 		// if user is already registered, get idle time
 		if gotAssociatedUser, err := getAssociatedUserBy(db, sq.Eq{"user_id": token.UID}); err == nil {
@@ -1119,10 +1115,14 @@ func main() {
 					// TODO: notify user
 				} else if err != nil {
 					passivePrintError(err)
+				} else {
+					shouldUpdate = false
 				}
 			}
 
-			passivePrintError(updateUserLastActive(db, token.UID))
+			if shouldUpdate {
+				passivePrintError(updateUserLastActive(db, token.UID))
+			}
 		}
 
 		return jsonEncode(rw, map[string]string{"message": "ok"})
@@ -1396,6 +1396,14 @@ func main() {
 				"associated_id": submittedData.AssociatedID,
 			})
 		}))
+
+	// r.With(appVerifyUser).Get("/user/share_callback", wrapHandler(func(rw http.ResponseWriter, r *http.Request) error {
+	// 	queries := r.URL.Query()
+	// 	action := queries.Get("action")
+	// 	messageId := queries.Get("message_id")
+	// 	sharerUserId := queries.Get("sharer_user_id")
+
+	// }))
 
 	r.Get("/user/connect_twitter", wrapHandler(func(rw http.ResponseWriter, r *http.Request) error {
 		requestToken, _, err := twitterOauth1Config.RequestToken()
