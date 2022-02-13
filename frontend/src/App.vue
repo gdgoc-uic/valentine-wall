@@ -42,6 +42,10 @@
   </div>
 
   <template v-else>
+    <portal>
+      <welcome-modal />
+    </portal>
+
     <navbar v-if="!$route.meta.disableAppHeader" :is-home="$route.name === 'home-page'" class="sticky top-0 z-50" />
     <router-view v-slot="{ Component }">
       <suspense>
@@ -69,6 +73,7 @@ import SubmitMessageModal from './components/SendMessageModal.vue';
 import Footer from "./components/Footer.vue";
 import { catchAndNotifyError } from "./notify";
 import Loading from "./components/Loading.vue";
+import WelcomeModal from "./components/WelcomeModal.vue";
 
 export default defineComponent({
   components: { 
@@ -79,7 +84,8 @@ export default defineComponent({
     Portal,
     Navbar,
     AppFooter: Footer,
-    Loading
+    Loading,
+    WelcomeModal
   },
   setup() {
     const route = useRoute();
@@ -111,6 +117,8 @@ export default defineComponent({
   },
   mounted() {
     if (!import.meta.env.SSR) {
+      this.$store.dispatch('checkFirstTimeVisitor');
+
       auth.onAuthStateChanged((user) => {
         this.$store.dispatch('onReceiveUser', user);
       });
