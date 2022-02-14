@@ -723,11 +723,7 @@ func main() {
 
 			var currentBalance float32
 			if err := Transact(db, func(tx *sqlx.Tx) error {
-				giftValues := []interface{}{}
 				for _, giftId := range submittedMsg.GiftIDs {
-					// accumulate sql values
-					giftValues = append(giftValues, submittedMsg.ID, giftId)
-
 					// add to total gift price
 					totalGiftPrice += giftList[giftId-1].Price
 
@@ -774,14 +770,13 @@ func main() {
 				} else {
 					submittedMsg.ID = id
 
-					if len(giftValues) != 0 {
-						for i := 0; i < len(giftValues); i += 2 {
-							giftValues[i] = id
+					if len(submittedMsg.GiftIDs) != 0 {
+						insertGiftQueryRaw := psql.Insert("message_gifts").
+							Columns("message_id", "gift_id")
+						for _, v := range submittedMsg.GiftIDs {
+							insertGiftQueryRaw = insertGiftQueryRaw.Values(id, v)
 						}
-
-						insertGiftQuery, insertGiftArgs, _ := psql.Insert("message_gifts").
-							Columns("message_id", "gift_id").
-							Values(giftValues...).ToSql()
+						insertGiftQuery, insertGiftArgs, _ := insertGiftQueryRaw.ToSql()
 						if res, err := tx.Exec(insertGiftQuery, insertGiftArgs...); err != nil {
 							return err
 						} else if err := wrapSqlResult(res); err != nil {
