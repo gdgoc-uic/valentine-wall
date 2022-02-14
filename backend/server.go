@@ -295,7 +295,7 @@ func getTermsAndConditions() ([]byte, error) {
 	return ioutil.ReadFile(filepath.Join(dataDirPath, "terms-and-conditions.md"))
 }
 
-var registrationKeys = cache.New(30 * time.Minute, 10 * time.Minute)
+var registrationKeys = cache.New(30*time.Minute, 10*time.Minute)
 
 func main() {
 	var chromeCtx context.Context
@@ -480,10 +480,10 @@ func main() {
 				return err
 			}
 
-			// timeToCache := 30 * time.Minute
+			timeToCache := 30 * time.Minute
 			// if targetEnv == "development" {
 			// timeToCache := 30 * time.Second
-			timeToCache := 5 * time.Second
+			// timeToCache := 5 * time.Second
 			// }
 
 			cacher.Set("rankings", results, timeToCache)
@@ -1417,7 +1417,6 @@ func main() {
 
 	// r.With(appVerifyUser).Get("/user/share_callback", wrapHandler(func(rw http.ResponseWriter, r *http.Request) error {
 	// 	queries := r.URL.Query()
-	// 	action := queries.Get("action")
 	// 	messageId := queries.Get("message_id")
 	// 	sharerUserId := queries.Get("sharer_user_id")
 
