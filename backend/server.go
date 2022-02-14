@@ -305,7 +305,7 @@ func queryLatestMessagesFrom(db *sqlx.DB, f time.Time, t time.Time, existingEntr
 	}
 
 	mSql, mArgs, _ := psql.Select(messagesCol...).
-		From("messages").Limit(12).OrderBy("created_at ASC").
+		From("messages").Limit(12).OrderBy("created_at DESC").
 		Where(preds).ToSql()
 
 	rows, err := db.Queryx(mSql, mArgs...)
@@ -322,8 +322,6 @@ func queryLatestMessagesFrom(db *sqlx.DB, f time.Time, t time.Time, existingEntr
 		existingEntriesChan <- msg
 	}
 }
-
-var registrationKeys = cache.New(30*time.Minute, 10*time.Minute)
 
 func main() {
 	var chromeCtx context.Context
