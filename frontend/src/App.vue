@@ -1,6 +1,18 @@
 <template>
   <div class="background"></div>
 
+  <feedback-form v-slot="{ openDialog }">
+    <div class="fixed right-[5%] bottom-[5%] tooltip" style="z-index: 999" data-tip="Problems, suggestions? Post it here!">
+      <button @click="openDialog" class="btn md:btn-lg btn-primary space-x-2 hidden md:flex">
+        <icon-comment-add />
+        <span>Feedback</span>
+      </button>
+      <button @click="openDialog" class="btn btn-lg btn-circle btn-primary md:hidden">
+        <icon-comment-add />
+      </button>
+    </div>
+  </feedback-form>
+
   <!-- Notifications -->
   <client-only>
     <notification-group>
@@ -74,6 +86,8 @@ import Footer from "./components/Footer.vue";
 import { catchAndNotifyError } from "./notify";
 import Loading from "./components/Loading.vue";
 import WelcomeModal from "./components/WelcomeModal.vue";
+import IconCommentAdd from "~icons/uil/comment-add";
+import FeedbackForm from "./components/FeedbackForm.vue";
 
 export default defineComponent({
   components: { 
@@ -85,7 +99,9 @@ export default defineComponent({
     Navbar,
     AppFooter: Footer,
     Loading,
-    WelcomeModal
+    WelcomeModal,
+    IconCommentAdd,
+    FeedbackForm
   },
   setup() {
     const route = useRoute();
@@ -174,7 +190,11 @@ body {
   }
 }
 
-.btn-primary, .badge-primary, .tabs-boxed .tab-active {
+.badge-primary, .tabs-boxed .tab-active {
   @apply bg-rose-500 border-rose-500 text-white hover:text-white;
+}
+
+.btn.btn-primary {
+  @apply bg-rose-500 border-rose-500 hover:bg-rose-600 hover:border-rose-600 text-white hover:text-white;
 }
 </style>

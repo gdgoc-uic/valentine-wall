@@ -294,13 +294,19 @@ func getTermsAndConditions() ([]byte, error) {
 	return ioutil.ReadFile(filepath.Join(dataDirPath, "terms-and-conditions.md"))
 }
 
-func queryLatestMessagesFrom(db *sqlx.DB, t time.Time, existingEntriesChan chan Message) {
+func queryLatestMessagesFrom(db *sqlx.DB, f time.Time, t time.Time, existingEntriesChan chan Message) {
+	preds := sq.And{
+		sq.Eq{"deleted_at": nil, "has_gifts": false},
+		sq.LtOrEq{"created_at": t},
+	}
+
+	if !t.Equal(f) {
+		preds = append(preds, sq.GtOrEq{"created_at": f})
+	}
+
 	mSql, mArgs, _ := psql.Select(messagesCol...).
 		From("messages").Limit(12).OrderBy("created_at ASC").
-		Where(sq.And{
-			sq.Eq{"deleted_at": nil, "has_gifts": false},
-			sq.LtOrEq{"created_at": t},
-		}).ToSql()
+		Where(preds).ToSql()
 
 	rows, err := db.Queryx(mSql, mArgs...)
 	defer rows.Close()
@@ -630,8 +636,9 @@ func main() {
 		rw.Header().Set("Cache-Control", "no-cache")
 		rw.Header().Set("Connection", "keep-alive")
 
+		lastFrom := time.Now()
 		existingEntriesChan := make(chan Message, 10)
-		go queryLatestMessagesFrom(db, time.Now(), existingEntriesChan)
+		go queryLatestMessagesFrom(db, lastFrom, lastFrom, existingEntriesChan)
 		defer close(existingEntriesChan)
 
 		for {
@@ -639,7 +646,9 @@ func main() {
 			case entry := <-existingEntriesChan:
 				encodeDataSSE(rw, entry)
 			case <-time.After((1 * time.Minute) + (30 * time.Second)):
-				go queryLatestMessagesFrom(db, time.Now(), existingEntriesChan)
+				now := time.Now()
+				go queryLatestMessagesFrom(db, lastFrom, now, existingEntriesChan)
+				lastFrom = now
 			case <-r.Context().Done():
 				return
 			}
