@@ -2,6 +2,7 @@
 title: Rules
 ---
 
+- Don't have any person to send message with? You post it to your own ID!
 - Messages are limited to 240 characters long.
 - Inappropriate words are not allowed.
 - When choosing a gift, your message will be posted privately.
