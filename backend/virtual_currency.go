@@ -162,11 +162,9 @@ func (b *VirtualBank) AddInitialBalanceTo(uid string, tx *sqlx.Tx) (*VirtualTran
 		}
 	}
 
-	if newWallet, err := b.GetWalletByUID(uid); err == nil {
-		return b.AddBalanceTo(newWallet, amount, "Initial Balance", tx)
-	} else {
-		return nil, 0, err
-	}
+	newWallet := &VirtualWallet{}
+	rows.StructScan(newWallet)
+	return b.AddBalanceTo(newWallet, amount, "Initial Balance", tx)
 }
 
 func (b *VirtualBank) GetWalletByUID(uid string) (*VirtualWallet, error) {
