@@ -24,7 +24,10 @@
             <div class="flex flex-row justify-center flex-wrap">
                 <div 
                     :key="'member_' + i" v-for="(m, i) in members" class="p-4 flex flex-col items-center w-1/2">
-                    <img :src="getImageUrl(m.firstName)" class="rounded-full mb-3 border-4 border-rose-300 hover:border-rose-500 transition-colors" :alt="m.name">
+                    <img 
+                        :alt="m.name" 
+                        :src="'/about/' + m.firstName + '.jpg'" 
+                        class="rounded-full mb-3 border-4 border-rose-300 hover:border-rose-500 transition-colors" />
                     <p class="text-rose-500 font-semibold text-xl mb-1">{{ m.name }}</p>
                     <span class="text-gray-600">{{ m.org }}</span>
                     <p class="text-center">{{ m.roles.join(', ') }}</p>
@@ -55,10 +58,5 @@ export default {
             })
         }
     },
-    methods: {
-        getImageUrl(name) {
-            return new URL(`../assets/images/about/${name}.jpg`, import.meta.url).href
-        }
-    }
 }
 </script>
