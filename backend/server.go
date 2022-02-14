@@ -1360,12 +1360,20 @@ func main() {
 						Message:    "Failed to connect ID to user. Please try again.",
 					}
 				} else if err := wrapSqlResult(res, "Failed to connect ID to user. Please try again"); err != nil {
-					return err
+					if respErr, ok := err.(*ResponseError); ok {
+						return respErr
+					} else {
+						panic(err)
+					}
 				}
 
 				// initialize virtual wallet
 				if _, _, err := b.AddInitialBalanceTo(token.UID, tx); err != nil {
-					return err
+					if respErr, ok := err.(*ResponseError); ok {
+						return respErr
+					} else {
+						panic(err)
+					}
 				}
 				return nil
 			}); err != nil {
