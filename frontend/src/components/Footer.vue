@@ -4,6 +4,7 @@
     <p>Copyright &copy; 2022 <br /> A project of Google Developer Student Clubs - University of the Immaculate Conception Chapter.</p>
     <p>Google is a trademark of Google LLC.</p>
     <ul class="flex self-center space-x-3">
+      <li><router-link :to="{ name: 'recent-wall-page' }" class="text-rose-500 underline">Recent Messages</router-link></li>
       <li><a class="text-rose-500 underline" href="https://www.uic.edu.ph/">UIC Website</a></li>
       <li><a class="text-rose-500 underline" href="https://www.uic.edu.ph/privacy-policy/">UIC Privacy Policy</a></li>
       <li><a class="text-rose-500 underline" href="https://www.uic.edu.ph/privacy-policy/">GDSC-UIC Facebook Page</a></li>
