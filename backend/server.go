@@ -217,7 +217,6 @@ type Message struct {
 	UpdatedAt time.Time `db:"updated_at" json:"updated_at"`
 }
 
-var recentMessagesChan chan Message
 var messagesCol = []string{"id", "recipient_id", "content", "has_replied", "has_gifts", "created_at", "updated_at"}
 
 type RawMessage struct {
@@ -295,14 +294,32 @@ func getTermsAndConditions() ([]byte, error) {
 	return ioutil.ReadFile(filepath.Join(dataDirPath, "terms-and-conditions.md"))
 }
 
+func queryLatestMessagesFrom(db *sqlx.DB, t time.Time, existingEntriesChan chan Message) {
+	mSql, mArgs, _ := psql.Select(messagesCol...).
+		From("messages").Limit(12).OrderBy("created_at ASC").
+		Where(sq.And{sq.Eq{"deleted_at": nil, "has_gifts": false}, sq.LtOrEq{"created_at": time.Now()}}).ToSql()
+
+	rows, err := db.Queryx(mSql, mArgs...)
+	defer rows.Close()
+	if err != nil {
+		log.Println(err)
+		return
+	}
+	for rows.Next() {
+		msg := Message{}
+		if err := rows.StructScan(&msg); err != nil {
+			log.Println(err)
+		}
+		existingEntriesChan <- msg
+	}
+}
+
 var registrationKeys = cache.New(30*time.Minute, 10*time.Minute)
 
 func main() {
 	var chromeCtx context.Context
 	var chromeCancel context.CancelFunc
 	htmlTemplates := &htmlTemplate.Template{}
-	recentMessagesChan = make(chan Message, 10)
-	defer close(recentMessagesChan)
 
 	// terms and conditions
 	tac, err := getTermsAndConditions()
@@ -610,36 +627,16 @@ func main() {
 		rw.Header().Set("Cache-Control", "no-cache")
 		rw.Header().Set("Connection", "keep-alive")
 
-		// existingEntriesChan := make(chan Message, 10)
-
-		// go func() {
-		// 	mSql, mArgs, _ := psql.Select(messagesCol...).
-		// 		From("messages").Limit(12).OrderBy("created_at ASC").
-		// 		Where(sq.And{sq.Eq{"deleted_at": nil, "has_gifts": false}, sq.LtOrEq{"created_at": time.Now()}}).ToSql()
-
-		// 	rows, err := db.Queryx(mSql, mArgs...)
-		// 	if err != nil {
-		// 		log.Println(err)
-		// 		return
-		// 	}
-		// 	defer rows.Close()
-
-		// 	for rows.Next() {
-		// 		msg := Message{}
-		// 		if err := rows.StructScan(&msg); err != nil {
-		// 			log.Println(err)
-		// 		}
-		// 		existingEntriesChan <- msg
-		// 	}
-		// }()
-		// defer close(existingEntriesChan)
+		existingEntriesChan := make(chan Message, 10)
+		go queryLatestMessagesFrom(db, time.Now(), existingEntriesChan)
+		defer close(existingEntriesChan)
 
 		for {
 			select {
-			// case entry := <-existingEntriesChan:
-			// 	encodeDataSSE(rw, entry)
-			case entry := <-recentMessagesChan:
+			case entry := <-existingEntriesChan:
 				encodeDataSSE(rw, entry)
+			case <-time.After(30 * time.Second):
+				go queryLatestMessagesFrom(db, time.Now(), existingEntriesChan)
 			case <-r.Context().Done():
 				return
 			}
@@ -813,10 +810,6 @@ func main() {
 
 				// send the mail within n minutes.
 				passivePrintError(notifier.Notify())
-			}
-
-			if !submittedMsg.HasGifts {
-				recentMessagesChan <- submittedMsg.Message
 			}
 
 			return jsonEncode(rw, map[string]interface{}{
