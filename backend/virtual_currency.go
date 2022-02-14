@@ -33,6 +33,33 @@ type VirtualWallet struct {
 	Balance float32 `db:"balance" json:"balance"`
 }
 
+func (vw *VirtualWallet) Update(vTx *VirtualTransaction, tx *sqlx.Tx) (float32, error) {
+	rows, err := tx.Query(
+		fmt.Sprintf(
+			"UPDATE %s SET balance = $1 WHERE user_id = $2 RETURNING balance",
+			virtualWalletsTableName,
+		),
+		vw.Balance+vTx.Amount,
+		vw.UserID,
+	)
+	defer rows.Close()
+	if err != nil {
+		return 0, err
+	}
+
+	var newBalance float32
+	if !rows.Next() {
+		errMessage := "Unable to process your transaction. Please try again."
+		return 0, &ResponseError{
+			StatusCode: http.StatusUnprocessableEntity,
+			Message:    errMessage,
+		}
+	}
+
+	rows.Scan(&newBalance)
+	return newBalance, nil
+}
+
 type VirtualTransaction struct {
 	ID          string    `db:"id" json:"id"`
 	UserID      string    `db:"user_id" json:"user_id"`
@@ -117,25 +144,27 @@ func (b *VirtualBank) AddInitialAmountToExistingAccounts(firebaseApp *firebase.A
 	return nil
 }
 
-func (b *VirtualBank) AddInitialBalanceTo(uid string, tx *sqlx.Tx) (*VirtualTransaction, error) {
+func (b *VirtualBank) AddInitialBalanceTo(uid string, tx *sqlx.Tx) (*VirtualTransaction, float32, error) {
 	amount := float32(4000)
-	if vWallet, err := b.GetWalletByUID(uid); err == nil && vWallet.Balance <= 0 {
-		return b.AddBalanceTo(uid, amount, "Add balance", tx)
-	}
+	walletSql := fmt.Sprintf("INSERT INTO %s (user_id, balance) VALUES ($1, $2) RETURNING *", virtualWalletsTableName)
 
-	gotTransaction, err := b.AddTransaction(uid, amount, "Initial Balance", tx)
+	rows, err := tx.Queryx(walletSql, uid, amount)
+	defer rows.Close()
 	if err != nil {
-		return nil, err
+		return nil, 0, err
 	}
 
-	walletSql, walletArgs, _ := psql.Insert(virtualWalletsTableName).Columns("user_id", "balance").Values(uid, amount).ToSql()
-	if res, err := tx.Exec(walletSql, walletArgs...); err != nil {
-		return nil, err
-	} else if err := wrapSqlResult(res); err != nil {
-		return nil, err
+	var newWallet *VirtualWallet
+	if !rows.Next() {
+		errMessage := "Unable to create wallet. Please try again."
+		return nil, 0, &ResponseError{
+			StatusCode: http.StatusUnprocessableEntity,
+			Message:    errMessage,
+		}
 	}
 
-	return gotTransaction, nil
+	rows.StructScan(newWallet)
+	return b.AddBalanceTo(newWallet, amount, "Initial Balance", tx)
 }
 
 func (b *VirtualBank) GetWalletByUID(uid string) (*VirtualWallet, error) {
@@ -150,32 +179,32 @@ func (b *VirtualBank) GetWalletByUID(uid string) (*VirtualWallet, error) {
 	return vWallet, nil
 }
 
-func (b *VirtualBank) AddBalanceTo(uid string, amount float32, desc string, tx *sqlx.Tx) (*VirtualTransaction, error) {
-	vWallet, err := b.GetWalletByUID(uid)
-	if err == sql.ErrNoRows {
-		return b.AddInitialBalanceTo(uid, tx)
-	} else if err != nil {
-		return nil, err
-	}
-
-	gotTransaction, err := b.AddTransaction(uid, amount, desc, tx)
+func (b *VirtualBank) AddBalanceTo(wallet *VirtualWallet, amount float32, desc string, tx *sqlx.Tx) (*VirtualTransaction, float32, error) {
+	gotTransaction, err := b.AddTransaction(wallet, amount, desc, tx)
 	if err != nil {
-		return nil, err
+		return nil, wallet.Balance, err
+	} else if newBalance, err := wallet.Update(gotTransaction, tx); err != nil {
+		return nil, wallet.Balance, err
+	} else {
+		return gotTransaction, newBalance, nil
 	}
-
-	walletSql, walletArgs, _ := psql.Update(virtualWalletsTableName).Set("balance", vWallet.Balance+amount).Where(sq.Eq{"user_id": uid}).ToSql()
-	if res, err := tx.Exec(walletSql, walletArgs...); err != nil {
-		return nil, err
-	} else if err := wrapSqlResult(res); err != nil {
-		return nil, err
-	}
-
-	return gotTransaction, nil
 }
 
-func (b *VirtualBank) AddTransaction(uid string, amount float32, desc string, tx *sqlx.Tx) (*VirtualTransaction, error) {
+func (b *VirtualBank) AddTransaction(wallet *VirtualWallet, amount float32, desc string, tx *sqlx.Tx) (*VirtualTransaction, error) {
+	if wallet == nil {
+		return nil, &ResponseError{
+			StatusCode: http.StatusForbidden,
+		}
+	} else if wallet.Balance+amount <= 0 {
+		return nil, &ResponseError{
+			StatusCode: http.StatusBadRequest,
+			WError:     fmt.Errorf("(account=%s, balance=%.2f, amount=%.2f, amountAfter=%.2f)", wallet.UserID, wallet.Balance, amount, wallet.Balance+amount),
+			Message:    "Insufficient balance.",
+		}
+	}
+
 	newTransaction := &VirtualTransaction{
-		UserID:      uid,
+		UserID:      wallet.UserID,
 		Amount:      amount,
 		Description: desc,
 		CreatedAt:   time.Now(),
@@ -197,33 +226,19 @@ func (b *VirtualBank) AddTransaction(uid string, amount float32, desc string, tx
 	return newTransaction, nil
 }
 
-func (b *VirtualBank) DeductBalanceTo(uid string, amount float32, desc string, tx *sqlx.Tx) (float32, error) {
-	vWallet, err := b.GetWalletByUID(uid)
+func (b *VirtualBank) DeductBalanceTo(vWallet *VirtualWallet, amount float32, desc string, tx *sqlx.Tx) (*VirtualTransaction, float32, error) {
+	if vWallet == nil {
+		return nil, 0, fmt.Errorf("empty wallet")
+	}
+
+	gotTransaction, err := b.AddTransaction(vWallet, -amount, desc, tx)
 	if err != nil {
-		return 0, &ResponseError{
-			WError:     err,
-			StatusCode: http.StatusForbidden,
-		}
-	} else if vWallet.Balance-amount <= 0 {
-		return 0, &ResponseError{
-			StatusCode: http.StatusBadRequest,
-			WError:     fmt.Errorf("(account=%s, balance=%.2f, amount=%.2f, amountAfter=%.2f)", uid, vWallet.Balance, amount, vWallet.Balance-amount),
-			Message:    "Insufficient balance.",
-		}
+		return nil, vWallet.Balance, err
+	} else if newBalance, err := vWallet.Update(gotTransaction, tx); err != nil {
+		return nil, vWallet.Balance, err
+	} else {
+		return gotTransaction, newBalance, nil
 	}
-
-	if _, err := b.AddTransaction(uid, -amount, desc, tx); err != nil {
-		return 0, err
-	}
-
-	walletSql, walletArgs, _ := psql.Update(virtualWalletsTableName).Set("balance", vWallet.Balance-amount).Where(sq.Eq{"user_id": uid}).ToSql()
-	if res, err := tx.Exec(walletSql, walletArgs...); err != nil {
-		return 0, err
-	} else if err := wrapSqlResult(res); err != nil {
-		return 0, err
-	}
-
-	return vWallet.Balance - amount, nil
 }
 
 func (b *VirtualBank) ConvertIdleTime(uid string, lastActiveAt time.Time) (*VirtualTransaction, error) {
@@ -239,14 +254,22 @@ func (b *VirtualBank) ConvertIdleTime(uid string, lastActiveAt time.Time) (*Virt
 
 	var trans *VirtualTransaction
 	coinsToEarn := 20 * quotientMinutes
-	err := Transact(b.DB, func(tx *sqlx.Tx) error {
-		gotTransaction, err := b.AddBalanceTo(uid, float32(coinsToEarn), "Idle time earning", tx)
+	wallet, err := b.GetWalletByUID(uid)
+	if err != nil {
+		return nil, err
+	}
+
+	if err := Transact(b.DB, func(tx *sqlx.Tx) error {
+		gotTransaction, _, err := b.AddBalanceTo(wallet, float32(coinsToEarn), "Idle time earning", tx)
 		if gotTransaction != nil {
 			trans = gotTransaction
 		}
 		return err
-	})
-	return trans, err
+	}); err != nil {
+		return nil, err
+	}
+
+	return trans, nil
 }
 
 func (b *VirtualBank) GenerateCheque(toUID string, amount float32) (*Cheque, error) {
@@ -311,10 +334,15 @@ func (b *VirtualBank) DepositChequeByID(chequeID string, recipientUID string) er
 		return err
 	}
 
+	recipientWallet, err := b.GetWalletByUID(recipientUID)
+	if err != nil {
+		return err
+	}
+
 	return Transact(b.DB, func(tx *sqlx.Tx) error {
 		// deposit cheque
-		_, err := b.AddBalanceTo(
-			gotCheque.UserID,
+		_, _, err := b.AddBalanceTo(
+			recipientWallet,
 			gotCheque.Amount,
 			gotCheque.Description,
 			tx,
@@ -325,15 +353,7 @@ func (b *VirtualBank) DepositChequeByID(chequeID string, recipientUID string) er
 
 type virtualWalletKey struct{}
 
-func getVirtualWalletFromReq(r *http.Request) *VirtualWallet {
-	vWallet, ok := r.Context().Value(virtualWalletKey{}).(*VirtualWallet)
-	if !ok {
-		return nil
-	}
-	return vWallet
-}
-
-func checkBalance(b *VirtualBank) func(http.Handler) http.Handler {
+func injectWallet(b *VirtualBank) func(http.Handler) http.Handler {
 	return func(next http.Handler) http.Handler {
 		return wrapHandler(func(rw http.ResponseWriter, r *http.Request) error {
 			token := getAuthTokenByReq(r)
@@ -349,16 +369,38 @@ func checkBalance(b *VirtualBank) func(http.Handler) http.Handler {
 				return err
 			}
 
-			if vWallet.Balance <= 0 {
-				return &ResponseError{
-					StatusCode: http.StatusBadRequest,
-					Message:    "Account balance is zero.",
-				}
-			}
-
 			ctx := context.WithValue(r.Context(), virtualWalletKey{}, vWallet)
 			next.ServeHTTP(rw, r.WithContext(ctx))
 			return nil
 		})
 	}
+}
+
+func getVirtualWalletFromReq(r *http.Request) (*VirtualWallet, error) {
+	vWallet, ok := r.Context().Value(virtualWalletKey{}).(*VirtualWallet)
+	if !ok {
+		return nil, fmt.Errorf("wallet not found")
+	}
+	return vWallet, nil
+}
+
+func checkBalance(next http.Handler) http.Handler {
+	return wrapHandler(func(rw http.ResponseWriter, r *http.Request) error {
+		vWallet, err := getVirtualWalletFromReq(r)
+		if err != nil {
+			return &ResponseError{
+				StatusCode: http.StatusForbidden,
+				WError:     err,
+				Message:    "Transaction forbidden",
+			}
+		} else if vWallet.Balance <= 0 {
+			return &ResponseError{
+				StatusCode: http.StatusBadRequest,
+				Message:    "Account balance is zero.",
+			}
+		}
+
+		next.ServeHTTP(rw, r)
+		return nil
+	})
 }

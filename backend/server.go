@@ -217,7 +217,6 @@ type Message struct {
 	UpdatedAt time.Time `db:"updated_at" json:"updated_at"`
 }
 
-var recentMessagesChan chan Message
 var messagesCol = []string{"id", "recipient_id", "content", "has_replied", "has_gifts", "created_at", "updated_at"}
 
 type RawMessage struct {
@@ -295,14 +294,32 @@ func getTermsAndConditions() ([]byte, error) {
 	return ioutil.ReadFile(filepath.Join(dataDirPath, "terms-and-conditions.md"))
 }
 
+func queryLatestMessagesFrom(db *sqlx.DB, t time.Time, existingEntriesChan chan Message) {
+	mSql, mArgs, _ := psql.Select(messagesCol...).
+		From("messages").Limit(12).OrderBy("created_at ASC").
+		Where(sq.And{sq.Eq{"deleted_at": nil, "has_gifts": false}, sq.LtOrEq{"created_at": time.Now()}}).ToSql()
+
+	rows, err := db.Queryx(mSql, mArgs...)
+	defer rows.Close()
+	if err != nil {
+		log.Println(err)
+		return
+	}
+	for rows.Next() {
+		msg := Message{}
+		if err := rows.StructScan(&msg); err != nil {
+			log.Println(err)
+		}
+		existingEntriesChan <- msg
+	}
+}
+
 var registrationKeys = cache.New(30*time.Minute, 10*time.Minute)
 
 func main() {
 	var chromeCtx context.Context
 	var chromeCancel context.CancelFunc
 	htmlTemplates := &htmlTemplate.Template{}
-	recentMessagesChan = make(chan Message, 10)
-	defer close(recentMessagesChan)
 
 	// terms and conditions
 	tac, err := getTermsAndConditions()
@@ -399,7 +416,7 @@ func main() {
 		log.Println(err)
 	}
 
-	appCheckBalance := checkBalance(b)
+	appInjectWallet := injectWallet(b)
 
 	// invitation system
 	invSys := &InvitationSystem{
@@ -610,36 +627,16 @@ func main() {
 		rw.Header().Set("Cache-Control", "no-cache")
 		rw.Header().Set("Connection", "keep-alive")
 
-		// existingEntriesChan := make(chan Message, 10)
-
-		// go func() {
-		// 	mSql, mArgs, _ := psql.Select(messagesCol...).
-		// 		From("messages").Limit(12).OrderBy("created_at ASC").
-		// 		Where(sq.And{sq.Eq{"deleted_at": nil, "has_gifts": false}, sq.LtOrEq{"created_at": time.Now()}}).ToSql()
-
-		// 	rows, err := db.Queryx(mSql, mArgs...)
-		// 	if err != nil {
-		// 		log.Println(err)
-		// 		return
-		// 	}
-		// 	defer rows.Close()
-
-		// 	for rows.Next() {
-		// 		msg := Message{}
-		// 		if err := rows.StructScan(&msg); err != nil {
-		// 			log.Println(err)
-		// 		}
-		// 		existingEntriesChan <- msg
-		// 	}
-		// }()
-		// defer close(existingEntriesChan)
+		existingEntriesChan := make(chan Message, 10)
+		go queryLatestMessagesFrom(db, time.Now(), existingEntriesChan)
+		defer close(existingEntriesChan)
 
 		for {
 			select {
-			// case entry := <-existingEntriesChan:
-			// 	encodeDataSSE(rw, entry)
-			case entry := <-recentMessagesChan:
+			case entry := <-existingEntriesChan:
 				encodeDataSSE(rw, entry)
+			case <-time.After(30 * time.Second):
+				go queryLatestMessagesFrom(db, time.Now(), existingEntriesChan)
 			case <-r.Context().Done():
 				return
 			}
@@ -657,10 +654,11 @@ func main() {
 		}
 		return jsonEncode(rw, stats)
 	}))
-	r.With(jsonOnly, appVerifyUser, appCheckBalance).
+	r.With(jsonOnly, appVerifyUser, appInjectWallet, checkBalance).
 		Post("/messages", wrapHandler(func(rw http.ResponseWriter, r *http.Request) error {
 			token := getAuthTokenByReq(r)
 			authClient := getAuthClientByReq(r)
+			wallet, _ := getVirtualWalletFromReq(r)
 
 			var submittedMsg RawMessage
 			if err := json.NewDecoder(r.Body).Decode(&submittedMsg); err != nil {
@@ -728,8 +726,8 @@ func main() {
 
 			if err := Transact(db, func(tx *sqlx.Tx) error {
 				// transact first before proceeding
-				gotCurrentBalance, err := b.DeductBalanceTo(
-					token.UID,
+				_, gotCurrentBalance, err := b.DeductBalanceTo(
+					wallet,
 					sendPrice,
 					fmt.Sprintf("Send message to %s", submittedMsg.RecipientID),
 					tx,
@@ -768,12 +766,16 @@ func main() {
 			if err := Transact(db, func(tx *sqlx.Tx) error {
 				// give the money to the person
 				if hasMoney && gotUserErr == nil {
-					if _, err := b.AddBalanceTo(
-						recipientUser.UID,
-						moneyGift.Price,
-						fmt.Sprintf("Money gift from message %s", submittedMsg.ID),
-						tx,
-					); err != nil {
+					if recipientWallet, err := b.GetWalletByUID(recipientUser.UID); err == nil {
+						if _, _, err := b.AddBalanceTo(
+							recipientWallet,
+							moneyGift.Price,
+							fmt.Sprintf("Money gift from message %s", submittedMsg.ID),
+							tx,
+						); err != nil {
+							return err
+						}
+					} else {
 						return err
 					}
 				}
@@ -808,10 +810,6 @@ func main() {
 
 				// send the mail within n minutes.
 				passivePrintError(notifier.Notify())
-			}
-
-			if !submittedMsg.HasGifts {
-				recentMessagesChan <- submittedMsg.Message
 			}
 
 			return jsonEncode(rw, map[string]interface{}{
@@ -937,10 +935,11 @@ func main() {
 		})
 	}))
 
-	r.With(jsonOnly, appVerifyUser, getRawMessage).
+	r.With(jsonOnly, appVerifyUser, appInjectWallet, checkBalance, getRawMessage).
 		Post("/messages/{recipientId}/{messageId}/reply", wrapHandler(func(rw http.ResponseWriter, rr *http.Request) error {
 			// retrieve message
 			message := rr.Context().Value(gotMessageKey{}).(RawMessage)
+			wallet, _ := getVirtualWalletFromReq(rr)
 
 			// retrieve token
 			token := getAuthTokenByReq(rr)
@@ -982,8 +981,8 @@ func main() {
 
 			Transact(db, func(tx *sqlx.Tx) error {
 				// transact first before proceeding
-				if gotCurrentBalance, err := b.DeductBalanceTo(
-					token.UID,
+				if _, gotCurrentBalance, err := b.DeductBalanceTo(
+					wallet,
 					150.0,
 					fmt.Sprintf("Reply message to %s", reply.MessageID),
 					tx,
@@ -1365,7 +1364,7 @@ func main() {
 				}
 
 				// initialize virtual wallet
-				if _, err := b.AddInitialBalanceTo(token.UID, tx); err != nil {
+				if _, _, err := b.AddInitialBalanceTo(token.UID, tx); err != nil {
 					return err
 				}
 				return nil
