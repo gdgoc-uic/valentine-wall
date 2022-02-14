@@ -154,7 +154,6 @@ func (b *VirtualBank) AddInitialBalanceTo(uid string, tx *sqlx.Tx) (*VirtualTran
 		return nil, 0, err
 	}
 
-	var newWallet *VirtualWallet
 	if !rows.Next() {
 		errMessage := "Unable to create wallet. Please try again."
 		return nil, 0, &ResponseError{
@@ -163,8 +162,11 @@ func (b *VirtualBank) AddInitialBalanceTo(uid string, tx *sqlx.Tx) (*VirtualTran
 		}
 	}
 
-	rows.StructScan(newWallet)
-	return b.AddBalanceTo(newWallet, amount, "Initial Balance", tx)
+	if newWallet, err := b.GetWalletByUID(uid); err == nil {
+		return b.AddBalanceTo(newWallet, amount, "Initial Balance", tx)
+	} else {
+		return nil, 0, err
+	}
 }
 
 func (b *VirtualBank) GetWalletByUID(uid string) (*VirtualWallet, error) {
