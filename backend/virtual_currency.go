@@ -207,6 +207,7 @@ func (b *VirtualBank) DeductBalanceTo(uid string, amount float32, desc string, t
 	} else if vWallet.Balance-amount <= 0 {
 		return 0, &ResponseError{
 			StatusCode: http.StatusBadRequest,
+			WError:     fmt.Errorf("(account=%s, balance=%.2f, amount=%.2f, amountAfter=%.2f)", uid, vWallet.Balance, amount, vWallet.Balance-amount),
 			Message:    "Insufficient balance.",
 		}
 	}
