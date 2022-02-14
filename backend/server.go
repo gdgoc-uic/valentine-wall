@@ -412,9 +412,9 @@ func main() {
 
 	// virtual currency system (aka virtual bank)
 	b := &VirtualBank{DB: db}
-	if err := b.AddInitialAmountToExistingAccounts(firebaseApp); err != nil {
-		log.Println(err)
-	}
+	// if err := b.AddInitialAmountToExistingAccounts(firebaseApp); err != nil {
+	// 	log.Println(err)
+	// }
 
 	appInjectWallet := injectWallet(b)
 
