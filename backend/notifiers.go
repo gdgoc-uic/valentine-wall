@@ -39,7 +39,7 @@ type TwUploadImageResponse struct {
 	} `json:"image"`
 }
 
-var twHashTag = "#ProjectKupido2022"
+var twHashTag = "#UICValentineWall"
 
 type TwitterNotifier struct {
 	Connection  UserConnection
