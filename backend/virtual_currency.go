@@ -149,7 +149,6 @@ func (b *VirtualBank) AddInitialBalanceTo(uid string, tx *sqlx.Tx) (*VirtualTran
 	walletSql := fmt.Sprintf("INSERT INTO %s (user_id, balance) VALUES ($1, $2) RETURNING *", virtualWalletsTableName)
 
 	rows, err := tx.Queryx(walletSql, uid, amount)
-	defer rows.Close()
 	if err != nil {
 		return nil, 0, err
 	}
@@ -164,6 +163,7 @@ func (b *VirtualBank) AddInitialBalanceTo(uid string, tx *sqlx.Tx) (*VirtualTran
 
 	newWallet := &VirtualWallet{}
 	rows.StructScan(newWallet)
+	rows.Close()
 	return b.AddBalanceTo(newWallet, amount, "Initial Balance", tx)
 }
 
