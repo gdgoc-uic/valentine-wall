@@ -52,7 +52,7 @@ export default {
   data() {
     return {
       open: false,
-      isProcessing: true,
+      isProcessing: false,
       isSuccess: false
     }
   },
