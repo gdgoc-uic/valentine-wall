@@ -721,34 +721,49 @@ func main() {
 			}
 
 			hasMoney := false
-			for _, giftId := range submittedMsg.GiftIDs {
-				giftPrice := giftList.GetPriceByID(giftId)
-				sendPrice += giftPrice
-
-				if giftId == moneyGift.ID {
-					hasMoney = true
-				}
-			}
+			totalGiftPrice := float32(0)
 
 			var currentBalance float32
-			recipientUser, gotUserErr := getUserBySID(db, authClient, submittedMsg.RecipientID)
-			if gotUserErr != nil {
-				passivePrintError(err)
-			}
-
 			if err := Transact(db, func(tx *sqlx.Tx) error {
+				giftValues := []interface{}{}
+				for _, giftId := range submittedMsg.GiftIDs {
+					// accumulate sql values
+					giftValues = append(giftValues, submittedMsg.ID, giftId)
+
+					// add to total gift price
+					totalGiftPrice += giftList[giftId-1].Price
+
+					// check if gift is money
+					if giftId == moneyGiftId {
+						hasMoney = true
+					}
+				}
+
 				// transact first before proceeding
-				_, gotCurrentBalance, err := b.DeductBalanceTo(
+				if _, gotCurrentBalance, err := b.DeductBalanceTo(
 					wallet,
 					sendPrice,
 					fmt.Sprintf("Send message to %s", submittedMsg.RecipientID),
 					tx,
-				)
-				if err != nil {
+				); err != nil {
 					return err
+				} else {
+					currentBalance = gotCurrentBalance
 				}
 
-				currentBalance = gotCurrentBalance
+				// make gift purchase separate transaction
+				if totalGiftPrice > 0 {
+					if _, gotCurrentBalance, err := b.DeductBalanceTo(
+						wallet,
+						totalGiftPrice,
+						fmt.Sprintf("Gifts for %s", submittedMsg.RecipientID),
+						tx,
+					); err != nil {
+						return err
+					} else {
+						currentBalance = gotCurrentBalance
+					}
+				}
 
 				// insert message
 				if rows, err := tx.NamedQuery(
@@ -762,12 +777,13 @@ func main() {
 					submittedMsg.ID = id
 				}
 
-				for _, giftId := range submittedMsg.GiftIDs {
-					if res, err := tx.Exec("INSERT INTO message_gifts (message_id, gift_id) VALUES ($1, $2)", submittedMsg.ID, giftId); err != nil {
-						return err
-					} else if err := wrapSqlResult(res); err != nil {
-						return err
-					}
+				insertGiftQuery, insertGiftArgs, _ := psql.Insert("message_gifts").
+					Columns("message_id", "gift_id").
+					Values(giftValues...).ToSql()
+				if res, err := tx.Exec(insertGiftQuery, insertGiftArgs...); err != nil {
+					return err
+				} else if err := wrapSqlResult(res); err != nil {
+					return err
 				}
 
 				return nil
@@ -775,13 +791,17 @@ func main() {
 				return err
 			}
 
-			if err := Transact(db, func(tx *sqlx.Tx) error {
-				// give the money to the person
-				if hasMoney && gotUserErr == nil {
+			// get user and give money if any
+			recipientUser, gotUserErr := getUserBySID(db, authClient, submittedMsg.RecipientID)
+			if gotUserErr != nil {
+				passivePrintError(err)
+			} else if hasMoney {
+				if err := Transact(db, func(tx *sqlx.Tx) error {
+					// give the money to the person
 					if recipientWallet, err := b.GetWalletByUID(recipientUser.UID); err == nil {
 						if _, _, err := b.AddBalanceTo(
 							recipientWallet,
-							moneyGift.Price,
+							moneyGiftPrice,
 							fmt.Sprintf("Money gift from message %s", submittedMsg.ID),
 							tx,
 						); err != nil {
@@ -790,11 +810,11 @@ func main() {
 					} else {
 						return err
 					}
-				}
 
-				return nil
-			}); err != nil {
-				passivePrintError(err)
+					return nil
+				}); err != nil {
+					passivePrintError(err)
+				}
 			}
 
 			// save to search engine
