@@ -84,7 +84,7 @@
         <message-tiles 
           :limit="20" 
           box-class="w-1/2 md:w-1/3"
-          :messages="recentMessages" prepend />
+          :messages="recentMessages" />
       </div>
     </section>
   </main>

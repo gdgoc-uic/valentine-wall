@@ -46,19 +46,20 @@ var sendPrice = float32(150.0)
 
 var validator = goValidator.New()
 var giftList = Gifts{
-	{1, "sunflower", "Sunflower", 350},
-	{2, "rose", "Rose", 450},
-	{3, "balloons", "Balloons", 100},
-	{4, "teddy-bear", "Teddy Bear", 200},
-	{5, "ring", "Ring", 800},
-	{6, "money", "Money", 1000}, // NOTE: if you choose money, the money will be added to virtual coins
-	{7, "heart", "Heart", 200},
-	{8, "chocolate", "Chocolate", 500},
+	{1, "sunflower", "Sunflower", 350.0},
+	{2, "rose", "Rose", 450.0},
+	{3, "balloons", "Balloons", 100.0},
+	{4, "teddy-bear", "Teddy Bear", 200.0},
+	{5, "ring", "Ring", 800.0},
+	{6, "money", "Money", 1000.0}, // NOTE: if you choose money, the money will be added to virtual coins
+	{7, "heart", "Heart", 200.0},
+	{8, "chocolate", "Chocolate", 500.0},
 	{9, "pizza", "Pizza", 150},
-	{10, "milk-tea", "Milk Tea", 150},
+	{10, "milk-tea", "Milk Tea", 150.0},
 }
 
-var moneyGift = giftList[5]
+var moneyGiftId = 6
+var moneyGiftPrice = giftList[moneyGiftId-1].Price
 
 var collegeDepartments = []CollegeDepartment{
 	{"CABE", "College of Accounting and Business Education"},
