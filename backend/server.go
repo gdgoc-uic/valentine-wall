@@ -296,7 +296,7 @@ func getTermsAndConditions() ([]byte, error) {
 
 func queryLatestMessagesFrom(db *sqlx.DB, t time.Time, existingEntriesChan chan Message) {
 	mSql, mArgs, _ := psql.Select(messagesCol...).
-		From("messages").Limit(12).OrderBy("created_at DESC").
+		From("messages").Limit(12).OrderBy("created_at ASC").
 		Where(sq.And{
 			sq.Eq{"deleted_at": nil, "has_gifts": false},
 			sq.LtOrEq{"created_at": t},
