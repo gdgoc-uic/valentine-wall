@@ -643,7 +643,7 @@ func main() {
 			select {
 			case entry := <-existingEntriesChan:
 				encodeDataSSE(rw, entry)
-			case <-time.After((1 * time.Minute) + (30 * time.Second)):
+			case <-time.After(30 * time.Second):
 				now := time.Now()
 				go queryLatestMessagesFrom(db, lastFrom, now, existingEntriesChan)
 				lastFrom = now
