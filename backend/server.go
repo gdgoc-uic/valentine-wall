@@ -399,7 +399,7 @@ func main() {
 		log.Println(err)
 	}
 
-	appCheckBalance := checkBalance(b)
+	appInjectWallet := injectWallet(b)
 
 	// invitation system
 	invSys := &InvitationSystem{
@@ -657,10 +657,11 @@ func main() {
 		}
 		return jsonEncode(rw, stats)
 	}))
-	r.With(jsonOnly, appVerifyUser, appCheckBalance).
+	r.With(jsonOnly, appVerifyUser, appInjectWallet, checkBalance).
 		Post("/messages", wrapHandler(func(rw http.ResponseWriter, r *http.Request) error {
 			token := getAuthTokenByReq(r)
 			authClient := getAuthClientByReq(r)
+			wallet, _ := getVirtualWalletFromReq(r)
 
 			var submittedMsg RawMessage
 			if err := json.NewDecoder(r.Body).Decode(&submittedMsg); err != nil {
@@ -728,8 +729,8 @@ func main() {
 
 			if err := Transact(db, func(tx *sqlx.Tx) error {
 				// transact first before proceeding
-				gotCurrentBalance, err := b.DeductBalanceTo(
-					token.UID,
+				_, gotCurrentBalance, err := b.DeductBalanceTo(
+					wallet,
 					sendPrice,
 					fmt.Sprintf("Send message to %s", submittedMsg.RecipientID),
 					tx,
@@ -768,12 +769,16 @@ func main() {
 			if err := Transact(db, func(tx *sqlx.Tx) error {
 				// give the money to the person
 				if hasMoney && gotUserErr == nil {
-					if _, err := b.AddBalanceTo(
-						recipientUser.UID,
-						moneyGift.Price,
-						fmt.Sprintf("Money gift from message %s", submittedMsg.ID),
-						tx,
-					); err != nil {
+					if recipientWallet, err := b.GetWalletByUID(recipientUser.UID); err == nil {
+						if _, _, err := b.AddBalanceTo(
+							recipientWallet,
+							moneyGift.Price,
+							fmt.Sprintf("Money gift from message %s", submittedMsg.ID),
+							tx,
+						); err != nil {
+							return err
+						}
+					} else {
 						return err
 					}
 				}
@@ -937,10 +942,11 @@ func main() {
 		})
 	}))
 
-	r.With(jsonOnly, appVerifyUser, getRawMessage).
+	r.With(jsonOnly, appVerifyUser, appInjectWallet, checkBalance, getRawMessage).
 		Post("/messages/{recipientId}/{messageId}/reply", wrapHandler(func(rw http.ResponseWriter, rr *http.Request) error {
 			// retrieve message
 			message := rr.Context().Value(gotMessageKey{}).(RawMessage)
+			wallet, _ := getVirtualWalletFromReq(rr)
 
 			// retrieve token
 			token := getAuthTokenByReq(rr)
@@ -982,8 +988,8 @@ func main() {
 
 			Transact(db, func(tx *sqlx.Tx) error {
 				// transact first before proceeding
-				if gotCurrentBalance, err := b.DeductBalanceTo(
-					token.UID,
+				if _, gotCurrentBalance, err := b.DeductBalanceTo(
+					wallet,
 					150.0,
 					fmt.Sprintf("Reply message to %s", reply.MessageID),
 					tx,
@@ -1365,7 +1371,7 @@ func main() {
 				}
 
 				// initialize virtual wallet
-				if _, err := b.AddInitialBalanceTo(token.UID, tx); err != nil {
+				if _, _, err := b.AddInitialBalanceTo(token.UID, tx); err != nil {
 					return err
 				}
 				return nil

@@ -147,17 +147,27 @@ func (sys *InvitationSystem) UseInvitationFromReq(rw http.ResponseWriter, r *htt
 		}
 
 		// give money to origin user
-		if _, err := b.AddBalanceTo(inv.UserID, invitationMoney, "Invitation incentive", tx); err != nil {
+		if invWallet, err := b.GetWalletByUID(inv.UserID); err == nil {
+			if _, _, err := b.AddBalanceTo(invWallet, invitationMoney, "Invitation incentive", tx); err != nil {
+				return err
+			}
+		} else {
 			return err
 		}
 
 		// give money to newly-created user
-		_, err := b.AddBalanceTo(
-			signedUpUid, invitationMoney,
-			fmt.Sprintf("Accepted invitation from %s", signedUpUid), tx,
-		)
+		if newWallet, err := b.GetWalletByUID(signedUpUid); err == nil {
+			if _, _, err := b.AddBalanceTo(
+				newWallet, invitationMoney,
+				fmt.Sprintf("Accepted invitation from %s", signedUpUid), tx,
+			); err != nil {
+				return err
+			}
+		} else {
+			return err
+		}
 
-		return err
+		return nil
 	})
 
 	if err == nil {
