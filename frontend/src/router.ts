@@ -79,6 +79,9 @@ const routes: RouteRecordRaw[] = [
     name: 'about-page',
     path: '/about',
     component: () => import('./pages/About.vue'),
+    meta: {
+      pageTitle: 'About'
+    }
   },
   {
     name: 'settings-page',

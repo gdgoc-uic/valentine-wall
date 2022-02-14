@@ -43,8 +43,6 @@ export default {
     components: {
         AboutText
     },
-    mounted() {
-    },
     computed: {
         members() {
             return members.map(m => {
