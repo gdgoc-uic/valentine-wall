@@ -174,7 +174,7 @@ body {
   }
 }
 
-.btn-primary, .step-primary, .badge-primary, .tabs-boxed .tab-active {
+.btn-primary, .badge-primary, .tabs-boxed .tab-active {
   @apply bg-rose-500 border-rose-500 text-white hover:text-white;
 }
 </style>

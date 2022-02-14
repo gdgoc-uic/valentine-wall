@@ -54,10 +54,13 @@
             </div>
             <div class="flex justify-between items-center mt-4">
               <content-counter ref="counter" :content="content" :newline-count="13" />
-              <button
-                class="self-end px-12 btn bg-rose-500 hover:bg-rose-600 border-none"
-                type="submit"
-                :disabled="!shouldSend">Send</button>
+              <div class="indicator">
+                <div class="indicator-item badge badge-primary">ღ150.0</div> 
+                <button
+                  class="self-end px-12 btn bg-rose-500 hover:bg-rose-600 border-none"
+                  type="submit"
+                  :disabled="!shouldSend">Send</button>
+              </div>
             </div>
           </form>
 

@@ -480,7 +480,7 @@ func main() {
 				return err
 			}
 
-			timeToCache := 30 * time.Minute
+			timeToCache := 15 * time.Minute
 			// if targetEnv == "development" {
 			// timeToCache := 30 * time.Second
 			// timeToCache := 5 * time.Second
