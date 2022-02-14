@@ -746,7 +746,7 @@ func main() {
 				); err != nil {
 					return err
 				} else {
-					currentBalance = gotCurrentBalance
+					wallet.Balance = gotCurrentBalance
 				}
 
 				// make gift purchase separate transaction
@@ -773,15 +773,21 @@ func main() {
 					return err
 				} else {
 					submittedMsg.ID = id
-				}
 
-				insertGiftQuery, insertGiftArgs, _ := psql.Insert("message_gifts").
-					Columns("message_id", "gift_id").
-					Values(giftValues...).ToSql()
-				if res, err := tx.Exec(insertGiftQuery, insertGiftArgs...); err != nil {
-					return err
-				} else if err := wrapSqlResult(res); err != nil {
-					return err
+					if len(giftValues) != 0 {
+						for i := 0; i < len(giftValues); i += 2 {
+							giftValues[i] = id
+						}
+
+						insertGiftQuery, insertGiftArgs, _ := psql.Insert("message_gifts").
+							Columns("message_id", "gift_id").
+							Values(giftValues...).ToSql()
+						if res, err := tx.Exec(insertGiftQuery, insertGiftArgs...); err != nil {
+							return err
+						} else if err := wrapSqlResult(res); err != nil {
+							return err
+						}
+					}
 				}
 
 				return nil

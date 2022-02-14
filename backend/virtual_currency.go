@@ -57,6 +57,7 @@ func (vw *VirtualWallet) Update(vTx *VirtualTransaction, tx *sqlx.Tx) (float32, 
 	}
 
 	rows.Scan(&newBalance)
+	vw.Balance = newBalance
 	return newBalance, nil
 }
 
