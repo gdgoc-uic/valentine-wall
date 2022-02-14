@@ -610,36 +610,36 @@ func main() {
 		rw.Header().Set("Cache-Control", "no-cache")
 		rw.Header().Set("Connection", "keep-alive")
 
-		existingEntriesChan := make(chan Message, 10)
+		// existingEntriesChan := make(chan Message, 10)
 
-		go func() {
-			mSql, mArgs, _ := psql.Select(messagesCol...).
-				From("messages").Limit(12).OrderBy("created_at ASC").
-				Where(sq.And{sq.Eq{"deleted_at": nil, "has_gifts": false}, sq.LtOrEq{"created_at": time.Now()}}).ToSql()
+		// go func() {
+		// 	mSql, mArgs, _ := psql.Select(messagesCol...).
+		// 		From("messages").Limit(12).OrderBy("created_at ASC").
+		// 		Where(sq.And{sq.Eq{"deleted_at": nil, "has_gifts": false}, sq.LtOrEq{"created_at": time.Now()}}).ToSql()
 
-			rows, err := db.Queryx(mSql, mArgs...)
-			if err != nil {
-				log.Println(err)
-				return
-			}
-			defer rows.Close()
+		// 	rows, err := db.Queryx(mSql, mArgs...)
+		// 	if err != nil {
+		// 		log.Println(err)
+		// 		return
+		// 	}
+		// 	defer rows.Close()
 
-			for rows.Next() {
-				msg := Message{}
-				if err := rows.StructScan(&msg); err != nil {
-					log.Println(err)
-				}
-				existingEntriesChan <- msg
-			}
-		}()
-		defer close(existingEntriesChan)
+		// 	for rows.Next() {
+		// 		msg := Message{}
+		// 		if err := rows.StructScan(&msg); err != nil {
+		// 			log.Println(err)
+		// 		}
+		// 		existingEntriesChan <- msg
+		// 	}
+		// }()
+		// defer close(existingEntriesChan)
 
 		for {
 			select {
-			case entry := <-existingEntriesChan:
+			// case entry := <-existingEntriesChan:
+			// 	encodeDataSSE(rw, entry)
+			case entry := <-recentMessagesChan:
 				encodeDataSSE(rw, entry)
-			case entry2 := <-recentMessagesChan:
-				encodeDataSSE(rw, entry2)
 			case <-r.Context().Done():
 				return
 			}
