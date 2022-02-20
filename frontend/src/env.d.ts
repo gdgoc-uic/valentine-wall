@@ -9,6 +9,7 @@ declare module '*.vue' {
 
 interface ImportMetaEnv {
   readonly VITE_BACKEND_URL: string
+  readonly VITE_READ_ONLY: string
   readonly VITE_FRONTEND_URL: string
   readonly VITE_REPORT_API_URL: string
   readonly VITE_REPORT_API_CATEGORY_ID_KEY: string

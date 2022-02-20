@@ -1,5 +1,5 @@
 <template>
-    <button v-if="!$store.getters.isLoggedIn" @click="login" class="btn text-gray-500 bg-white hover:bg-gray-100 hover:text-gray-500 normal-case border-0 shadow-md space-x-3">
+    <button v-if="!$store.getters.isLoggedIn" @click="login" class="btn text-gray-500 bg-white hover:bg-gray-100 hover:text-gray-500 normal-case border border-gray-300 shadow-md space-x-3">
         <google-icon />
         <span>Sign in with UIC Google</span>
     </button>

@@ -7,6 +7,7 @@ import (
 	"log"
 	"os"
 	"path/filepath"
+	"regexp"
 	"strconv"
 
 	goaway "github.com/TwiN/go-away"
@@ -21,6 +22,8 @@ type CustomProfanityDictionary struct {
 	FalseNegatives []string
 }
 
+var emailRegex *regexp.Regexp
+
 // uninit'ed variables
 var databasePrefix = "valentine-wall"
 var databasePath string
@@ -29,6 +32,7 @@ var baseUrl string
 var twitterOauth1Config *oauth1.Config
 var gAppCredPath string
 var chromeDevtoolsURL string
+var readOnly = false
 
 // TODO: add custom dictionary for bisaya and tagalog
 var profanityDetector *goaway.ProfanityDetector
@@ -83,6 +87,15 @@ func loadCustomProfanityDetector(customDictionary *CustomProfanityDictionary) *g
 }
 
 func init() {
+	log.Println("compiling email regex...")
+	{
+		var err error
+		emailRegex, err = regexp.Compile(`\A[a-z]+_([0-9]+)@uic.edu.ph\z`)
+		if err != nil {
+			log.Panicln(err)
+		}
+	}
+
 	// if err := godotenv.Load("./.server.env"); err != nil {
 	// 	log.Panicln(err)
 	// }
@@ -176,5 +189,9 @@ func init() {
 
 	if gotInvitationCookieName, exists := os.LookupEnv("INVITATION_COOKIE_NAME"); exists {
 		invitationCookieName = gotInvitationCookieName
+	}
+
+	if gotReadOnly, exists := os.LookupEnv("READ_ONLY"); exists {
+		readOnly = gotReadOnly == "true"
 	}
 }

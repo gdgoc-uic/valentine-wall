@@ -14,6 +14,7 @@ ARG firebase_project_id
 ARG report_api_url
 ARG report_api_key
 ARG report_api_category_id_key
+ARG read_only
 
 ENV VITE_FRONTEND_URL=${frontend_url}
 ENV VITE_BACKEND_URL=${backend_url}
@@ -27,6 +28,7 @@ ENV VITE_FIREBASE_PROJECT_ID=${firebase_project_id}
 ENV VITE_REPORT_API_URL=${report_api_url}
 ENV VITE_REPORT_API_KEY=${report_api_key}
 ENV VITE_REPORT_API_CATEGORY_ID_KEY=${report_api_category_id_key}
+ENV VITE_READ_ONLY=${read_only}
 
 COPY . .
 RUN npm install

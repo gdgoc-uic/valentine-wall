@@ -139,12 +139,14 @@ export default defineComponent({
         this.$store.dispatch('onReceiveUser', user);
       });
 
-      Promise.all([
-        this.$store.dispatch('getGiftList'),
-        this.$store.dispatch('getDepartmentList')
-      ]).catch((err) => {
-        catchAndNotifyError(this, err);
-      });
+      if (import.meta.env.VITE_READ_ONLY !== "true") {
+        Promise.all([
+          this.$store.dispatch('getGiftList'),
+          this.$store.dispatch('getDepartmentList')
+        ]).catch((err) => {
+          catchAndNotifyError(this, err);
+        });
+      }
     }
   },
 })

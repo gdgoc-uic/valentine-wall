@@ -186,17 +186,20 @@ export function createStore() {
           commit('SET_USER_ID', user.uid);
           commit('SET_USER_EMAIL', user.email ?? '<unknown e-mail>');
           commit('SET_USER_ACCESS_TOKEN', await user.getIdToken(false));
-          await Promise.all([
-            getters.apiClient.post('/user/session', { credentials: 'include' }),
-            dispatch('getUserInfo')
-          ]);
 
-          // it should not affect the whole flow just in case
-          // updateLastActiveAt won't go through
-          try {
-            await dispatch('updateLastActiveAt');
-          } catch (e) {
-            console.error(e);
+          if (import.meta.env.VITE_READ_ONLY !== 'true') {
+            await Promise.all([
+              getters.apiClient.post('/user/session', { credentials: 'include' }),
+              dispatch('getUserInfo')
+            ]);
+  
+            // it should not affect the whole flow just in case
+            // updateLastActiveAt won't go through
+            try {
+              await dispatch('updateLastActiveAt');
+            } catch (e) {
+              console.error(e);
+            }
           }
 
           setUserId(analytics!, user.uid);
@@ -210,7 +213,10 @@ export function createStore() {
       },
       async logout({ commit, getters }) {
         try {
-          await getters.apiClient.post('/user/logout_callback');
+          if (import.meta.env.VITE_READ_ONLY !== 'true') {
+            await getters.apiClient.post('/user/logout_callback');
+          }
+
           await auth.signOut();
           commit('SET_USER_ID', '');
           commit('SET_USER_EMAIL', '');
@@ -260,6 +266,7 @@ export function createStore() {
         await getters.apiClient.patch('/user/session');
       },
       checkFirstTimeVisitor({ commit }) {
+        if (import.meta.env.VITE_READ_ONLY === "true") return;
         if (!localStorage.getItem(firstTimeKey)) {
           commit('SET_WELCOME_MODAL_OPEN', true);
         }
