@@ -8,12 +8,15 @@ import (
 	"encoding/json"
 	"fmt"
 	htmlTemplate "html/template"
+	"io"
 	"io/ioutil"
 	"log"
 	"net/http"
+	"os"
 	"path/filepath"
 	"sort"
 	"strconv"
+	"strings"
 	"sync"
 	"text/template"
 	"time"
@@ -320,11 +323,11 @@ func queryLatestMessagesFrom(db *sqlx.DB, f time.Time, t time.Time, existingEntr
 		Where(preds).ToSql()
 
 	rows, err := db.Queryx(mSql, mArgs...)
-	defer rows.Close()
 	if err != nil {
 		log.Println(err)
 		return
 	}
+	defer rows.Close()
 	for rows.Next() {
 		msg := Message{}
 		if err := rows.StructScan(&msg); err != nil {
@@ -332,6 +335,25 @@ func queryLatestMessagesFrom(db *sqlx.DB, f time.Time, t time.Time, existingEntr
 		}
 		existingEntriesChan <- msg
 	}
+}
+
+func FileServer(r chi.Router, path string, root http.FileSystem) {
+	if strings.ContainsAny(path, "{}*") {
+		panic("FileServer does not permit any URL parameters.")
+	}
+
+	if path != "/" && path[len(path)-1] != '/' {
+		path += "/"
+	}
+	path += "*"
+
+	r.Get(path, func(w http.ResponseWriter, r *http.Request) {
+		rctx := chi.RouteContext(r.Context())
+		pathPrefix := strings.TrimSuffix(rctx.RoutePattern(), "/*")
+		fmt.Println(pathPrefix)
+		fs := http.StripPrefix(pathPrefix, http.FileServer(root))
+		fs.ServeHTTP(w, r)
+	})
 }
 
 var zipFiles = sync.Map{}
@@ -474,6 +496,11 @@ func main() {
 			StatusCode: http.StatusMethodNotAllowed,
 		}
 	}))
+
+	// renderer assets
+	workDir, _ := os.Getwd()
+	filesDir := http.Dir(filepath.Join(workDir, "renderer_assets"))
+	FileServer(r, "/renderer_assets", filesDir)
 
 	if !readOnly {
 		r.Get("/terms-and-conditions", func(rw http.ResponseWriter, r *http.Request) {
@@ -1815,6 +1842,55 @@ window.opener.postMessage({message:'twitter connect success',user_connections:%s
 			}
 		})
 	}
+
+	r.Get("/__archive_all", wrapHandler(func(rw http.ResponseWriter, r *http.Request) error {
+		rw.Header().Set("Content-Type", "application/zip")
+		rw.Header().Set("Content-Disposition", "attachment; filename=vwall.zip")
+
+		rows, err := db.Queryx("SELECT * FROM messages")
+		if err != nil {
+			return err
+		}
+
+		defer rows.Close()
+
+		zipArchive := &bytes.Buffer{}
+		zipWriter := zip.NewWriter(zipArchive)
+
+		for rows.Next() {
+			msg := RawMessage{}
+			if err := rows.StructScan(&msg); err != nil {
+				return err
+			}
+
+			if err := db.Select(&msg.GiftIDs, "SELECT gift_id FROM message_gifts WHERE message_id = $1", msg.ID); err != nil {
+				passivePrintError(err)
+			}
+
+			buf, err := imageRenderer.Render(imageTypeTwitter, msg.Message)
+			if err != nil {
+				return err
+			}
+
+			msgRID := msg.RecipientID
+			if len(msg.GiftIDs) != 0 {
+				msgRID = "g_" + msgRID
+			}
+
+			filePath := filepath.Join("messages", fmt.Sprintf("%s/messages_%s_%s.png", msg.RecipientID, msgRID, msg.ID))
+			fileWriter, err := zipWriter.Create(filePath)
+			if err != nil {
+				return err
+			}
+
+			fileWriter.Write(buf)
+		}
+
+		// TODO: generate summary
+		passivePrintError(zipWriter.Close())
+		io.Copy(rw, zipArchive)
+		return nil
+	}))
 
 	log.Printf("Server opened on http://localhost:%d\n", serverPort)
 	if err := http.ListenAndServe(fmt.Sprintf(":%d", serverPort), r); err != nil {
