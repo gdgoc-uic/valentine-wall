@@ -1888,10 +1888,10 @@ window.opener.postMessage({message:'twitter connect success',user_connections:%s
 
 				fileWriter.Write(buf)
 			}
-			zipFiles.Store("vwall.zip", zipArchive.Bytes())
 
 			// TODO: generate summary
 			passivePrintError(zipWriter.Close())
+			zipFiles.Store("vwall.zip", zipArchive.Bytes())
 			io.Copy(rw, zipArchive)
 		} else {
 			rw.Write(gotZip.([]byte))
