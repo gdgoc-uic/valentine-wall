@@ -922,6 +922,15 @@ func main() {
 				rw.Header().Set("Content-Type", "image/png")
 				rw.Write(buf)
 				return nil
+			} else if rr.URL.Query().Has("template_image") {
+				rw.Header().Set("Content-Type", "text/html")
+				if err := imageRenderer.Template.Execute(rw, RendererContext{
+					RawMessage: message,
+					BackendURL: baseUrl,
+				}); err != nil {
+					return err
+				}
+				return nil
 			}
 
 			isDeletable := false

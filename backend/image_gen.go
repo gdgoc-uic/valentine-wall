@@ -8,6 +8,7 @@ import (
 	"io"
 	"log"
 	"os"
+	"sync"
 	"time"
 
 	"github.com/chromedp/cdproto/page"
@@ -174,24 +175,45 @@ func generateImagePNGChrome(wr io.Writer, parentChromeCtx context.Context, tmpl 
 	defer acancel()
 
 	// render to browser
-	var buf []byte
-	actions := chromedp.Tasks{
+	if err := chromedp.Run(actx,
 		chromedp.Navigate("about:blank"),
-		chromedp.ActionFunc(func(c context.Context) error {
-			frameTree, err := page.GetFrameTree().Do(c)
-			if err != nil {
-				return err
-			}
-			return page.SetDocumentContent(frameTree.Frame.ID, output.String()).Do(c)
-		}),
-		chromedp.Screenshot("#image-preview", &buf, chromedp.NodeVisible),
-	}
-
-	if err := chromedp.Run(actx, actions...); err != nil {
-		return err
-	} else if _, err := wr.Write(buf); err != nil {
+	); err != nil {
 		return err
 	}
 
+	var wg sync.WaitGroup
+	wg.Add(1)
+	chromedp.ListenTarget(ctx, func(ev interface{}) {
+		switch ev.(type) {
+		case *page.EventLoadEventFired:
+			go func() {
+				var buf []byte
+				if err := chromedp.Run(actx,
+					chromedp.Screenshot("#image-preview", &buf, chromedp.NodeVisible),
+				); err != nil {
+					fmt.Println(err)
+				} else if _, err := wr.Write(buf); err != nil {
+					fmt.Println(err)
+				}
+				wg.Done()
+			}()
+		}
+	})
+
+	if err := chromedp.Run(actx,
+		chromedp.PollFunction(`
+		async (html) => {
+			document.open();
+			document.write(html);
+			document.close();
+			await document.fonts.ready;
+			return true;
+		}
+		`, nil, chromedp.WithPollingArgs(output.String())),
+	); err != nil {
+		return err
+	}
+
+	wg.Wait()
 	return nil
 }

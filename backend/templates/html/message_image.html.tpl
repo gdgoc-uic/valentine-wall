@@ -8,7 +8,7 @@
         font-style: normal;
         font-weight: 400;
         src: url('{{ .BackendURL }}/renderer_assets/fonts/lato/lato-v22-latin-regular.eot'); /* IE9 Compat Modes */
-        src: local(''),
+        src: 
             url('{{ .BackendURL }}/renderer_assets/fonts/lato/lato-v22-latin-regular.eot?#iefix') format('embedded-opentype'), /* IE6-IE8 */
             url('{{ .BackendURL }}/renderer_assets/fonts/lato/lato-v22-latin-regular.woff2') format('woff2'), /* Super Modern Browsers */
             url('{{ .BackendURL }}/renderer_assets/fonts/lato/lato-v22-latin-regular.woff') format('woff'), /* Modern Browsers */
@@ -22,7 +22,7 @@
         font-style: normal;
         font-weight: 400;
         src: url('{{ .BackendURL }}/renderer_assets/fonts/nanum-pen-script/nanum-pen-script-v15-latin-regular.eot'); /* IE9 Compat Modes */
-        src: local(''),
+        src: 
             url('{{ .BackendURL }}/renderer_assets/fonts/nanum-pen-script/nanum-pen-script-v15-latin-regular.eot?#iefix') format('embedded-opentype'), /* IE6-IE8 */
             url('{{ .BackendURL }}/renderer_assets/fonts/nanum-pen-script/nanum-pen-script-v15-latin-regular.woff2') format('woff2'), /* Super Modern Browsers */
             url('{{ .BackendURL }}/renderer_assets/fonts/nanum-pen-script/nanum-pen-script-v15-latin-regular.woff') format('woff'), /* Modern Browsers */
@@ -131,7 +131,7 @@
       </div>
       <div class="gifts">
         {{ range $i, $giftId := .GiftIDs }}
-          <img src="./emojis/{{ $giftId }}.svg" class="gift-{{ $i }}" />
+          <img src="{{ $.BackendURL }}/renderer_assets/emojis/{{ $giftId }}.svg" class="gift-{{ $i }}" />
         {{ end }}
       </div>
       <img class="logo" src="{{ .BackendURL }}/renderer_assets/images/logo.png" />
