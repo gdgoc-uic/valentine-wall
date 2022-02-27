@@ -7,13 +7,13 @@
         font-family: 'Lato';
         font-style: normal;
         font-weight: 400;
-        src: url('{{ .BackendUrl }}/renderer_assets/fonts/lato-v22-latin-regular.eot'); /* IE9 Compat Modes */
+        src: url('{{ .BackendURL }}/renderer_assets/fonts/lato-v22-latin-regular.eot'); /* IE9 Compat Modes */
         src: local(''),
-            url('{{ .BackendUrl }}/renderer_assets/fonts/lato-v22-latin-regular.eot?#iefix') format('embedded-opentype'), /* IE6-IE8 */
-            url('{{ .BackendUrl }}/renderer_assets/fonts/lato-v22-latin-regular.woff2') format('woff2'), /* Super Modern Browsers */
-            url('{{ .BackendUrl }}/renderer_assets/fonts/lato-v22-latin-regular.woff') format('woff'), /* Modern Browsers */
-            url('{{ .BackendUrl }}/renderer_assets/fonts/lato-v22-latin-regular.ttf') format('truetype'), /* Safari, Android, iOS */
-            url('{{ .BackendUrl }}/renderer_assets/fonts/lato-v22-latin-regular.svg#Lato') format('svg'); /* Legacy iOS */
+            url('{{ .BackendURL }}/renderer_assets/fonts/lato-v22-latin-regular.eot?#iefix') format('embedded-opentype'), /* IE6-IE8 */
+            url('{{ .BackendURL }}/renderer_assets/fonts/lato-v22-latin-regular.woff2') format('woff2'), /* Super Modern Browsers */
+            url('{{ .BackendURL }}/renderer_assets/fonts/lato-v22-latin-regular.woff') format('woff'), /* Modern Browsers */
+            url('{{ .BackendURL }}/renderer_assets/fonts/lato-v22-latin-regular.ttf') format('truetype'), /* Safari, Android, iOS */
+            url('{{ .BackendURL }}/renderer_assets/fonts/lato-v22-latin-regular.svg#Lato') format('svg'); /* Legacy iOS */
       }
 
       /* nanum-pen-script-regular - latin */
@@ -21,13 +21,13 @@
         font-family: 'Nanum Pen Script';
         font-style: normal;
         font-weight: 400;
-        src: url('{{ .BackendUrl }}/renderer_assets/fonts/nanum-pen-script-v15-latin-regular.eot'); /* IE9 Compat Modes */
+        src: url('{{ .BackendURL }}/renderer_assets/fonts/nanum-pen-script-v15-latin-regular.eot'); /* IE9 Compat Modes */
         src: local(''),
-            url('{{ .BackendUrl }}/renderer_assets/fonts/nanum-pen-script-v15-latin-regular.eot?#iefix') format('embedded-opentype'), /* IE6-IE8 */
-            url('{{ .BackendUrl }}/renderer_assets/fonts/nanum-pen-script-v15-latin-regular.woff2') format('woff2'), /* Super Modern Browsers */
-            url('{{ .BackendUrl }}/renderer_assets/fonts/nanum-pen-script-v15-latin-regular.woff') format('woff'), /* Modern Browsers */
-            url('{{ .BackendUrl }}/renderer_assets/fonts/nanum-pen-script-v15-latin-regular.ttf') format('truetype'), /* Safari, Android, iOS */
-            url('{{ .BackendUrl }}/renderer_assets/fonts/nanum-pen-script-v15-latin-regular.svg#NanumPenScript') format('svg'); /* Legacy iOS */
+            url('{{ .BackendURL }}/renderer_assets/fonts/nanum-pen-script-v15-latin-regular.eot?#iefix') format('embedded-opentype'), /* IE6-IE8 */
+            url('{{ .BackendURL }}/renderer_assets/fonts/nanum-pen-script-v15-latin-regular.woff2') format('woff2'), /* Super Modern Browsers */
+            url('{{ .BackendURL }}/renderer_assets/fonts/nanum-pen-script-v15-latin-regular.woff') format('woff'), /* Modern Browsers */
+            url('{{ .BackendURL }}/renderer_assets/fonts/nanum-pen-script-v15-latin-regular.ttf') format('truetype'), /* Safari, Android, iOS */
+            url('{{ .BackendURL }}/renderer_assets/fonts/nanum-pen-script-v15-latin-regular.svg#NanumPenScript') format('svg'); /* Legacy iOS */
       }
 
       * {
@@ -43,7 +43,7 @@
       .image-wrapper {
         width: 1200px;
         height: 675px;
-        background-image: url({{ .BackendUrl }}/renderer_assets/images/background.png);
+        background-image: url({{ .BackendURL }}/renderer_assets/images/background.png);
         background-size: cover;
         padding: 3rem 6rem;
         position: relative;
@@ -134,7 +134,7 @@
           <img src="./emojis/{{ $giftId }}.svg" class="gift-{{ $i }}" />
         {{ end }}
       </div>
-      <img class="logo" src="{{ .BackendUrl }}/renderer_assets/images/logo.png" />
+      <img class="logo" src="{{ .BackendURL }}/renderer_assets/images/logo.png" />
     </div>
   </body>
 </html>

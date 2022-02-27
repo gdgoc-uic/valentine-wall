@@ -914,7 +914,7 @@ func main() {
 
 			// generate image if ?image query
 			if rr.URL.Query().Has("image") {
-				buf, err := imageRenderer.Render(imageTypeTwitter, message.Message)
+				buf, err := imageRenderer.Render(imageTypeTwitter, message)
 				if err != nil {
 					return err
 				}
@@ -1075,7 +1075,7 @@ func main() {
 
 				notifier := MultiNotifier{[]Notifier{}}
 				if twitterIdx, hasTwitter := isConnectedTo(connections, "twitter"); submittedData.Options.PostToTwitter && hasTwitter {
-					imageData, err := imageRenderer.Render(imageTypeTwitter, message.Message)
+					imageData, err := imageRenderer.Render(imageTypeTwitter, message)
 					if err == nil {
 						notifier.Add(&TwitterNotifier{
 							Connection:  connections[twitterIdx],
@@ -1788,7 +1788,7 @@ window.opener.postMessage({message:'twitter connect success',user_connections:%s
 							Data:   map[string]int{"len": 1},
 						})
 
-						buf, err := imageRenderer.Render(imageTypeTwitter, msg.Message)
+						buf, err := imageRenderer.Render(imageTypeTwitter, msg)
 						if err != nil {
 							errChan <- err
 							return
@@ -1867,7 +1867,7 @@ window.opener.postMessage({message:'twitter connect success',user_connections:%s
 				passivePrintError(err)
 			}
 
-			buf, err := imageRenderer.Render(imageTypeTwitter, msg.Message)
+			buf, err := imageRenderer.Render(imageTypeTwitter, msg)
 			if err != nil {
 				return err
 			}

@@ -64,7 +64,7 @@ type ImageRenderer struct {
 	CacheStore *cache.Cache
 }
 
-func (ctx *ImageRenderer) Render(itype ImageType, message Message) ([]byte, error) {
+func (ctx *ImageRenderer) Render(itype ImageType, message RawMessage) ([]byte, error) {
 	// use cached image if available
 	imageCacheKey := fmt.Sprintf("image/%s", message.ID)
 	if cachedImage, isImageCached := ctx.CacheStore.Get(imageCacheKey); isImageCached && cachedImage != nil {
@@ -77,14 +77,14 @@ func (ctx *ImageRenderer) Render(itype ImageType, message Message) ([]byte, erro
 	if ctx.ChromeCtx != nil {
 		// use alternative gg-based mode if not connected to chrome
 		err = generateImagePNGChrome(imgBuf, ctx.ChromeCtx, ctx.Template, RendererContext{
-			Message:    message,
+			RawMessage: message,
 			BackendURL: baseUrl,
 		})
 	}
 
 	if err != nil || imgBuf.Len() == 0 {
 		passivePrintError(err)
-		if err2 := generateImagePNG(imgBuf, imageTypeTwitter, message); err2 != nil {
+		if err2 := generateImagePNG(imgBuf, imageTypeTwitter, message.Message); err2 != nil {
 			return nil, err2
 		}
 	}
@@ -156,7 +156,7 @@ func generateImagePNG(wr io.Writer, itype ImageType, message Message) error {
 }
 
 type RendererContext struct {
-	Message
+	RawMessage
 	BackendURL string
 }
 
