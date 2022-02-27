@@ -469,21 +469,22 @@ func main() {
 	r.Use(middleware.CleanPath)
 
 	// enable cors only on development or when frontend is not the same as base
-	if targetEnv == "development" || frontendUrl != baseUrl {
-		r.Use(cors.Handler(cors.Options{
-			AllowedOrigins:   []string{frontendUrl, baseUrl},
-			AllowCredentials: true,
-			AllowedHeaders:   []string{"Content-Type", "Authorization"},
-			Debug:            targetEnv == "development",
-			AllowedMethods: []string{
-				http.MethodHead,
-				http.MethodGet,
-				http.MethodPost,
-				http.MethodDelete,
-				http.MethodPatch,
-			},
-		}))
-	}
+	// if targetEnv == "development" || frontendUrl != baseUrl {
+	r.Use(cors.Handler(cors.Options{
+		// AllowedOrigins:   []string{frontendUrl, baseUrl},
+		AllowedOrigins:   []string{"*"},
+		AllowCredentials: true,
+		AllowedHeaders:   []string{"Content-Type", "Authorization"},
+		Debug:            targetEnv == "development",
+		AllowedMethods: []string{
+			http.MethodHead,
+			http.MethodGet,
+			http.MethodPost,
+			http.MethodDelete,
+			http.MethodPatch,
+		},
+	}))
+	// }
 
 	r.NotFound(wrapHandler(func(rw http.ResponseWriter, r *http.Request) error {
 		return &ResponseError{
