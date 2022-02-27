@@ -1854,7 +1854,7 @@ window.opener.postMessage({message:'twitter connect success',user_connections:%s
 
 		defer rows.Close()
 
-		gotZip, loaded := zipFiles.LoadAndDelete("vwall.zip")
+		gotZip, loaded := zipFiles.Load("vwall.zip")
 
 		if !loaded {
 			zipArchive := &bytes.Buffer{}
