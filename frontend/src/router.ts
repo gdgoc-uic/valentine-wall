@@ -14,6 +14,17 @@ export function getPageTitle(route: RouteLocationNormalizedLoaded): string {
   return `${pageTitle}${pageSeparator}${pageSuffix}`;
 }
 
+const readOnlyRoutes: RouteRecordRaw[] = [
+  {
+    name: 'home-page',
+    path: '/',
+    component: () => import('./pages/Home_ReadOnly.vue'),
+    meta: {
+      disableAppHeader: true
+    }
+  },
+];
+
 const routes: RouteRecordRaw[] = [
   {
     name: 'home-page',
@@ -162,6 +173,6 @@ export function createRouter() {
       // always scroll to top
       return { top: 0 }
     },
-    routes
+    routes: import.meta.env.VITE_READ_ONLY === 'true' ? readOnlyRoutes : routes
   });
 }

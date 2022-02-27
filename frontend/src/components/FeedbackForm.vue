@@ -44,10 +44,6 @@ export default {
     email: {
       type: String,
     },
-    messageId: {
-      type: String,
-      required: true
-    }
   },
   data() {
     return {

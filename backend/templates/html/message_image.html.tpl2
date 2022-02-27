@@ -7,13 +7,13 @@
         font-family: 'Lato';
         font-style: normal;
         font-weight: 400;
-        src: url('{{ .BackendURL }}/renderer_assets/fonts/lato-v22-latin-regular.eot'); /* IE9 Compat Modes */
+        src: url('{{ .backendUrl }}/renderer_assets/fonts/lato-v22-latin-regular.eot'); /* IE9 Compat Modes */
         src: local(''),
-            url('{{ .BackendURL }}/renderer_assets/fonts/lato-v22-latin-regular.eot?#iefix') format('embedded-opentype'), /* IE6-IE8 */
-            url('{{ .BackendURL }}/renderer_assets/fonts/lato-v22-latin-regular.woff2') format('woff2'), /* Super Modern Browsers */
-            url('{{ .BackendURL }}/renderer_assets/fonts/lato-v22-latin-regular.woff') format('woff'), /* Modern Browsers */
-            url('{{ .BackendURL }}/renderer_assets/fonts/lato-v22-latin-regular.ttf') format('truetype'), /* Safari, Android, iOS */
-            url('{{ .BackendURL }}/renderer_assets/fonts/lato-v22-latin-regular.svg#Lato') format('svg'); /* Legacy iOS */
+            url('{{ .backendUrl }}/renderer_assets/fonts/lato-v22-latin-regular.eot?#iefix') format('embedded-opentype'), /* IE6-IE8 */
+            url('{{ .backendUrl }}/renderer_assets/fonts/lato-v22-latin-regular.woff2') format('woff2'), /* Super Modern Browsers */
+            url('{{ .backendUrl }}/renderer_assets/fonts/lato-v22-latin-regular.woff') format('woff'), /* Modern Browsers */
+            url('{{ .backendUrl }}/renderer_assets/fonts/lato-v22-latin-regular.ttf') format('truetype'), /* Safari, Android, iOS */
+            url('{{ .backendUrl }}/renderer_assets/fonts/lato-v22-latin-regular.svg#Lato') format('svg'); /* Legacy iOS */
       }
 
       /* nanum-pen-script-regular - latin */
@@ -21,13 +21,13 @@
         font-family: 'Nanum Pen Script';
         font-style: normal;
         font-weight: 400;
-        src: url('{{ .BackendURL }}/renderer_assets/fonts/nanum-pen-script-v15-latin-regular.eot'); /* IE9 Compat Modes */
+        src: url('{{ .backendUrl }}/renderer_assets/fonts/nanum-pen-script-v15-latin-regular.eot'); /* IE9 Compat Modes */
         src: local(''),
-            url('{{ .BackendURL }}/renderer_assets/fonts/nanum-pen-script-v15-latin-regular.eot?#iefix') format('embedded-opentype'), /* IE6-IE8 */
-            url('{{ .BackendURL }}/renderer_assets/fonts/nanum-pen-script-v15-latin-regular.woff2') format('woff2'), /* Super Modern Browsers */
-            url('{{ .BackendURL }}/renderer_assets/fonts/nanum-pen-script-v15-latin-regular.woff') format('woff'), /* Modern Browsers */
-            url('{{ .BackendURL }}/renderer_assets/fonts/nanum-pen-script-v15-latin-regular.ttf') format('truetype'), /* Safari, Android, iOS */
-            url('{{ .BackendURL }}/renderer_assets/fonts/nanum-pen-script-v15-latin-regular.svg#NanumPenScript') format('svg'); /* Legacy iOS */
+            url('{{ .backendUrl }}/renderer_assets/fonts/nanum-pen-script-v15-latin-regular.eot?#iefix') format('embedded-opentype'), /* IE6-IE8 */
+            url('{{ .backendUrl }}/renderer_assets/fonts/nanum-pen-script-v15-latin-regular.woff2') format('woff2'), /* Super Modern Browsers */
+            url('{{ .backendUrl }}/renderer_assets/fonts/nanum-pen-script-v15-latin-regular.woff') format('woff'), /* Modern Browsers */
+            url('{{ .backendUrl }}/renderer_assets/fonts/nanum-pen-script-v15-latin-regular.ttf') format('truetype'), /* Safari, Android, iOS */
+            url('{{ .backendUrl }}/renderer_assets/fonts/nanum-pen-script-v15-latin-regular.svg#NanumPenScript') format('svg'); /* Legacy iOS */
       }
 
       * {
@@ -43,7 +43,7 @@
       .image-wrapper {
         width: 1200px;
         height: 675px;
-        background-image: url({{ .BackendURL }}/renderer_assets/images/background.png);
+        background-image: url({{ .backendUrl }}/renderer_assets/images/background.png);
         background-size: cover;
         padding: 3rem 6rem;
         position: relative;
@@ -97,26 +97,26 @@
         bottom: 0;
       }
 
-      .gift-0, .gift-2, .gift-1 {
+      .gift-1, .gift-3, .gift-2 {
         width: 13%;
         position: absolute;
         transform-origin: bottom center;
         filter: drop-shadow(1px 4px 8px rgba(128, 6, 42, 0.678));
       }
 
-      .gift-0 {
+      .gift-1 {
         bottom: 5%;
         right: 5%;
         transform: rotate(30deg);
       }
 
-      .gift-2 {
+      .gift-3 {
         top: 1%;
         left: 0;
         transform: rotate(20deg);
       }
 
-      .gift-1 {
+      .gift-2 {
         top: 1%;
         right: 3%;
         transform: rotate(-20deg);
@@ -126,15 +126,15 @@
   <body>
     <div id="image-preview" class="image-wrapper">
       <div class="content-wrapper">
-        <p class="content">{{ .Content }}</p>
-        <p class="timestamp">Posted on {{ .CreatedAt }}</p>
+        <p class="content">Cursus sapien nulla nascetur ad vivamus in iaculis ullamcorper cum a adipiscing justo adipiscing fames aptent praesent torquent fringilla non parturient ac.Ultricies non orci per vestibulum odio donec aptent condimentum nascetur himenaeos.</p>
+        <p class="timestamp">Posted on test</p>
       </div>
       <div class="gifts">
-        {{ range $i, $giftId := .GiftIDs }}
-          <img src="./emojis/{{ $giftId }}.svg" class="gift-{{ $i }}" />
-        {{ end }}
+        <img src="./emojis/2.svg" class="gift-1" />
+        <img src="./emojis/3.svg" class="gift-2" />
+        <img src="./emojis/4.svg" class="gift-3" />
       </div>
-      <img class="logo" src="{{ .BackendURL }}/renderer_assets/images/logo.png" />
+      <img class="logo" src="{{ .backendUrl }}/renderer_assets/images/logo.png" />
     </div>
   </body>
 </html>

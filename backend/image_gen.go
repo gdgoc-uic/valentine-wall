@@ -53,8 +53,8 @@ func loadFont(path string) *truetype.Font {
 }
 
 func init() {
-	latoLight = loadFont("./fonts/lato/Lato-Light.ttf")
-	nanumPenScript = loadFont("./fonts/nanum-pen-script/NanumPenScript-Regular.ttf")
+	latoLight = loadFont("./renderer_assets/fonts/lato/lato-v22-latin-regular.ttf")
+	nanumPenScript = loadFont("./renderer_assets/fonts/nanum-pen-script/nanum-pen-script-v15-latin-regular.ttf")
 }
 
 type ImageRenderer struct {
@@ -64,7 +64,7 @@ type ImageRenderer struct {
 	CacheStore *cache.Cache
 }
 
-func (ctx *ImageRenderer) Render(itype ImageType, message Message) ([]byte, error) {
+func (ctx *ImageRenderer) Render(itype ImageType, message RawMessage) ([]byte, error) {
 	// use cached image if available
 	imageCacheKey := fmt.Sprintf("image/%s", message.ID)
 	if cachedImage, isImageCached := ctx.CacheStore.Get(imageCacheKey); isImageCached && cachedImage != nil {
@@ -76,12 +76,15 @@ func (ctx *ImageRenderer) Render(itype ImageType, message Message) ([]byte, erro
 	var err error
 	if ctx.ChromeCtx != nil {
 		// use alternative gg-based mode if not connected to chrome
-		err = generateImagePNGChrome(imgBuf, ctx.ChromeCtx, ctx.Template, message)
+		err = generateImagePNGChrome(imgBuf, ctx.ChromeCtx, ctx.Template, RendererContext{
+			RawMessage: message,
+			BackendURL: baseUrl,
+		})
 	}
 
 	if err != nil || imgBuf.Len() == 0 {
-		log.Println(err)
-		if err2 := generateImagePNG(imgBuf, imageTypeTwitter, message); err2 != nil {
+		passivePrintError(err)
+		if err2 := generateImagePNG(imgBuf, imageTypeTwitter, message.Message); err2 != nil {
 			return nil, err2
 		}
 	}
@@ -152,10 +155,15 @@ func generateImagePNG(wr io.Writer, itype ImageType, message Message) error {
 	return dc.EncodePNG(wr)
 }
 
-func generateImagePNGChrome(wr io.Writer, parentChromeCtx context.Context, tmpl *template.Template, message Message) error {
+type RendererContext struct {
+	RawMessage
+	BackendURL string
+}
+
+func generateImagePNGChrome(wr io.Writer, parentChromeCtx context.Context, tmpl *template.Template, rctx RendererContext) error {
 	// compile template first
 	output := &bytes.Buffer{}
-	if err := tmpl.Execute(output, message); err != nil {
+	if err := tmpl.Execute(output, rctx); err != nil {
 		return err
 	}
 

@@ -149,10 +149,25 @@ func getAuthTokenByReq(r *http.Request) *auth.Token {
 
 func getAuthToken(r *http.Request, firebaseApp *firebase.App) (*auth.Token, *auth.Client, error) {
 	authHeader := r.Header.Get("Authorization")
-	if len(authHeader) == 0 || !strings.HasPrefix(authHeader, "Bearer ") {
+	idToken := ""
+
+	if len(authHeader) != 0 && !strings.HasPrefix(authHeader, "Bearer ") {
 		return nil, nil, &ResponseError{
 			StatusCode: http.StatusForbidden,
 		}
+	} else if len(authHeader) == 0 {
+		q := r.URL.Query()
+
+		authTokenQueryName := "__auth_token"
+		if !q.Has(authTokenQueryName) {
+			return nil, nil, &ResponseError{
+				StatusCode: http.StatusForbidden,
+			}
+		} else {
+			idToken = q.Get(authTokenQueryName)
+		}
+	} else {
+		idToken = strings.TrimPrefix(authHeader, "Bearer ")
 	}
 
 	authClient, err := firebaseApp.Auth(r.Context())
@@ -160,7 +175,6 @@ func getAuthToken(r *http.Request, firebaseApp *firebase.App) (*auth.Token, *aut
 		return nil, nil, err
 	}
 
-	idToken := strings.TrimPrefix(authHeader, "Bearer ")
 	token, err := authClient.VerifyIDToken(r.Context(), idToken)
 	if err != nil {
 		return nil, nil, &ResponseError{
@@ -382,10 +396,10 @@ func passivePrintError(err error) {
 }
 
 // sse-related
-func encodeDataSSE(rw http.ResponseWriter, msg Message) {
+func encodeDataSSE(rw http.ResponseWriter, data interface{}) {
 	writer := &bytes.Buffer{}
 	encoder := json.NewEncoder(writer)
-	if err := encoder.Encode(msg); err != nil {
+	if err := encoder.Encode(data); err != nil {
 		log.Println(err)
 		fmt.Fprintf(writer, "null")
 	}
@@ -399,4 +413,13 @@ func writeResponseDataSSE(rw http.ResponseWriter, buf *bytes.Buffer) {
 	if f, ok := rw.(http.Flusher); ok {
 		f.Flush()
 	}
+}
+
+func getStudentIDFromEmail(email string) (string, error) {
+	matches := emailRegex.FindAllStringSubmatch(email, -1)
+	if (matches == nil || len(matches) == 0) || (len(matches[0]) < 2 || len(matches[0][1]) == 0) {
+		return "", fmt.Errorf("no student id found")
+	}
+
+	return matches[0][1], nil
 }

@@ -57,6 +57,7 @@ services:
       - TWITTER_CALLBACK_URL
       - POSTAL_OFFICE_ADDRESS=postal_office:3350
       - CHROME_DEVTOOLS_URL=ws://headless_chrome:3000
+      - READ_ONLY
     networks:
       - backend
     depends_on:
@@ -72,6 +73,7 @@ services:
         env: ${ENV}
         frontend_url: ${FRONTEND_URL}
         backend_url: ${BACKEND_URL}
+        read_only: ${READ_ONLY}
         firebase_api_key: ${FIREBASE_API_KEY}
         firebase_auth_domain: ${FIREBASE_AUTH_DOMAIN}
         firebase_storage_bucket: ${FIREBASE_STORAGE_BUCKET}
