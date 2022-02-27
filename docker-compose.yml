@@ -39,7 +39,7 @@ services:
       dockerfile: ./backend/Dockerfile
     volumes:
       - ./backend/_data:/app/_data
-      - ./backend/fonts:/app/fonts
+      - ./backend/renderer_assets:/app/renderer_assets
       - ./backend/migrations:/app/migrations
       - ./backend/templates:/app/templates
       - ./${PROFANITY_JSON_FILE_NAME}:/app/${PROFANITY_JSON_FILE_NAME}

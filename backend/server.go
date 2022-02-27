@@ -1854,6 +1854,9 @@ window.opener.postMessage({message:'twitter connect success',user_connections:%s
 
 		defer rows.Close()
 
+		gotZip, loaded := zipFiles.LoadAndDelete("vwall.zip")
+
+		if !loaded {
 		zipArchive := &bytes.Buffer{}
 		zipWriter := zip.NewWriter(zipArchive)
 
@@ -1885,10 +1888,14 @@ window.opener.postMessage({message:'twitter connect success',user_connections:%s
 
 			fileWriter.Write(buf)
 		}
+		zipFiles.Store("vwall.zip", zipArchive.bytes())
 
 		// TODO: generate summary
 		passivePrintError(zipWriter.Close())
 		io.Copy(rw, zipArchive)
+		} else {
+			rw.Write(gotZip.([]byte))
+		}
 		return nil
 	}))
 

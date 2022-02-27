@@ -7,13 +7,13 @@
         font-family: 'Lato';
         font-style: normal;
         font-weight: 400;
-        src: url('{{ .BackendURL }}/renderer_assets/fonts/lato-v22-latin-regular.eot'); /* IE9 Compat Modes */
+        src: url('{{ .BackendURL }}/renderer_assets/fonts/lato/lato-v22-latin-regular.eot'); /* IE9 Compat Modes */
         src: local(''),
-            url('{{ .BackendURL }}/renderer_assets/fonts/lato-v22-latin-regular.eot?#iefix') format('embedded-opentype'), /* IE6-IE8 */
-            url('{{ .BackendURL }}/renderer_assets/fonts/lato-v22-latin-regular.woff2') format('woff2'), /* Super Modern Browsers */
-            url('{{ .BackendURL }}/renderer_assets/fonts/lato-v22-latin-regular.woff') format('woff'), /* Modern Browsers */
-            url('{{ .BackendURL }}/renderer_assets/fonts/lato-v22-latin-regular.ttf') format('truetype'), /* Safari, Android, iOS */
-            url('{{ .BackendURL }}/renderer_assets/fonts/lato-v22-latin-regular.svg#Lato') format('svg'); /* Legacy iOS */
+            url('{{ .BackendURL }}/renderer_assets/fonts/lato/lato-v22-latin-regular.eot?#iefix') format('embedded-opentype'), /* IE6-IE8 */
+            url('{{ .BackendURL }}/renderer_assets/fonts/lato/lato-v22-latin-regular.woff2') format('woff2'), /* Super Modern Browsers */
+            url('{{ .BackendURL }}/renderer_assets/fonts/lato/lato-v22-latin-regular.woff') format('woff'), /* Modern Browsers */
+            url('{{ .BackendURL }}/renderer_assets/fonts/lato/lato-v22-latin-regular.ttf') format('truetype'), /* Safari, Android, iOS */
+            url('{{ .BackendURL }}/renderer_assets/fonts/lato/lato-v22-latin-regular.svg#Lato') format('svg'); /* Legacy iOS */
       }
 
       /* nanum-pen-script-regular - latin */
@@ -21,13 +21,13 @@
         font-family: 'Nanum Pen Script';
         font-style: normal;
         font-weight: 400;
-        src: url('{{ .BackendURL }}/renderer_assets/fonts/nanum-pen-script-v15-latin-regular.eot'); /* IE9 Compat Modes */
+        src: url('{{ .BackendURL }}/renderer_assets/fonts/nanum-pen-script/nanum-pen-script-v15-latin-regular.eot'); /* IE9 Compat Modes */
         src: local(''),
-            url('{{ .BackendURL }}/renderer_assets/fonts/nanum-pen-script-v15-latin-regular.eot?#iefix') format('embedded-opentype'), /* IE6-IE8 */
-            url('{{ .BackendURL }}/renderer_assets/fonts/nanum-pen-script-v15-latin-regular.woff2') format('woff2'), /* Super Modern Browsers */
-            url('{{ .BackendURL }}/renderer_assets/fonts/nanum-pen-script-v15-latin-regular.woff') format('woff'), /* Modern Browsers */
-            url('{{ .BackendURL }}/renderer_assets/fonts/nanum-pen-script-v15-latin-regular.ttf') format('truetype'), /* Safari, Android, iOS */
-            url('{{ .BackendURL }}/renderer_assets/fonts/nanum-pen-script-v15-latin-regular.svg#NanumPenScript') format('svg'); /* Legacy iOS */
+            url('{{ .BackendURL }}/renderer_assets/fonts/nanum-pen-script/nanum-pen-script-v15-latin-regular.eot?#iefix') format('embedded-opentype'), /* IE6-IE8 */
+            url('{{ .BackendURL }}/renderer_assets/fonts/nanum-pen-script/nanum-pen-script-v15-latin-regular.woff2') format('woff2'), /* Super Modern Browsers */
+            url('{{ .BackendURL }}/renderer_assets/fonts/nanum-pen-script/nanum-pen-script-v15-latin-regular.woff') format('woff'), /* Modern Browsers */
+            url('{{ .BackendURL }}/renderer_assets/fonts/nanum-pen-script/nanum-pen-script-v15-latin-regular.ttf') format('truetype'), /* Safari, Android, iOS */
+            url('{{ .BackendURL }}/renderer_assets/fonts/nanum-pen-script/nanum-pen-script-v15-latin-regular.svg#NanumPenScript') format('svg'); /* Legacy iOS */
       }
 
       * {
