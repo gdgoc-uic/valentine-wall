@@ -1857,42 +1857,42 @@ window.opener.postMessage({message:'twitter connect success',user_connections:%s
 		gotZip, loaded := zipFiles.LoadAndDelete("vwall.zip")
 
 		if !loaded {
-		zipArchive := &bytes.Buffer{}
-		zipWriter := zip.NewWriter(zipArchive)
+			zipArchive := &bytes.Buffer{}
+			zipWriter := zip.NewWriter(zipArchive)
 
-		for rows.Next() {
-			msg := RawMessage{}
-			if err := rows.StructScan(&msg); err != nil {
-				return err
+			for rows.Next() {
+				msg := RawMessage{}
+				if err := rows.StructScan(&msg); err != nil {
+					return err
+				}
+
+				if err := db.Select(&msg.GiftIDs, "SELECT gift_id FROM message_gifts WHERE message_id = $1", msg.ID); err != nil {
+					passivePrintError(err)
+				}
+
+				buf, err := imageRenderer.Render(imageTypeTwitter, msg)
+				if err != nil {
+					return err
+				}
+
+				msgRID := msg.RecipientID
+				if len(msg.GiftIDs) != 0 {
+					msgRID = "g_" + msgRID
+				}
+
+				filePath := filepath.Join("messages", fmt.Sprintf("%s/messages_%s_%s.png", msg.RecipientID, msgRID, msg.ID))
+				fileWriter, err := zipWriter.Create(filePath)
+				if err != nil {
+					return err
+				}
+
+				fileWriter.Write(buf)
 			}
+			zipFiles.Store("vwall.zip", zipArchive.Bytes())
 
-			if err := db.Select(&msg.GiftIDs, "SELECT gift_id FROM message_gifts WHERE message_id = $1", msg.ID); err != nil {
-				passivePrintError(err)
-			}
-
-			buf, err := imageRenderer.Render(imageTypeTwitter, msg)
-			if err != nil {
-				return err
-			}
-
-			msgRID := msg.RecipientID
-			if len(msg.GiftIDs) != 0 {
-				msgRID = "g_" + msgRID
-			}
-
-			filePath := filepath.Join("messages", fmt.Sprintf("%s/messages_%s_%s.png", msg.RecipientID, msgRID, msg.ID))
-			fileWriter, err := zipWriter.Create(filePath)
-			if err != nil {
-				return err
-			}
-
-			fileWriter.Write(buf)
-		}
-		zipFiles.Store("vwall.zip", zipArchive.bytes())
-
-		// TODO: generate summary
-		passivePrintError(zipWriter.Close())
-		io.Copy(rw, zipArchive)
+			// TODO: generate summary
+			passivePrintError(zipWriter.Close())
+			io.Copy(rw, zipArchive)
 		} else {
 			rw.Write(gotZip.([]byte))
 		}
