@@ -1,5 +1,4 @@
 import { Store } from "vuex";
-import { expandAPIEndpoint } from "./client";
 import { State } from "./store";
 
 export function popupCenter({ url, title, w, h }: { url: string, title: string, w: number, h: number }): Window | null {
@@ -34,7 +33,8 @@ interface ConnectCallbacks {
 }
 
 export function connectToTwitter(store: Store<State>, cbs?: ConnectCallbacks) {
-    const connectUrl = expandAPIEndpoint('/user/connect_twitter');
+    // const connectUrl = expandAPIEndpoint('/user/connect_twitter');
+    const connectUrl = '';
     const loginWindow = popupCenter({ url: connectUrl, title: 'twitter_login_window', w: 800, h: 500 });
     if (!loginWindow) {
         cbs?.onError?.(new Error('Failed to open window.'));

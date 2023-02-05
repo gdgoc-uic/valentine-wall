@@ -59,7 +59,7 @@ import IconAnnoyed from '~icons/uil/annoyed';
 import IconReply from '~icons/uil/comment-heart';
 import ContentCounter from './ContentCounter.vue';
 import { logEvent } from '@firebase/analytics';
-import { analytics } from '../firebase';
+// import { analytics } from '../firebase';
 import { catchAndNotifyError, notify } from '../notify';
 import { connectToEmail, connectToTwitter } from '../auth';
 
@@ -109,7 +109,7 @@ export default {
           catchAndNotifyError(this, e);
         },
         onFinally: () => {
-          logEvent(analytics!, 'connect_twitter', { success });
+          // logEvent(analytics!, 'connect_twitter', { success });
         }
       });
     },
@@ -123,26 +123,26 @@ export default {
         success = false;
         catchAndNotifyError(this, e); 
       } finally {
-        logEvent(analytics!, 'connect_email', { success });
+        // logEvent(analytics!, 'connect_email', { success });
       }
     },
     async submitReply() {
       try {
         this.isSending = true;
-        const { data: json } = await this.$client.postJson(`/messages/${this.message.recipient_id}/${this.message.id}/reply`, {
-          reply: {
-            content: this.content
-          },
-          options: {
-            post_to_email: true,
-            post_to_twitter: true
-          }
-        });
+        // const { data: json } = await this.$client.postJson(`/messages/${this.message.recipient_id}/${this.message.id}/reply`, {
+        //   reply: {
+        //     content: this.content
+        //   },
+        //   options: {
+        //     post_to_email: true,
+        //     post_to_twitter: true
+        //   }
+        // });
 
-        notify(this, { type: 'success', text: json['message'] });
-        this.$store.commit('SET_USER_WALLET_BALANCE', json['current_balance']);
+        // notify(this, { type: 'success', text: json['message'] });
+        // this.$store.commit('SET_USER_WALLET_BALANCE', json['current_balance']);
         this.$emit('update:hasReplied', true);
-        logEvent(analytics!, 'reply-message', { id: this.message.id });
+        // logEvent(analytics!, 'reply-message', { id: this.message.id });
       } catch (e) {
         this.isSending = false;
         catchAndNotifyError(this, e);

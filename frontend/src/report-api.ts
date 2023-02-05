@@ -1,7 +1,6 @@
-import { expandEndpoint } from "./client";
-
 export const expandReportApiEndpoint = (endpoint: string): string => {
-  return expandEndpoint(import.meta.env.VITE_REPORT_API_URL, endpoint);
+  // return expandEndpoint(import.meta.env.VITE_REPORT_API_URL, endpoint);
+  return '';
 }
 
 export const headers = {

@@ -101,7 +101,8 @@ import IconSend from '~icons/uil/message';
 import LoginButton from '../components/LoginButton.vue';
 import PaginatedResponseHandler from '../components/PaginatedResponseHandler.vue';
 import MessageTiles from '../components/MessageTiles.vue';
-import { expandAPIEndpoint } from '../client';
+import { pb } from '../client';
+import { UnsubscribeFunc } from 'pocketbase';
 
 export default {
   components: { 
@@ -123,17 +124,18 @@ export default {
   },
   mounted() {
     if (!import.meta.env.SSR) {
-      this.recentsSSE = new EventSource(expandAPIEndpoint('/recent-messages'));
-      this.recentsSSE.onmessage = (event) => {
-        if (event.data === 'null') return;
-        // console.log(event);
-        this.recentMessages = [JSON.parse(event.data)];
-      }
+      pb.collection('messages').subscribe('*', (e) => {
+        this.recentMessages.push(e.record);
+      })
+        .then(unsub => {
+          if (!unsub) return;
+          this.recentsSSE = unsub;
+        });
     }
   },
   unmounted() {
     if (!import.meta.env.SSR) {
-      this.recentsSSE.close();
+      this.recentsSSE();
     }
   },
   data() {
@@ -142,7 +144,7 @@ export default {
       rankingSex: 'male',
       rankingsEndpoint: '',
       recentMessages: [] as any[],
-      recentsSSE: null as unknown as EventSource
+      recentsSSE: null as unknown as UnsubscribeFunc
     }
   },
   watch: {

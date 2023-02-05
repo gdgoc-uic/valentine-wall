@@ -2,8 +2,8 @@ import { logEvent, setUserId, setUserProperties } from 'firebase/analytics';
 import { GoogleAuthProvider, signInWithPopup, User } from 'firebase/auth';
 import { createStore as createVuexStore, Store } from 'vuex';
 import { InjectionKey } from 'vue';
-import { createAPIClient, APIClient, APIResponseError } from './client';
-import { analytics, auth } from './firebase';
+import { pb } from './client';
+// import { analytics, auth } from './firebase';
 
 // NOTE: snake_case because JSON response is in snake_case
 interface UserConnection {
@@ -117,9 +117,6 @@ export function createStore() {
     },
   
     getters: {
-      apiClient(state, getters): APIClient {
-        return createAPIClient(() => getters.headers);
-      },
       isLoggedIn(state) {
         return state.user.accessToken.length != 0 && state.user.id.length != 0;
       },
@@ -165,11 +162,11 @@ export function createStore() {
   
         try {
           commit('SET_AUTH_LOADING', true);
-          await signInWithPopup(auth, provider);
+          // await signInWithPopup(auth, provider);
           if (state.isSetupModalOpen) {
-            logEvent(analytics!, 'sign_up');
+            // logEvent(analytics!, 'sign_up');
           } else {
-            logEvent(analytics!, 'login');
+            // logEvent(analytics!, 'login');
           }
         } catch (e) {
           throw e;
@@ -188,10 +185,10 @@ export function createStore() {
           commit('SET_USER_ACCESS_TOKEN', await user.getIdToken(false));
 
           if (import.meta.env.VITE_READ_ONLY !== 'true') {
-            await Promise.all([
-              getters.apiClient.post('/user/session', { credentials: 'include' }),
-              dispatch('getUserInfo')
-            ]);
+            // await Promise.all([
+            //   getters.apiClient.post('/user/session', { credentials: 'include' }),
+            //   dispatch('getUserInfo')
+            // ]);
   
             // it should not affect the whole flow just in case
             // updateLastActiveAt won't go through
@@ -202,8 +199,8 @@ export function createStore() {
             }
           }
 
-          setUserId(analytics!, user.uid);
-          setUserProperties(analytics!, { account_type: 'student' });
+          // setUserId(analytics!, user.uid);
+          // setUserProperties(analytics!, { account_type: 'student' });
         } catch (e) {
           console.error(e);
           await dispatch('logout');
@@ -217,7 +214,9 @@ export function createStore() {
             await getters.apiClient.post('/user/logout_callback');
           }
 
-          await auth.signOut();
+          // await auth.signOut();
+          pb.authStore.clear();
+
           commit('SET_USER_ID', '');
           commit('SET_USER_EMAIL', '');
           commit('SET_USER_ACCESS_TOKEN', '');
@@ -226,9 +225,9 @@ export function createStore() {
           commit('SET_USER_DEPARTMENT', '');
           commit('SET_USER_WALLET', null);
         } catch (e) {
-          if (e instanceof APIResponseError) {
-            throw Error('Unable to logout user.');
-          }
+          // if (e instanceof APIResponseError) {
+          //   throw Error('Unable to logout user.');
+          // }
           throw e;
         }
       },
@@ -255,11 +254,11 @@ export function createStore() {
         }
       },
       async getGiftList({ commit, getters }) {
-        const { data: json } = await getters.apiClient.get('/gifts');
+        const { data: json } = await pb.send('/gifts', {});
         commit('SET_GIFT_LIST', json);
       },
       async getDepartmentList({ commit, getters }) {
-        const { data: json } = await getters.apiClient.get('/departments');
+        const { data: json } = await pb.send('/departments', {});
         commit('SET_DEPARTMENT_LIST', json);
       },
       async updateLastActiveAt({ getters }) {

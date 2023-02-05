@@ -71,7 +71,7 @@
 
 <script lang="ts">
 import { computed, defineComponent } from "@vue/runtime-core";
-import { auth } from "./firebase";
+// import { auth } from "./firebase";
 import { HeadAttrs, useHead } from "@vueuse/head";
 
 import BasicAlert from "./components/BasicAlert.vue";
@@ -88,6 +88,7 @@ import Loading from "./components/Loading.vue";
 import WelcomeModal from "./components/WelcomeModal.vue";
 import IconCommentAdd from "~icons/uil/comment-add";
 import FeedbackForm from "./components/FeedbackForm.vue";
+import { pb } from "./client";
 
 export default defineComponent({
   components: { 
@@ -135,9 +136,9 @@ export default defineComponent({
     if (!import.meta.env.SSR) {
       this.$store.dispatch('checkFirstTimeVisitor');
 
-      auth.onAuthStateChanged((user) => {
+      pb.authStore.onChange((_, user) => {
         this.$store.dispatch('onReceiveUser', user);
-      });
+      }, true);
 
       if (import.meta.env.VITE_READ_ONLY !== "true") {
         Promise.all([

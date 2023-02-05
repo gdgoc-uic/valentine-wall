@@ -83,30 +83,30 @@ export default {
       }, 1500);
     },
     async generateInvitationLink() {
-      try {
-        this.isProcessing = true;
-        this.gotInvitationCode = null;
-        this.gotExpirationHrs = null;
-        this.gotMaxUsers = null;
-        this.gotRewardCoins = null;
+      // try {
+      //   this.isProcessing = true;
+      //   this.gotInvitationCode = null;
+      //   this.gotExpirationHrs = null;
+      //   this.gotMaxUsers = null;
+      //   this.gotRewardCoins = null;
 
-        const form = this.$refs.generateInvForm;
-        if (!form || !(form instanceof HTMLFormElement)) return;
+      //   const form = this.$refs.generateInvForm;
+      //   if (!form || !(form instanceof HTMLFormElement)) return;
   
-        const formData = new FormData(form);
-        const maxUsers = formData.get('max_users');
-        const { data: json } = await this.$client.post('/user/invitations/generate?max_users=' + maxUsers);
-        this.$notify({ type: 'success', text: json['message'] });
-        this.$emit('success', json);
-        this.gotInvitationCode = json['invitation_code'];
-        this.gotExpirationHrs = json['expires_in_hrs'];
-        this.gotMaxUsers = json['max_users'];
-        this.gotRewardCoins = json['reward_coins'];
-      } catch (e) {
-        catchAndNotifyError(this, e);
-      } finally {
-        this.isProcessing = false;
-      }
+      //   const formData = new FormData(form);
+      //   const maxUsers = formData.get('max_users');
+      //   const { data: json } = await this.$client.post('/user/invitations/generate?max_users=' + maxUsers);
+      //   this.$notify({ type: 'success', text: json['message'] });
+      //   this.$emit('success', json);
+      //   this.gotInvitationCode = json['invitation_code'];
+      //   this.gotExpirationHrs = json['expires_in_hrs'];
+      //   this.gotMaxUsers = json['max_users'];
+      //   this.gotRewardCoins = json['reward_coins'];
+      // } catch (e) {
+      //   catchAndNotifyError(this, e);
+      // } finally {
+      //   this.isProcessing = false;
+      // }
     }
   }
 }

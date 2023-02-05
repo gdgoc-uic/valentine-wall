@@ -63,7 +63,7 @@
               <report-dialog 
                 :key="reportDialogKey"
                 @success="onReportSuccess"
-                :email="$store.getters.isLoggedIn ? $store.state.user.email : null" 
+                :email="$store.getters.isLoggedIn ? $store.state.user.email : undefined" 
                 :message-id="message.id">
                 <template #default="{ openDialog }">
                   <button 
@@ -131,8 +131,7 @@ import ShareDialog from '../components/ShareDialog.vue';
 import Modal from '../components/Modal.vue';
 
 import { logEvent } from '@firebase/analytics';
-import { analytics } from '../firebase';
-import { APIResponse, APIResponseError, expandAPIEndpoint } from '../client';
+// import { analytics } from '../firebase';
 import { catchAndNotifyError } from '../notify';
 import { Gift } from '../store';
 import { WatchStopHandle } from '@vue/runtime-core';
@@ -164,9 +163,9 @@ export default {
     ReportDialog,
   },
   mounted() {
-    if (this.$route.query.from) {
-      logEvent(analytics!, "traffic_source", { from: this.$route.query.from });
-    }
+    // if (this.$route.query.from) {
+    //   logEvent(analytics!, "traffic_source", { from: this.$route.query.from });
+    // }
   },
   data() {
     return {
@@ -186,7 +185,7 @@ export default {
     onShareSuccess(provider: string) {
       // share success
       if (provider === 'clipboard') {
-        logEvent(analytics!, 'share', { method: 'copy-url', item_id: this.message.id });
+        // logEvent(analytics!, 'share', { method: 'copy-url', item_id: this.message.id });
       }
     },
     onShareFailed(err: unknown) {
@@ -206,19 +205,19 @@ export default {
     },
     async deleteMessage() {
       try {
-        const { data: json } = await this.$client.delete(`/messages/${this.$route.params.recipientId}/${this.$route.params.messageId}`);
-        this.$notify({ type: 'success', text: json['message'] });
-        this.$router.replace({ name: 'home-page' });
+        // const { data: json } = await this.$client.delete(`/messages/${this.$route.params.recipientId}/${this.$route.params.messageId}`);
+        // this.$notify({ type: 'success', text: json['message'] });
+        // this.$router.replace({ name: 'home-page' });
       } catch(e) {
         catchAndNotifyError(this, e);
       }
     },
     async deleteReply() {
       try {
-        const { data: json } = await this.$client.delete(`/messages/${this.$route.params.recipientId}/${this.$route.params.messageId}/reply`);
-        this.$notify({ type: 'success', text: json['message'] });
-        this.message.has_replied = false;
-        this.$router.go(0);
+        // const { data: json } = await this.$client.delete(`/messages/${this.$route.params.recipientId}/${this.$route.params.messageId}/reply`);
+        // this.$notify({ type: 'success', text: json['message'] });
+        // this.message.has_replied = false;
+        // this.$router.go(0);
       } catch(e) {
         catchAndNotifyError(this, e);
       }
@@ -229,19 +228,19 @@ export default {
         this.$router.go(0);
       }
     },
-    handleResponse(r: APIResponse) {
-      const { rawResponse: resp, data: json } = r;
-      this.isDeletable = json['is_deletable'] ?? false;
-      this.message = json['message'];
-      if (!this.hasGifts) {
-        this.revealContent = true;
-      }
-      logEvent(analytics!, 'retrieve_message', { status_code: resp.status });
+    handleResponse(r: any) {
+      // const { rawResponse: resp, data: json } = r;
+      // this.isDeletable = json['is_deletable'] ?? false;
+      // this.message = json['message'];
+      // if (!this.hasGifts) {
+      //   this.revealContent = true;
+      // }
+      // logEvent(analytics!, 'retrieve_message', { status_code: resp.status });
     },
     handleResponseError(e: unknown) {
-      if (e instanceof APIResponseError) {
-        logEvent(analytics!, 'retrieve_message', { status_code: e.rawResponse.status });
-      }
+      // if (e instanceof APIResponseError) {
+        // logEvent(analytics!, 'retrieve_message', { status_code: e.rawResponse.status });
+      // }
     },
     relativifyDate(date: Date) {
       return fromNow(date);
@@ -287,7 +286,8 @@ export default {
       return `/messages/${this.$route.params.recipientId}/${this.$route.params.messageId}`;
     },
     imageUrl(): string {
-      return expandAPIEndpoint(this.endpoint + '?image');
+      // return expandAPIEndpoint(this.endpoint + '?image');
+      return '?image';
     },
   },
 }

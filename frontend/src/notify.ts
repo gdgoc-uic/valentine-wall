@@ -1,6 +1,6 @@
 import { logEvent } from "firebase/analytics";
 import { Component, h, Plugin } from "vue";
-import { analytics } from "./firebase";
+// import { analytics } from "./firebase";
 
 export interface NotifierArguments {
   title?: string,
@@ -20,7 +20,7 @@ export interface Notifier {
 export function notify(nt: Notifier, args: NotifierArguments) {
   if (!import.meta.env.SSR){
     nt.$notify(args);
-    logEvent(analytics!, 'server_notifications', args);
+    // logEvent(analytics!, 'server_notifications', args);
   }
 }
 

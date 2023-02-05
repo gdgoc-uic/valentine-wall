@@ -46,8 +46,8 @@ export default {
   methods: {
     async loadMessageCount() {
       try {
-        const { data } = await this.$client.get('/messages_count');
-        this.messagesCount = data;
+        // const { data } = await this.$client.get('/messages_count');
+        // this.messagesCount = data;
       } catch (e) {
         catchAndNotifyError(this, e);
       }

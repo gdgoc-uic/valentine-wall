@@ -38,7 +38,6 @@
 </template>
 
 <script lang="ts">
-import { APIResponseError } from '../client';
 import { catchAndNotifyError } from '../notify';
 import Modal from './Modal.vue';
 import BasicInformationStep from './SetupDialog/BasicInformationStep.vue';
@@ -103,15 +102,15 @@ export default {
     async submitSetupForm() {
       try {
         try {
-          const { data: setupJson } = await this.$client.postJson('/user/setup', this.submitDetails);
-          this.$notify({ type: 'success', text: setupJson['message'] });
-          await this.$store.dispatch('getUserInfo');
-          this.$store.commit('SET_SETUP_MODAL_OPEN', false);
+          // const { data: setupJson } = await this.$client.postJson('/user/setup', this.submitDetails);
+          // this.$notify({ type: 'success', text: setupJson['message'] });
+          // await this.$store.dispatch('getUserInfo');
+          // this.$store.commit('SET_SETUP_MODAL_OPEN', false);
         } catch (e) {
-          if (e instanceof APIResponseError && e.rawResponse.status == 403 && e.message == 'Access to the service is denied.') {
-            this.$router.replace({ name: 'home-page' });
-            await this.$store.dispatch('logout');
-          }
+          // if (e instanceof APIResponseError && e.rawResponse.status == 403 && e.message == 'Access to the service is denied.') {
+          //   this.$router.replace({ name: 'home-page' });
+          //   await this.$store.dispatch('logout');
+          // }
           throw e;
         }
       } catch(e) {

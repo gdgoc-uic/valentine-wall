@@ -43,14 +43,14 @@ export default {
     async depositCheck(e: SubmitEvent) {
       try {
         this.isProcessing = true;
-        if (!e.target || !(e.target instanceof HTMLFormElement)) return;
-        const formData = new FormData(e.target);
-        const { data: json } = await this.$client.postJson('/user/cheque/deposit', { 
-          cheque_id: formData.get('cheque_id')
-        });
+        // if (!e.target || !(e.target instanceof HTMLFormElement)) return;
+        // const formData = new FormData(e.target);
+        // const { data: json } = await this.$client.postJson('/user/cheque/deposit', { 
+        //   cheque_id: formData.get('cheque_id')
+        // });
 
-        this.$notify({ type: 'success', text: json['message'] });
-        this.$router.go(0);
+        // this.$notify({ type: 'success', text: json['message'] });
+        // this.$router.go(0);
       } catch (e) {
         catchAndNotifyError(this, e);
       } finally {

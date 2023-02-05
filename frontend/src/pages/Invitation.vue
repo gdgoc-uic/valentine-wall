@@ -18,7 +18,7 @@ export default {
     async processInvitationCode(invCode: string) {
       setTimeout(async () => {
         try {
-          await this.$client.get(`/invite/${invCode}`, { credentials: 'include' });
+          // await this.$client.get(`/invite/${invCode}`, { credentials: 'include' });
         } catch (e) {
           catchAndNotifyError(this, e);
         } finally {

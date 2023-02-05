@@ -30,9 +30,9 @@ export default {
   methods: {
     async loadTC() {
       try {
-        const { data } = await this.$client.get('/terms-and-conditions');
-        console.log(data);
-        this.tc = data;
+        // const { data } = await this.$client.get('/terms-and-conditions');
+        // console.log(data);
+        // this.tc = data;
       } catch (e) {
         catchAndNotifyError(this, e);
       }

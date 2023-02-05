@@ -49,7 +49,7 @@
               <textarea
                 name="content"
                 class="textarea textarea-bordered h-48"
-                @input="content = $event.target.value"
+                @input="content = $event.target!.value"
                 maxlength="240"></textarea>
             </div>
             <div class="flex justify-between items-center mt-4">
@@ -81,7 +81,7 @@ import GiftIcon from './GiftIcon.vue';
 import IconClose from '~icons/uil/multiply';
 
 import { logEvent } from '@firebase/analytics';
-import { analytics } from '../firebase';
+// import { analytics } from '../firebase';
 import { catchAndNotifyError, notify } from '../notify';
 import { VueComponent as RulesContent } from '../assets/texts/rules.md';
 
@@ -172,19 +172,19 @@ export default {
           throw new Error('Maximum of 3 gifts is allowed.');
         }
 
-        const { data: json } = await this.$client.postJson('/messages', {
-          recipient_id: formData.get('recipient_id'),
-          content: formData.get('content'),
-          gift_ids: giftIds,
-          uid: this.$store.state.user.id
-        });
+        // const { data: json } = await this.$client.postJson('/messages', {
+        //   recipient_id: formData.get('recipient_id'),
+        //   content: formData.get('content'),
+        //   gift_ids: giftIds,
+        //   uid: this.$store.state.user.id
+        // });
 
-        logEvent(analytics!, 'post-message');
-        notify(this, { type: 'success', text: json['message'] });
-        this.$store.commit('SET_USER_WALLET_BALANCE', json['current_balance'])
+        // logEvent(analytics!, 'post-message');
+        // notify(this, { type: 'success', text: json['message'] });
+        // this.$store.commit('SET_USER_WALLET_BALANCE', json['current_balance'])
         e.target.reset();
         this.$emit('update:open', false);
-        this.$router.push(json['route']);
+        // this.$router.push(json['route']);
       } catch(e) {
         catchAndNotifyError(this, e);
       } finally {

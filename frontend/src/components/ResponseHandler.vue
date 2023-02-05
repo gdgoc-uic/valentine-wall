@@ -25,7 +25,6 @@
 </template>
 
 <script lang="ts">
-import { APIResponse, APIResponseError } from '../client';
 import { catchAndNotifyError } from '../notify';
 import Loading from './Loading.vue';
 import PromiseLoader from './PromiseLoader.vue';
@@ -52,31 +51,33 @@ export default {
     },
     data() {
         return {
-            resp: { data: null } as unknown as APIResponse,
+            resp: { data: null } as unknown,
             error: null as unknown
         }
     },
     computed: {
         fetchPromise() {
-            return !this.endpoint
-                ? Promise.reject(new Error('Not loaded.'))
-                : this.$client.get(this.endpoint);
+            // return !this.endpoint
+            //     ? 
+                return Promise.reject(new Error('Not loaded.'))
+                // : this.$client.get(this.endpoint);
         }
     },
     methods: {
-        handleResolve(r: APIResponse) {
+        handleResolve(r: any) {
             this.resp = r;
             this.$emit('success', r);
         },
         handleReject(err: unknown) {
             this.error = err;
             this.$emit('error', err);
-            if (err instanceof APIResponseError && err.rawResponse.status !== 404) {
-                catchAndNotifyError(this, err);
-            }
+            // if (err instanceof APIResponseError && err.rawResponse.status !== 404) {
+            //     catchAndNotifyError(this, err);
+            // }
         },
         isResponseError(): boolean {
-            return this.error instanceof APIResponseError;
+            // return this.error instanceof APIResponseError;
+            return true;
         }
     }
 }

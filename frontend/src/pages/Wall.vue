@@ -74,7 +74,6 @@
 import { catchAndNotifyError } from '../notify';
 import { defineComponent } from '@vue/runtime-core';
 import ClientOnly from '../components/ClientOnly.vue';
-import { APIResponse } from '../client';
 import PaginatedResponseHandler from '../components/PaginatedResponseHandler.vue';
 import PaginationLoadMoreButton from '../components/PaginationLoadMoreButton.vue';
 import LoginButton from '../components/LoginButton.vue';
@@ -135,7 +134,7 @@ export default defineComponent({
     loadData(): Promise<any> {
       return this.loadStats();
     },
-    checkMessagesLength({ data }: APIResponse) {
+    checkMessagesLength({ data }: any) {
       if (!Array.isArray(data['data']) || data['data'].length == 0) {
         throw new Error('No messages found.');
       }
@@ -143,9 +142,9 @@ export default defineComponent({
     async loadStats(): Promise<void> {
       try {
         if (!this.$route.params.recipientId) return;
-        const recipientId = this.$route.params.recipientId ?? '';
-        const { data: json } = await this.$client.get(`/messages/${recipientId}/stats`);
-        this.stats = json;
+        // const recipientId = this.$route.params.recipientId ?? '';
+        // const { data: json } = await this.$client.get(`/messages/${recipientId}/stats`);
+        // this.stats = json;
       } catch(e) {
         catchAndNotifyError(this, e);
       }

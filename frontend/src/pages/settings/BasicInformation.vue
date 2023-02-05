@@ -90,15 +90,15 @@ export default {
     async saveUserInfo() {
       try {
         this.isSaving = true;
-        const { data } = await this.$client.patchJson('/user/info', {
-          sex: this.sex,
-          department: this.department
-        });
+        // const { data } = await this.$client.patchJson('/user/info', {
+        //   sex: this.sex,
+        //   department: this.department
+        // });
 
-        this.$notify({ type: 'success', text: data['message'] });
-        await this.$store.dispatch('getUserInfo');
-        this.sex = this.$store.state.user.sex;
-        this.department = this.$store.state.user.department;
+        // this.$notify({ type: 'success', text: data['message'] });
+        // await this.$store.dispatch('getUserInfo');
+        // this.sex = this.$store.state.user.sex;
+        // this.department = this.$store.state.user.department;
       } catch (e) {
         catchAndNotifyError(this, e);
       } finally {
@@ -124,8 +124,8 @@ export default {
     },
     async disconnectUserConnection(name: string) {
       try {
-        const { data } = await this.$client.delete(`/user/connections/${name}`);
-        this.$notify({ type: 'success', text: data['message'] });
+        // const { data } = await this.$client.delete(`/user/connections/${name}`);
+        // this.$notify({ type: 'success', text: data['message'] });
       } catch (e) {
         catchAndNotifyError(this, e);
       } finally {
