@@ -39,6 +39,13 @@ var htmlTemplates = &htmlTemplate.Template{}
 
 func setupRoutes(app *pocketbase.PocketBase) hook.Handler[*core.ServeEvent] {
 	return func(e *core.ServeEvent) error {
+		var err error
+		if htmlTemplates, err = htmlTemplate.ParseGlob("./templates/html/*.html.tpl"); err != nil {
+			log.Panicln(err)
+		} else {
+			log.Printf("%d html templates have been loaded\n", len(htmlTemplates.Templates()))
+		}
+
 		imageRenderer := &ImageRenderer{
 			CacheStore: cache.New(time.Duration(10*time.Minute), time.Duration(5*time.Second)),
 		}
@@ -55,12 +62,6 @@ func setupRoutes(app *pocketbase.PocketBase) hook.Handler[*core.ServeEvent] {
 
 			// load template
 			log.Println("loading image template...")
-			var err error
-			if htmlTemplates, err = htmlTemplate.ParseGlob("./templates/html/*.html.tpl"); err != nil {
-				log.Panicln(err)
-			} else {
-				log.Printf("%d html templates have been loaded\n", len(htmlTemplates.Templates()))
-			}
 
 			imageRenderer.ChromeCtx = chromeCtx
 			imageRenderer.Template = htmlTemplates.Lookup("message_image.html.tpl")
@@ -253,6 +254,12 @@ func setupRoutes(app *pocketbase.PocketBase) hook.Handler[*core.ServeEvent] {
 			_, err := c.Response().Write(gotZip.([]byte))
 			return err
 		}, apis.RequireRecordAuth("users"))
+
+		e.Router.GET("/user_auth/callback", func(c echo.Context) error {
+			// collection :=
+			tpl := htmlTemplates.Lookup("auth_callback.html.tpl")
+			return tpl.Execute(c.Response(), nil)
+		})
 
 		return nil
 	}

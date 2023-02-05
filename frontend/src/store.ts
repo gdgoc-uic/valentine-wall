@@ -1,8 +1,9 @@
 import { logEvent, setUserId, setUserProperties } from 'firebase/analytics';
-import { GoogleAuthProvider, signInWithPopup, User } from 'firebase/auth';
 import { createStore as createVuexStore, Store } from 'vuex';
 import { InjectionKey } from 'vue';
-import { pb } from './client';
+import { backendUrl, pb } from './client';
+import { popupCenter } from './auth';
+import { Record as PbRecord } from 'pocketbase';
 // import { analytics, auth } from './firebase';
 
 // NOTE: snake_case because JSON response is in snake_case
@@ -153,16 +154,48 @@ export function createStore() {
   
     actions: {
       async login({ commit, state }) {
-        const provider = new GoogleAuthProvider();
-        provider.addScope('email');
-        provider.addScope('profile');
-        provider.setCustomParameters({
-          'hd': 'uic.edu.ph'
-        });
-  
         try {
           commit('SET_AUTH_LOADING', true);
-          // await signInWithPopup(auth, provider);
+          // TODO: improve auth
+          // 1. create an endpoint in server that will receive the callback
+          // 2. create an HTML template that will receive the context (html/auth_callback.html.tpl)
+          // 3. using window.postMessage and the code from connectToTwitter in auth.ts, receive the payload
+          // 4. verify the code on the client side
+          const authMethods = await pb.collection('users').listAuthMethods();
+          const googleProvider = authMethods.authProviders.find(p => p.name === 'google');
+          if (!googleProvider) return;
+  
+          const redirectUrl = pb.buildUrl('/user_auth/callback');
+
+          // TODO: change url on production!
+          const connectUrl = `${googleProvider.authUrl}${redirectUrl}&hd=uic.edu.ph`;
+          const loginWindow = popupCenter({ url: connectUrl, title: 'twitter_login_window', w: 800, h: 500 });
+          if (!loginWindow) {
+              throw new Error('Failed to open window.');
+          }
+  
+          const handleFn = function (this: Window, e: MessageEvent) {
+            if (e.origin === backendUrl && typeof e.data === 'object' && 'state' in e.data) {
+              const data = e.data;
+              if (googleProvider.state !== data['state']) {
+                  throw new Error();
+              }
+
+              pb.collection('users').authWithOAuth2(
+                googleProvider.name,
+                data['code'],
+                googleProvider.codeVerifier,
+                redirectUrl,
+              ).then((authData) => {
+                  console.log(authData);
+              })
+            
+              window.removeEventListener('message', handleFn);
+              loginWindow.close();
+            }
+          }
+  
+          window.addEventListener('message', handleFn);
           if (state.isSetupModalOpen) {
             // logEvent(analytics!, 'sign_up');
           } else {
@@ -174,15 +207,15 @@ export function createStore() {
           commit('SET_AUTH_LOADING', false);
         }
       },
-      async onReceiveUser({ commit, dispatch, getters }, user: User | null): Promise<void> {  
+      async onReceiveUser({ commit, dispatch, getters }, user: PbRecord | null): Promise<void> {  
         try {
           if (!user) {
             return;
           }
   
-          commit('SET_USER_ID', user.uid);
+          commit('SET_USER_ID', user.id);
           commit('SET_USER_EMAIL', user.email ?? '<unknown e-mail>');
-          commit('SET_USER_ACCESS_TOKEN', await user.getIdToken(false));
+          commit('SET_USER_ACCESS_TOKEN', 'dummy TODO');
 
           if (import.meta.env.VITE_READ_ONLY !== 'true') {
             // await Promise.all([
