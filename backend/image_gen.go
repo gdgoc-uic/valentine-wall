@@ -16,6 +16,7 @@ import (
 	"github.com/fogleman/gg"
 	"github.com/golang/freetype/truetype"
 	"github.com/patrickmn/go-cache"
+	"github.com/pocketbase/pocketbase/models"
 )
 
 type ImageType int
@@ -65,9 +66,9 @@ type ImageRenderer struct {
 	CacheStore *cache.Cache
 }
 
-func (ctx *ImageRenderer) Render(itype ImageType, message RawMessage) ([]byte, error) {
+func (ctx *ImageRenderer) Render(itype ImageType, message *models.Record) ([]byte, error) {
 	// use cached image if available
-	imageCacheKey := fmt.Sprintf("image/%s", message.ID)
+	imageCacheKey := fmt.Sprintf("image/%s", message.Id)
 	if cachedImage, isImageCached := ctx.CacheStore.Get(imageCacheKey); isImageCached && cachedImage != nil {
 		log.Println("using cached image...")
 		return cachedImage.([]byte), nil
@@ -85,7 +86,7 @@ func (ctx *ImageRenderer) Render(itype ImageType, message RawMessage) ([]byte, e
 
 	if err != nil || imgBuf.Len() == 0 {
 		passivePrintError(err)
-		if err2 := generateImagePNG(imgBuf, imageTypeTwitter, message.Message); err2 != nil {
+		if err2 := generateImagePNG(imgBuf, imageTypeTwitter, message); err2 != nil {
 			return nil, err2
 		}
 	}
@@ -96,7 +97,7 @@ func (ctx *ImageRenderer) Render(itype ImageType, message RawMessage) ([]byte, e
 	return imgBuf.Bytes(), nil
 }
 
-func generateImagePNG(wr io.Writer, itype ImageType, message Message) error {
+func generateImagePNG(wr io.Writer, itype ImageType, message *models.Record) error {
 	margin := float64(50)
 	doubleMargin := 2.0 * margin
 	innerContainerMargin := 4.0 * margin
@@ -118,7 +119,7 @@ func generateImagePNG(wr io.Writer, itype ImageType, message Message) error {
 	dc.Fill()
 
 	// content := `Molestie id vulputate condimentum tempus nisi interdum scelerisque odio habitasse consectetur suspendisse hac id eu adipiscing.Arcu ridiculus felis nec adipiscing gravida platea neque parturient posuere faucibus laoreet vestibulum feugiat.`
-	content := message.Content
+	content := message.GetString("content")
 	fontReductionFactor := 1.0
 	threshold := 110.0
 	lineHeight := 1.5
@@ -151,13 +152,13 @@ func generateImagePNG(wr io.Writer, itype ImageType, message Message) error {
 	dc.SetFontFace(truetype.NewFace(latoLight, &truetype.Options{
 		Size: float64(width) * 0.02,
 	}))
-	dc.DrawStringWrapped(fmt.Sprintf("Posted on %s", message.CreatedAt), centerX, containerEndY+10, 0.5, 0.5, innerContainerStartX, 1, gg.AlignCenter)
+	dc.DrawStringWrapped(fmt.Sprintf("Posted on %s", message.Created.Time()), centerX, containerEndY+10, 0.5, 0.5, innerContainerStartX, 1, gg.AlignCenter)
 
 	return dc.EncodePNG(wr)
 }
 
 type RendererContext struct {
-	RawMessage
+	RawMessage *models.Record
 	BackendURL string
 }
 

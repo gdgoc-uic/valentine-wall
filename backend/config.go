@@ -10,7 +10,6 @@ import (
 	"strconv"
 
 	goaway "github.com/TwiN/go-away"
-	goValidator "github.com/go-playground/validator/v10"
 )
 
 type CustomProfanityDictionary struct {
@@ -23,7 +22,6 @@ var emailRegex *regexp.Regexp
 
 // uninit'ed variables
 var baseUrl string
-var gAppCredPath string
 var chromeDevtoolsURL string
 var readOnly = false
 
@@ -33,13 +31,9 @@ var profanityDetector *goaway.ProfanityDetector
 // init'ed variables
 var serverPort = 4000
 var targetEnv = "development"
-var postalOfficeAddress = "localhost:3350"
 var dataDirPath = filepath.Join(".", "_data")
-var invitationCookieName = "vw-invitation_ref"
 
 var sendPrice = float64(150.0)
-
-var validator = goValidator.New()
 
 func loadCustomProfanityDetector(customDictionary *CustomProfanityDictionary) *goaway.ProfanityDetector {
 	return goaway.NewProfanityDetector().WithCustomDictionary(
@@ -105,16 +99,8 @@ func init() {
 		profanityDetector = goaway.NewProfanityDetector()
 	}
 
-	if gotPoAddress, exists := os.LookupEnv("POSTAL_OFFICE_ADDRESS"); exists {
-		postalOfficeAddress = gotPoAddress
-	}
-
 	if gotChromeDevtoolsURL, exists := os.LookupEnv("CHROME_DEVTOOLS_URL"); exists {
 		chromeDevtoolsURL = gotChromeDevtoolsURL
-	}
-
-	if gotInvitationCookieName, exists := os.LookupEnv("INVITATION_COOKIE_NAME"); exists {
-		invitationCookieName = gotInvitationCookieName
 	}
 
 	if gotReadOnly, exists := os.LookupEnv("READ_ONLY"); exists {

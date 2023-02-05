@@ -18,6 +18,15 @@ func main() {
 		return onUserVerified(app, e)
 	})
 
+	app.OnRecordBeforeCreateRequest().Add(func(e *core.RecordCreateEvent) error {
+		switch e.Record.Collection().Name {
+		case "messages":
+			return onBeforeAddMessage(app.Dao(), e)
+		}
+
+		return nil
+	})
+
 	app.OnRecordAfterCreateRequest().Add(func(e *core.RecordCreateEvent) error {
 		switch e.Record.Collection().Name {
 		case "users":
