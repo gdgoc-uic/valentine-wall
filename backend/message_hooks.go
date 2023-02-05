@@ -5,6 +5,7 @@ import (
 	"net/http"
 
 	"github.com/pocketbase/dbx"
+	"github.com/pocketbase/pocketbase/apis"
 	"github.com/pocketbase/pocketbase/core"
 	"github.com/pocketbase/pocketbase/daos"
 	"github.com/pocketbase/pocketbase/models"
@@ -12,7 +13,7 @@ import (
 )
 
 func expandMessage(dao *daos.Dao, record *models.Record) error {
-	errs := dao.ExpandRecord(record, []string{"user", "gifts"}, func(relCollection *models.Collection, relIds []string) ([]*models.Record, error) {
+	errs := dao.ExpandRecord(record, []string{"user", "user.user", "gifts"}, func(relCollection *models.Collection, relIds []string) ([]*models.Record, error) {
 		return dao.FindRecordsByIds(relCollection.Name, relIds)
 	})
 	if len(errs) != 0 {
@@ -88,19 +89,17 @@ func computeGiftCost(record *models.Record) (totalAmount float64, remittableAmou
 	return totalAmount, remittableAmount
 }
 
-func onAddMessage(dao *daos.Dao, e *core.RecordCreateEvent) error {
+func onBeforeAddMessage(dao *daos.Dao, e *core.RecordCreateEvent) error {
 	// to avoid spams
-	if _, err := dao.FindRecordsByExpr(
+	if r, err := dao.FindRecordsByExpr(
 		e.Record.Collection().Name,
 		dbx.HashExp{
 			"content":   e.Record.GetString("content"),
 			"recipient": e.Record.GetString("recipient"),
 		},
-	); err == nil {
-		return (&ResponseError{
-			StatusCode: http.StatusBadRequest,
-			Message:    "You have posted a similar message to a similar recipient.",
-		}).ToApiError()
+	); err == nil && len(r) != 0 {
+		return apis.NewBadRequestError(
+			"You have posted a similar message to a similar recipient.", nil)
 	}
 
 	// check profanity content
@@ -108,13 +107,18 @@ func onAddMessage(dao *daos.Dao, e *core.RecordCreateEvent) error {
 		return err.ToApiError()
 	}
 
+	return nil
+}
+
+func onAddMessage(dao *daos.Dao, e *core.RecordCreateEvent) error {
 	expandMessage(dao, e.Record)
 
 	user := e.Record.Expand()["user"].(*models.Record)
 	recipient, isRecipientAccessible := e.Record.Expand()["recipient"].(*models.Record)
 	totalAmount, remittableAmount := computeGiftCost(e.Record)
 
-	wallet, err := getWalletByUserId(dao, e.Record.GetString("user"))
+	wallet, err := getWalletByUserId(dao, user.GetString("user"))
+
 	if err != nil {
 		return err
 	} else if wallet.GetFloat("amount") < remittableAmount {
