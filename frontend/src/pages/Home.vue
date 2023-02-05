@@ -102,7 +102,7 @@ import LoginButton from '../components/LoginButton.vue';
 import PaginatedResponseHandler from '../components/PaginatedResponseHandler.vue';
 import MessageTiles from '../components/MessageTiles.vue';
 import { pb } from '../client';
-import { UnsubscribeFunc } from 'pocketbase';
+import { Record as PbRecord, UnsubscribeFunc } from 'pocketbase';
 
 export default {
   components: { 
@@ -124,13 +124,18 @@ export default {
   },
   mounted() {
     if (!import.meta.env.SSR) {
-      pb.collection('messages').subscribe('*', (e) => {
-        this.recentMessages.push(e.record);
-      })
-        .then(unsub => {
-          if (!unsub) return;
-          this.recentsSSE = unsub;
+      pb.collection('messages').getList(1, 10, {
+        sort: '-created'
+      }).then(records => {
+        this.recentMessages.push(...records.items);
+
+        return pb.collection('messages').subscribe('*', (e) => {
+          this.recentMessages.push(e.record);
         });
+      }).then(unsub => {
+        if (!unsub) return;
+        this.recentsSSE = unsub;
+      });
     }
   },
   unmounted() {
@@ -143,7 +148,7 @@ export default {
       isFormOpen: false,
       rankingSex: 'male',
       rankingsEndpoint: '',
-      recentMessages: [] as any[],
+      recentMessages: [] as PbRecord[],
       recentsSSE: null as unknown as UnsubscribeFunc
     }
   },

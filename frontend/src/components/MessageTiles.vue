@@ -3,18 +3,19 @@
     <!-- TODO: make card widths and --colors-- different -->
     <div :key="msg.id" v-for="msg in messageList" :class="boxClass" class="message-paper-wrapper">
       <router-link
-        :to="{ name: 'message-page', params: { recipientId: msg.recipient_id, messageId: msg.id } }"
+        :to="{ name: 'message-page', params: { recipientId: msg.recipient, messageId: msg.id } }"
         class="message-paper"
-        :class="[msg.has_gifts ? 'paper-variant-gift' : `paper-variant-${msg.paperColor}`]">
-          <div v-if="!msg.has_gifts" class="px-6 pt-6">
+        :class="[msg.gifts.length != 0 ? 'paper-variant-gift' : `paper-variant-${msg.paperColor}`]">
+          <div v-if="msg.gifts.length == 0" class="px-6 pt-6">
             <p>{{ msg.content }}</p>
           </div>
           <div v-else class="flex w-full h-full items-center justify-center">
             <icon-gift class="text-white text-9xl" />
           </div>
           <div class="message-meta-info">
-            <p :class="[msg.has_gifts ? 'text-white' : 'text-gray-500']" class="text-sm">{{ humanizeTime(msg.created_at) }} ago</p>
-            <icon-reply v-if="msg.has_replied" class="text-pink-500" />
+            <p :class="[msg.gifts.length != 0 ? 'text-white' : 'text-gray-500']" class="text-sm">{{ humanizeTime(msg.created) }} ago</p>
+            <!-- TODO: has_replied -->
+            <!-- <icon-reply v-if="msg.has_replied" class="text-pink-500" /> -->
           </div>
       </router-link>
     </div>
@@ -55,7 +56,7 @@ export default {
     }
   },
   mounted() {
-    this.applyChanges(this.processResults(this.messages));
+    this.applyChanges(this.messages);
   },
   data() {
     return {
@@ -64,6 +65,7 @@ export default {
   },
   watch: {
     messages(newMessages: any[], oldMessages: any[]) {
+      console.log(this.messages);
       this.applyChanges(newMessages);
     }
   },
