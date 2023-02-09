@@ -1,6 +1,6 @@
 <template>
     <!-- TODO: handle disappear-on-loading -->
-    <slot v-if="!disappearOnLoading" :data="query.data"></slot>
+    <slot v-if="(!disappearOnLoading || query.isFetched.value) && typeof query.data.value !== 'undefined'" :data="query.data"></slot>
     <slot v-if="query.isError.value" name="error" :error="query.error.value"></slot>
     <div v-else-if="query.isLoading.value" class="py-12 w-full h-full flex-col items-center justify-center text-center">
         <loading class="mx-auto" />
