@@ -7,13 +7,16 @@
         <h1 class="text-center text-3xl font-bold">Valentine Ranking Board</h1>
 
         <div class="tabs tabs-boxed">
-          <button @click="rankingsSex = 'male'" :class="{ 'tab-active': rankingsSex == 'male' }" class="tab tab-lg">Male</button>
-          <button @click="rankingsSex = 'female'" :class="{ 'tab-active': rankingsSex == 'female' }" class="tab tab-lg">Female</button>
+          <button 
+            v-for="sex in availableSexes"
+            @click="rankingsSex = sex.id" 
+            :class="{ 'tab-active': rankingsSex == sex.id }" 
+            class="tab tab-lg">{{ sex.label }}</button>
         </div>
       </div>
 
-      <paginated-response-handler :origin-endpoint="endpoint">
-        <template #default="{ data: rankings, links, goto }">
+      <response-handler :query="query">
+        <template #default>
           <table class="table w-full">
             <thead>
               <tr>
@@ -33,7 +36,7 @@
               </tr>
             </thead>
             <tbody>
-              <tr :key="r.recipient_id" v-for="(r, i) in rankings" :class="{'border-b-2': i < rankings.length - 1}">
+              <tr :key="r.recipient_id" v-for="(r, i) in rankings?.items" :class="{'border-b-2': i < (rankings?.items ?? []).length - 1}">
                 <td class="text-xl font-bold text-gray-700">#{{ i + 1 }}</td>
                 <td class="text-xl font-semibold text-gray-500">{{ r.department }}</td>
                 <td class="text-xl text-gray-500 text-center">
@@ -46,23 +49,50 @@
             </tbody>
           </table>
 
-          <pagination-load-more-button :link="links.next" @click="goto(links.next, true)" />
+          <pagination-load-more-button 
+            :should-go-next="(rankings?.page ?? 0) < (rankings?.totalPages ?? 0)" 
+            @click="page++" />
         </template>
 
         <template #error="{ error }">
-          <p>{{ error.message || error }}</p>
+          <p>{{ error ? (error as Error).message : error }}</p>
         </template>
-      </paginated-response-handler>
+      </response-handler>
     </div>
   </main>
 </template>
 
 <script lang="ts" setup>
-import PaginatedResponseHandler from "../components/PaginatedResponseHandler.vue";
+import ResponseHandler from "../components/ResponseHandler2.vue";
 import PaginationLoadMoreButton from '../components/PaginationLoadMoreButton.vue';
 import IconCoin from '~icons/twemoji/coin';
-import { ref, computed } from "vue";
+import { ref, watch } from "vue";
+import { useQuery, useQueryClient } from "@tanstack/vue-query";
+import { pb } from "../client";
 
+const availableSexes = [
+  {
+    id: 'male',
+    label: 'Male'
+  },
+  {
+    id: 'female',
+    label: 'Female'
+  }
+];
+
+const queryClient = useQueryClient();
+const page = ref(1);
 const rankingsSex = ref('male');
-const endpoint = computed(() => `/rankings?limit=10&sex=${rankingsSex}`);
+
+// TODO: integrate notiwind into tanstack query
+// TODO: retrofit tanstack query to ResponseHandler
+const query = useQuery(
+  ['rankings', rankingsSex, page], 
+  () => pb.collection('rankings')
+          .getList(page.value, 10, { filter: `sex="${rankingsSex.value}"` }), {
+    keepPreviousData: true
+  });
+
+const rankings = query.data;
 </script>
