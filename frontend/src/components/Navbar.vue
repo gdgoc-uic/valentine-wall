@@ -151,7 +151,7 @@ import LoginButton from './LoginButton.vue';
 import SearchForm from './SearchForm.vue';
 import { useRoute, useRouter } from 'vue-router';
 import { useStore } from 'vuex';
-import { State } from '../store';
+import { State, storeKey } from '../store';
 import { ref, computed } from 'vue';
 import { pb } from '../client';
 
@@ -164,7 +164,7 @@ const props = defineProps({
 
 const router = useRouter();
 const route = useRoute();
-const store = useStore<State>();
+const store = useStore<State>(storeKey);
 
 async function logout(e: Event) {
   e.preventDefault();
