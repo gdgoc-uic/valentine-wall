@@ -61,10 +61,10 @@
           <!-- TODO: add 'add coins' modal -->
           <button 
             :class="[!shouldSendButtonHide ? 'rounded-none' : 'rounded-l-none']" 
-            v-if="$store.getters.isLoggedIn && $store.state.user.wallet.balance" 
-            class="btn shadow-md btn normal-case text-black bg-white border-0 hover:bg-gray-100">
+            v-if="$store.getters.isLoggedIn" 
+            class="btn shadow-md normal-case text-black bg-white border-0 hover:bg-gray-100">
             <icon-coin class="mr-2" />
-            <span>ღ{{ $store.state.user.wallet.balance }}</span>
+            <span>ღ{{ pb.authStore.model!.expand.wallet?.balance ?? 'unknown' }}</span>
           </button>
           <button
             v-if="!shouldSendButtonHide && $store.getters.isLoggedIn"
@@ -118,10 +118,10 @@
               </li>
             </ul>
             <button 
-              v-if="$store.getters.isLoggedIn && $store.state.user.wallet.balance" 
+              v-if="$store.getters.isLoggedIn" 
               class="btn shadow-md normal-case text-black bg-white border-0 hover:bg-gray-100 w-full mb-2">
               <icon-coin class="mr-2" />
-              <span>ღ{{ $store.state.user.wallet.balance }}</span>
+              <span>ღ{{ pb.authStore.model!.expand.wallet?.balance ?? 'unknown' }}</span>
             </button>
             <button
               v-if="!shouldSendButtonHide"
@@ -138,7 +138,7 @@
   </div>
 </template>
 
-<script lang="ts">
+<script lang="ts" setup>
 import IconMenu from '~icons/uil/align-center-alt';
 import IconDropdown from '~icons/uil/angle-down';
 import IconSend from '~icons/uil/message';
@@ -149,82 +149,69 @@ import { catchAndNotifyError } from '../notify';
 import ClientOnly from './ClientOnly.vue';
 import LoginButton from './LoginButton.vue';
 import SearchForm from './SearchForm.vue';
+import { useRoute, useRouter } from 'vue-router';
+import { useStore } from 'vuex';
+import { State } from '../store';
+import { ref, computed } from 'vue';
+import { pb } from '../client';
 
-export default {
-  props: {
-    isHome: {
-      type: Boolean,
-      default: false
-    }
-  },
-  components: {
-    IconMenu,
-    IconDropdown,
-    IconSend,
-    IconSearch,
-    IconClose,
-    IconCoin,
-    SearchForm,
-    ClientOnly,
-    LoginButton
-  },
-  mounted() {
-    this.mounted = true;
-  },
-  data() {
-    return {
-      mounted: false,
-      menuOpen: false
-    }
-  },
-  computed: {
-    shouldSendButtonHide(): boolean {
-      return this.isHome || this.$route.path.startsWith('/settings') || this.$route.path.startsWith('/about');
-    },
-    navbarLinks(): any[] {
-      return [
-        {
-          label: 'Rankings',
-          to: { name: 'rankings-page' }
-        },
-        {
-          label: 'About',
-          to: { name: 'about-page' }
-        }
-      ];
-    },
-    accountLinks(): any[] {
-      return [
-        {
-          liClass: 'text-black',
-          tag: 'router-link',
-          props: {
-            to: { name: 'settings-page' }
-          },
-          children: 'Settings'
-        },
-        {
-          liClass: 'text-red-500',
-          tag: 'a',
-          props: {
-            class: 'cursor-pointer',
-            onClick: this.logout
-          },
-          children: 'Logout' 
-        }
-      ];
-    }
-  },
-  methods: {
-    async logout(e: Event) {
-      e.preventDefault();
-      try {
-        this.$router.replace({ name: 'home-page' });
-        await this.$store.dispatch('logout');
-      } catch(e) {
-        catchAndNotifyError(this, e);
-      }
-    }
+const props = defineProps({
+  isHome: {
+    type: Boolean,
+    default: false
   }
-};
+});
+
+const router = useRouter();
+const route = useRoute();
+const store = useStore<State>();
+
+async function logout(e: Event) {
+  e.preventDefault();
+  try {
+    router.replace({ name: 'home-page' });
+    await store.dispatch('logout');
+  } catch(e) {
+    // TODO: bring back later
+    // catchAndNotifyError(this, e);
+  }
+}
+
+const menuOpen = ref(false);
+const navbarLinks = [
+  {
+    label: 'Rankings',
+    to: { name: 'rankings-page' }
+  },
+  {
+    label: 'About',
+    to: { name: 'about-page' }
+  }
+];
+
+const accountLinks = [
+  {
+    liClass: 'text-black',
+    tag: 'router-link',
+    props: {
+      to: { name: 'settings-page' }
+    },
+    children: 'Settings'
+  },
+  {
+    liClass: 'text-red-500',
+    tag: 'a',
+    props: {
+      class: 'cursor-pointer',
+      onClick: logout
+    },
+    children: 'Logout' 
+  }
+];
+
+const shouldSendButtonHide = computed(() => {
+  return props.isHome || 
+    route.path.startsWith('/settings') || 
+    route.path.startsWith('/about');
+});
 </script>

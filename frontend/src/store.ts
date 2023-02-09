@@ -3,7 +3,7 @@ import { createStore as createVuexStore, Store } from 'vuex';
 import { InjectionKey } from 'vue';
 import { backendUrl, pb } from './client';
 import { popupCenter } from './auth';
-import { Record as PbRecord } from 'pocketbase';
+import { ClientResponseError, Record as PbRecord } from 'pocketbase';
 // import { analytics, auth } from './firebase';
 
 // NOTE: snake_case because JSON response is in snake_case
@@ -167,6 +167,12 @@ export function createStore() {
             return;
           }
 
+          // TODO: use vue reactive state
+          try {
+            const wallet = await pb.collection('virtual_wallets').getFirstListItem(`user="${user.id}"`);
+            pb.authStore.model!.expand['wallet'] = wallet;
+          } catch {}
+
           try {
             if (user.details) {
               const result = await pb.collection('user_details').getOne(user.details);
@@ -176,8 +182,10 @@ export function createStore() {
               pb.authStore.model!.expand['details'] = result;
             }
 
-          } catch {
-            commit('SET_SETUP_MODAL_OPEN', true);
+          } catch (e) {
+            if (e instanceof ClientResponseError && e.status === 404) {
+              commit('SET_SETUP_MODAL_OPEN', true);
+            }
           }
           
           if (import.meta.env.VITE_READ_ONLY !== 'true') {  
