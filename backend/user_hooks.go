@@ -7,7 +7,7 @@ import (
 	"github.com/pocketbase/pocketbase/models"
 )
 
-func onAddUser(dao *daos.Dao, e *core.RecordCreateEvent) error {
+func onAddUser(dao *daos.Dao, e *core.ModelEvent) error {
 	// create virtual wallet
 	collection, err := dao.FindCollectionByNameOrId("virtual_wallets")
 	if err != nil {
@@ -15,7 +15,7 @@ func onAddUser(dao *daos.Dao, e *core.RecordCreateEvent) error {
 	}
 
 	record := models.NewRecord(collection)
-	record.Set("user", e.Record.Id)
+	record.Set("user", e.Model.GetId())
 	record.Set("balance", 0)
 
 	return dao.SaveRecord(record)
@@ -30,4 +30,14 @@ func onUserVerified(app *pocketbase.PocketBase, e *core.RecordConfirmVerificatio
 	}
 
 	return app.NewMailClient().Send(msg)
+}
+
+func onRemoveUser(dao *daos.Dao, e *core.RecordDeleteEvent) error {
+	record, err := dao.FindFirstRecordByData("user_details", "user", e.Record.Id)
+	if err != nil {
+		// TODO: add error
+		// return nil
+	}
+
+	return dao.DeleteRecord(record)
 }

@@ -31,8 +31,6 @@ func main() {
 
 	app.OnRecordAfterCreateRequest().Add(func(e *core.RecordCreateEvent) error {
 		switch e.Record.Collection().Name {
-		case "users":
-			return onAddUser(app.Dao(), e)
 		case "messages":
 			return onAddMessage(app.Dao(), e)
 		case "message_replies":
@@ -44,6 +42,8 @@ func main() {
 
 	app.OnModelAfterCreate().Add(func(e *core.ModelEvent) error {
 		switch e.Model.TableName() {
+		case "users":
+			return onAddUser(app.Dao(), e)
 		case "virtual_wallets":
 			return onAddWallet(app.Dao(), e)
 		case "virtual_transactions":
@@ -55,6 +55,8 @@ func main() {
 
 	app.OnRecordAfterDeleteRequest().Add(func(e *core.RecordDeleteEvent) error {
 		switch e.Record.Collection().Name {
+		case "users":
+			return onRemoveUser(app.Dao(), e)
 		case "messages":
 			return onRemoveMessage(app.Dao(), e)
 		}
