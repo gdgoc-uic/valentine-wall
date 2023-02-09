@@ -57,38 +57,12 @@
   </main>
 </template>
 
-<script lang="ts">
+<script lang="ts" setup>
 import PaginatedResponseHandler from "../components/PaginatedResponseHandler.vue";
 import PaginationLoadMoreButton from '../components/PaginationLoadMoreButton.vue';
 import IconCoin from '~icons/twemoji/coin';
+import { ref, computed } from "vue";
 
-export default {
-  components: { 
-    PaginatedResponseHandler,
-    PaginationLoadMoreButton,
-    IconCoin
-  },
-  created() {
-    this.endpoint = this.getRankingsEndpoint();
-  },
-  data() {
-    return {
-      endpoint: '',
-      rankingsSex: 'male',
-    }
-  },
-  watch: {
-    rankingsSex(newVal, oldVal) {
-      if (newVal == oldVal) return;
-      this.endpoint = this.getRankingsEndpoint();
-    }
-  },
-  methods: {
-    getRankingsEndpoint(): string {
-      const rankingsSex = this.rankingsSex;
-      // const rankingsSex = 'unknown';
-      return `/rankings?limit=10&sex=${rankingsSex}`;
-    },
-  }
-}
+const rankingsSex = ref('male');
+const endpoint = computed(() => `/rankings?limit=10&sex=${rankingsSex}`);
 </script>
