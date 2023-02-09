@@ -119,7 +119,7 @@
             </ul>
             <button 
               v-if="$store.getters.isLoggedIn && $store.state.user.wallet.balance" 
-              class="btn shadow-md btn normal-case text-black bg-white border-0 hover:bg-gray-100 w-full mb-2">
+              class="btn shadow-md normal-case text-black bg-white border-0 hover:bg-gray-100 w-full mb-2">
               <icon-coin class="mr-2" />
               <span>ღ{{ $store.state.user.wallet.balance }}</span>
             </button>

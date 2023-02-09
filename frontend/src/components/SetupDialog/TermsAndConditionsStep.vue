@@ -15,7 +15,8 @@
   </div>
 </template>
 
-<script>
+<script lang="ts">
+import { pb } from '../../client';
 import { catchAndNotifyError } from '../../notify'
 export default {
   emits: ['status'],
@@ -24,15 +25,19 @@ export default {
   },
   data() {
     return {
-      tc: null,
+      tc: null as string | null,
     }
   },
   methods: {
     async loadTC() {
       try {
-        // const { data } = await this.$client.get('/terms-and-conditions');
-        // console.log(data);
-        // this.tc = data;
+        const resp = await fetch(pb.buildUrl('/terms-and-conditions'));
+        if (!resp.ok) {
+          throw new Error('Unable to load terms and conditions');
+        }
+
+        const data = await resp.text();
+        this.tc = data;
       } catch (e) {
         catchAndNotifyError(this, e);
       }

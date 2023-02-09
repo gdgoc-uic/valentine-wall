@@ -2,7 +2,7 @@
   <modal 
     :open="$store.state.isSetupModalOpen" 
     @update:open="commit('SET_SETUP_MODAL_OPEN', $event)"
-    modal-box-class="max-w-[70rem] min-h-[80%]">
+    modal-box-class="max-w-[70rem] min-h-[80%] h-full">
     <div class="flex flex-col items-center h-full">
       <ul class="steps steps-horizontal text-lg">
         <li @click="step = 0" :class="{ 'step-primary': step >= 0 }" class="step">Welcome</li>
@@ -13,7 +13,7 @@
         <div class="flex flex-col h-full w-full">
           <div v-show="step == 0" class="h-full w-full flex flex-col">
             <div class="flex flex-col md:flex-row flex-1">
-              <div class="flex flex-col text-center lg:text-right justify-center space-y-4 md:w-2/3">
+              <div class="flex flex-col text-center lg:text-right justify-center space-y-4 pr-24 md:w-2/3">
                 <h2 class="text-3xl md:text-7xl font-bold">Welcome to UIC Valentine Wall!</h2>
                 <p class="text-3xl">Please click "next" to get started</p>
               </div>
@@ -43,6 +43,7 @@ import Modal from './Modal.vue';
 import BasicInformationStep from './SetupDialog/BasicInformationStep.vue';
 import TermsAndConditionsStep from './SetupDialog/TermsAndConditionsStep.vue';
 import IconSetupWelcome from '~icons/home-icons/setup_welcome';
+import { pb } from '../client';
 
 export default {
   components: { 
@@ -54,9 +55,9 @@ export default {
   data() {
     return {
       submitDetails: {
-        associated_id: null as unknown as string,
-        department: null as unknown as string,
-        sex: null as unknown as string,
+        student_id: null as string | null,
+        college_department: null as string | null,
+        sex: null as string | null,
         terms_agreed: false,
       },
       step: 0
@@ -83,8 +84,8 @@ export default {
         this.step--;
       }
 
-      this.submitDetails.associated_id = details.associated_id;
-      this.submitDetails.department = details.department;
+      this.submitDetails.student_id = details.student_id;
+      this.submitDetails.college_department = details.college_department;
       this.submitDetails.sex = details.sex;
     },
     onTCStatus(status: boolean | null) {
@@ -102,10 +103,19 @@ export default {
     async submitSetupForm() {
       try {
         try {
-          // const { data: setupJson } = await this.$client.postJson('/user/setup', this.submitDetails);
-          // this.$notify({ type: 'success', text: setupJson['message'] });
-          // await this.$store.dispatch('getUserInfo');
-          // this.$store.commit('SET_SETUP_MODAL_OPEN', false);
+          // TODO: include terms_agreed when submitting
+          const { terms_agreed, ...submitDetails } = this.submitDetails;
+          const userDetails = await pb.collection('user_details').create({
+            ...submitDetails,
+            user: pb.authStore.model!.id
+          });
+
+          await pb.collection('users').update(pb.authStore.model!.id, { details: userDetails.id });
+          pb.authStore.model!.expand['details'] = userDetails;
+
+          this.$notify({ type: 'success', text: 'Profile saved successfully.' });
+          await this.$store.dispatch('getUserInfo');
+          this.$store.commit('SET_SETUP_MODAL_OPEN', false);
         } catch (e) {
           // if (e instanceof APIResponseError && e.rawResponse.status == 403 && e.message == 'Access to the service is denied.') {
           //   this.$router.replace({ name: 'home-page' });

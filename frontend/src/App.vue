@@ -42,7 +42,7 @@
 
   <!-- ID Modal -->
   <portal>
-    <setup-dialog v-if="!$store.state.user.associatedId && $store.getters.isLoggedIn" />
+    <setup-dialog v-if="!pb.authStore.model?.expand.details?.student_id && $store.getters.isLoggedIn" />
     <submit-message-modal
       :key="$route.fullPath" 
       :open="$store.state.isSendMessageModalOpen" 
@@ -131,6 +131,10 @@ export default defineComponent({
         ];
       }),
     });
+
+    return {
+      pb
+    }
   },
   mounted() {
     if (!import.meta.env.SSR) {

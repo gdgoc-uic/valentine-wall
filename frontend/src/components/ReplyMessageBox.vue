@@ -62,6 +62,7 @@ import { logEvent } from '@firebase/analytics';
 // import { analytics } from '../firebase';
 import { catchAndNotifyError, notify } from '../notify';
 import { connectToEmail, connectToTwitter } from '../auth';
+import {pb} from '../client';
 
 export default {
   components: { 
@@ -80,6 +81,11 @@ export default {
     message: {
       type: Object,
       default: {}
+    }
+  },
+  setup() {
+    return {
+      pb
     }
   },
   data() {
