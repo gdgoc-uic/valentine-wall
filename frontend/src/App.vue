@@ -124,12 +124,6 @@ useHead({
 });
 
 if (!import.meta.env.SSR) {
-  const unwatchUser = watch(state, (newUser) => {
-    if (!newUser) return;
-
-    // TODO: auto-update last active at
-  });
-
   onMounted(() => {
     store.methods.loadGiftsAndDepartments();
 
@@ -141,7 +135,7 @@ if (!import.meta.env.SSR) {
   });
 
   onUnmounted(() => {
-    unwatchUser();
+    pb.collection('virtual_wallets').unsubscribe();
   });
 }
 </script>

@@ -143,6 +143,12 @@ export function createAuthStore(): Store<AuthState, AuthMethods> {
       // setUserId(analytics!, user.uid);
       // setUserProperties(analytics!, { account_type: 'student' });
       state.user = user;
+
+      await pb.collection('virtual_wallets').subscribe(user.expand.wallet.id, (data) => {
+        if (data.action === 'update') {
+          state.user.expand.wallet.balance = (data.record as VirtualWallet).balance;
+        }
+      });
     } catch (e) {
       console.error(e);
       logout();

@@ -40,7 +40,6 @@ export async function thirdPartyLogin(provider: string, table = 'users') {
   }
 
   const handleFn = function (this: Window, e: MessageEvent) {
-    console.log(e.origin);
     if (e.origin === backendUrl && typeof e.data === 'object' && 'state' in e.data) {
       const data = e.data;
       if (chosenProvider.state !== data['state']) {
