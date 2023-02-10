@@ -1,16 +1,14 @@
 <template>
   <main class="flex">
-    <!-- Polish UI -->
-    <!-- TODO: add empty state -->
     <div class="bg-white max-w-7xl shadow-lg w-full flex flex-col mx-auto self-start mt-4 p-6 lg:p-12 rounded-lg">
       <div class="flex flex-col md:flex-row justify-between items-center mb-8">
         <h1 class="text-center text-3xl font-bold">Valentine Ranking Board</h1>
 
         <div class="tabs tabs-boxed">
           <button 
-            v-for="sex in availableSexes"
-            @click="rankingsSex = sex.id" 
-            :class="{ 'tab-active': rankingsSex == sex.id }" 
+            v-for="sex in sexList"
+            @click="rankingsSex = sex.value" 
+            :class="{ 'tab-active': rankingsSex == sex.value }" 
             class="tab tab-lg">{{ sex.label }}</button>
         </div>
       </div>
@@ -50,6 +48,10 @@
               </template>
             </tbody>
           </table>
+          
+          <div v-if="query.isFetched && rankings!.pages[0].items.length === 0" class="text-center text-gray-600 font-bold py-8">
+            <span class="text-3xl">No rankings yet. Check again later!</span>
+          </div>
 
           <pagination-load-more-button 
             :should-go-next="hasNextPage" @click="fetchNextPage" />
@@ -67,22 +69,13 @@
 import ResponseHandler from "../components/ResponseHandler2.vue";
 import PaginationLoadMoreButton from '../components/PaginationLoadMoreButton.vue';
 import IconCoin from '~icons/twemoji/coin';
-import { ref, watch } from "vue";
-import { useInfiniteQuery, useQuery, useQueryClient } from "@tanstack/vue-query";
+import { ref } from "vue";
+import { useInfiniteQuery } from "@tanstack/vue-query";
 import { pb } from "../client";
 import { CollegeDepartment } from "../types";
+import { useStore } from "../store_new";
 
-const availableSexes = [
-  {
-    id: 'male',
-    label: 'Male'
-  },
-  {
-    id: 'female',
-    label: 'Female'
-  }
-];
-
+const { state: { sexList } } = useStore();
 const rankingsSex = ref('male');
 
 // TODO: integrate notiwind into tanstack query
