@@ -5,6 +5,7 @@
         <img src="../assets/images/logo.png" class="w-4/5 md:w-2/3 lg:w-full pb-8 mx-auto" alt="Valentine Wall">
         <p class="text-gray-500 text-lg font-bold pb-4">Send, confess, and share your feelings anonymously!</p>
         <login-button v-if="!$store.getters.isLoggedIn" class="btn-lg" />
+        <!-- move send message to the homepage -->
         <button
           v-else
           @click="$store.commit('SET_SEND_MESSAGE_MODAL_OPEN', true)"
@@ -21,21 +22,29 @@
         </div>
 
         <div class="tabs">
-          <button @click="rankingSex = 'male'" :class="{ 'tab-active': rankingSex == 'male' }" class="tab tab-lg flex-1 tab-bordered">Male</button>
-          <button @click="rankingSex = 'female'" :class="{ 'tab-active': rankingSex == 'female' }" class="tab tab-lg flex-1 tab-bordered">Female</button>
+          <button 
+            v-for="sex in [{id: 'male', label: 'Male'}, {id: 'female', label: 'Female'}]"
+            :key="'ranking_btn_' + sex.id"
+            @click="rankingsSex = sex.id" 
+            :class="{ 'tab-active': rankingsSex == sex.id }" 
+            class="tab tab-lg flex-1 tab-bordered">{{ sex.label }}</button>
         </div>
 
         <div class="flex-1 flex flex-col ranking-board">
-          <paginated-response-handler :origin-endpoint="rankingsEndpoint">
-            <template #default="{ data: rankings }">
+          <response-handler :query="rankingsQuery">
+            <template #default>
               <!-- TODO: add empty state -->
-              <div class="min-h-12 flex my-4 shadow ranking-info" :key="i" v-for="(r, i) in rankings">
-                <div class="w-2/12 bg-black text-white inline-flex items-center justify-center font-bold ranking-placement">{{ ordinalSuffixOf(i + 1) }}</div>
+              <div class="min-h-12 flex my-4 shadow ranking-info" :key="i" v-for="(r, i) in rankingsQuery.data.value?.items">
+                <div class="w-2/12 bg-black text-white inline-flex items-center justify-center font-bold ranking-placement">
+                  {{ ordinalSuffixOf(i + 1) }}
+                </div>
                 <div class="flex-1 py-2 pl-2 inline-flex items-center">
-                  <img v-if="r.sex == 'female'" src="../assets/images/home/queen.png" class="w-2/12 mx-4" :alt="r.sex" />
-                  <img v-else src="../assets/images/home/king.png" class="w-2/12 mx-4" :alt="r.sex" />
+                  <img 
+                    :src="r.sex == 'female' ? queenImg : kingImg"
+                    class="w-2/12 mx-4" :alt="r.sex" />
+
                   <!-- TODO: use shorthand dept name -->
-                  <span class="font-bold">{{ r.department }}</span>
+                  <span class="font-bold">{{ (r.expand.college_department as PbRecord)?.uid ?? 'Unknown' }}</span>
                 </div>
                 <div class="flex w-3/12 px-2 bg-white">
                   <div class="pl-1 inline-flex items-center space-x-1 py-6">
@@ -47,9 +56,9 @@
             </template>
 
             <template #error="{ error }">
-              <p>{{ error.message }}</p>
+              <p>{{ errorMessage(error) }}</p>
             </template>
-          </paginated-response-handler>
+          </response-handler>
         </div>
 
         <router-link 
@@ -84,102 +93,82 @@
         <message-tiles 
           :limit="20" 
           box-class="w-1/2 md:w-1/3"
-          :messages="recentMessages" />
+          :messages="recentMessages"
+          prepend />
       </div>
     </section>
   </main>
 </template>
 
-<script lang="ts">
-import ClientOnly from '../components/ClientOnly.vue';
-import Portal from '../components/Portal.vue';
-import IconGift from '~icons/uil/gift';
+<script lang="ts" setup>
+import kingImg from '../assets/images/home/king.png';
+import queenImg from '../assets/images/home/queen.png';
+
 import IconCoin from '~icons/twemoji/coin';
-import IconEnvelope from '~icons/uil/envelope';
 import SearchForm from '../components/SearchForm.vue';
 import IconSend from '~icons/uil/message';
 import LoginButton from '../components/LoginButton.vue';
-import PaginatedResponseHandler from '../components/PaginatedResponseHandler.vue';
+import ResponseHandler from '../components/ResponseHandler2.vue';
 import MessageTiles from '../components/MessageTiles.vue';
 import { pb } from '../client';
 import { Record as PbRecord, UnsubscribeFunc } from 'pocketbase';
+import { onMounted, onUnmounted, ref, reactive } from 'vue';
+import { useQuery } from '@tanstack/vue-query';
 
-export default {
-  components: { 
-    ClientOnly, 
-    Portal,
-    IconGift,
-    IconEnvelope,
-    IconSend,
-    IconCoin,
-    SearchForm,
-    LoginButton,
-    PaginatedResponseHandler,
-    MessageTiles
-  },
-  created() {
-    if (!this.rankingsEndpoint.length) {
-      this.rankingsEndpoint = this.getRankingsEndpoint();
-    }
-  },
-  mounted() {
-    if (!import.meta.env.SSR) {
-      pb.collection('messages').getList(1, 10, {
-        sort: '-created'
-      }).then(records => {
-        this.recentMessages.push(...records.items);
-
-        return pb.collection('messages').subscribe('*', (e) => {
-          this.recentMessages.push(e.record);
-        });
-      }).then(unsub => {
-        if (!unsub) return;
-        this.recentsSSE = unsub;
-      });
-    }
-  },
-  unmounted() {
-    if (!import.meta.env.SSR) {
-      this.recentsSSE();
-    }
-  },
-  data() {
-    return {
-      isFormOpen: false,
-      rankingSex: 'male',
-      rankingsEndpoint: '',
-      recentMessages: [] as PbRecord[],
-      recentsSSE: null as unknown as UnsubscribeFunc
-    }
-  },
-  watch: {
-    rankingSex(newVal, oldVal) {
-      if (newVal == oldVal) return;
-      this.rankingsEndpoint = this.getRankingsEndpoint();
-    }
-  },
-  methods: {
-    getRankingsEndpoint(): string {
-      const rankingSex = this.rankingSex;
-      // const rankingSex = 'unknown';
-      return `/rankings?limit=3&sex=${rankingSex}`;
-    },
-    ordinalSuffixOf(i: number): string {
-        var j = i % 10,
-            k = i % 100;
-        if (j == 1 && k != 11) {
-            return i + "st";
-        }
-        if (j == 2 && k != 12) {
-            return i + "nd";
-        }
-        if (j == 3 && k != 13) {
-            return i + "rd";
-        }
-        return i + "th";
-    },
-  },
+function ordinalSuffixOf(i: number): string {
+  var j = i % 10,
+    k = i % 100;
+  if (j == 1 && k != 11) {
+    return i + "st";
+  }
+  if (j == 2 && k != 12) {
+    return i + "nd";
+  }
+  if (j == 3 && k != 13) {
+    return i + "rd";
+  }
+  return i + "th";
 }
+
+const rankingsSex = ref('male');
+const recentMessages = reactive<PbRecord[]>([]);
+const recentsSSE = ref<UnsubscribeFunc>();
+const errorMessage = (e: unknown) => e instanceof Error ? e.message : 'Unknown error';
+
+const rankingsQuery = useQuery(
+  ['rankings_summary', rankingsSex],
+  () => pb.collection('rankings').getList(1, 3, { 
+    filter: `sex = "${rankingsSex.value}"`,
+    expand: 'college_department'
+  }),
+  {
+    refetchOnWindowFocus: () => false,
+  }
+);
+
+onMounted(() => {
+  if (!import.meta.env.SSR) {
+    pb.collection('messages').getList(1, 10, {
+      sort: '-created'
+    }).then(records => {
+      recentMessages.push(...records.items);
+
+      return pb.collection('messages').subscribe('*', (e) => {
+        recentMessages.splice(0, recentMessages.length);
+        recentMessages.push(e.record);
+      });
+    }).then(unsub => {
+      if (!unsub) return;
+      recentsSSE.value = unsub;
+    });
+  }
+});
+
+onUnmounted(() => {
+  if (!import.meta.env.SSR) {
+    recentsSSE.value?.();
+  }
+});
 </script>
 
 <style lang="postcss" scoped>
