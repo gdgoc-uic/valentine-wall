@@ -22,7 +22,7 @@
                 <p v-if="revealContent" class="font-bold text-4xl">{{ message!.content }}</p>
               </div>
               <p class="text-gray-500" :class="{ 'text-center': hasGifts }">
-                Posted {{ relativifyDate(message!.created_at) }} ({{ prettifyDate(message!.created_at) }})
+                Posted {{ fromNow(message!.created_at) }} ({{ prettifyDateTime(message!.created_at) }})
               </p>
             </div>
 
@@ -76,7 +76,6 @@
 
           <div v-if="message!.expand.message_replies" class="shadow-lg w-full bg-white rounded-lg p-6 md:p-12">
             <p class="text-gray-500 mb-2">{{ message!.recipient }} replied</p>
-            <!-- TODO: multi-reply support -->
             <p class="text-2xl">{{ message!.expand.message_replies.toString() }}</p>
 
             <div class="flex items-end w-full">
@@ -91,14 +90,12 @@
               </delete-dialog>
             </div>
           </div>
-          <div v-else-if="!message!.expand.message_replies || !authState.isLoggedIn" class="p-6 lg:p-8 bg-white rounded-xl shadow-lg">
-            <div v-if="authState.user!.expand.details?.student_id == message!.recipient"
-              class="flex space-x-2 items-center text-2xl">
-              <icon-reply class="text-pink-500 mb-4" />
-              <h2 class="font-bold mb-4">Your reply</h2>
-            </div>
-            <reply-message-box @update:hasReplied="handleHasReplied" :message="message" />
-          </div>
+          
+          <reply-thread v-if="
+            authState.isLoggedIn && (
+              message!.recipient == authState.user!.expand.details.student_id || 
+              message!.user == authState.user.id
+            )" />
         </template>
 
         <template #error="{ error }">
@@ -120,19 +117,19 @@ import IconTrash from '~icons/uil/trash-alt';
 import IconShare from '~icons/uil/share-alt';
 import GiftIcon from '../components/GiftIcon.vue';
 
+import ReplyThread from '../components/ReplyThread.vue';
 import ReplyMessageBox from '../components/ReplyMessageBox.vue';
 import ShareDialog from '../components/ShareDialog.vue';
 
 import { logEvent } from '@firebase/analytics';
 // import { analytics } from '../firebase';
-import { catchAndNotifyError, notify } from '../notify';
-import { WatchStopHandle } from '@vue/runtime-core';
+import { notify } from '../notify';
 import ResponseHandler from '../components/ResponseHandler2.vue';
 import IconReport from '~icons/uil/exclamation-circle';
 import { fromNow, prettifyDateTime } from '../time_utils';
 import DeleteDialog from '../components/DeleteDialog.vue';
 import ReportDialog from '../components/ReportDialog.vue';
-import { ref, computed } from 'vue';
+import { ref, computed, provide } from 'vue';
 import { pb } from '../client';
 import { useMutation, useQuery } from '@tanstack/vue-query';
 import { useRoute, useRouter } from 'vue-router';
@@ -147,7 +144,6 @@ const isDeletable = ref(false);
 const openReportModal = ref(false);
 const revealContent = ref(false);
 const reportDialogKey = ref(1);
-const authLoadingWatcher = ref<WatchStopHandle>(null!);
 
 function isClientError(err: unknown): err is ClientResponseError {
   return err instanceof ClientResponseError;
@@ -188,14 +184,6 @@ function handleHasReplied(hasReplied: boolean) {
   if (hasReplied) {
     router.go(0);
   }
-}
-
-function relativifyDate(date: Date) {
-  return fromNow(date);
-}
-
-function prettifyDate(date: Date) {
-  return prettifyDateTime(date);
 }
 
 function generateDisplayGiftLabelString(g: Gift, i: number, arr: Gift[]) {
@@ -265,4 +253,6 @@ const displayedGiftLabels = computed(() => {
   return message.value.expand.gifts.map(generateDisplayGiftLabelString).join(
     message.value.expand.gifts.length > 2 ? ', ' : message.value.expand.gifts.length == 2 ? ' ' : '');
 });
+
+provide('message', message);
 </script>

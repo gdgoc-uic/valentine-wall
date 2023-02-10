@@ -9,11 +9,6 @@
     </div>
   </div>
 
-  <div v-else-if="message.replies_count > 0" class="flex flex-col justify-center text-center items-center">
-    <icon-reply class="text-pink-500 text-9xl mb-4" />
-    <h3 class="text-2xl font-bold">Already replied!</h3>
-  </div>
-
   <div v-else>
     <div class="form-control">
       <textarea 
@@ -45,19 +40,14 @@ import ContentCounter from './ContentCounter.vue';
 import { logEvent } from '@firebase/analytics';
 // import { analytics } from '../firebase';
 import { notify } from '../notify';
-import { ref, computed } from 'vue';
+import { ref, computed, Ref, inject } from 'vue';
 import { useAuth } from '../store_new';
 import { useMutation } from '@tanstack/vue-query';
 import { pb } from '../client';
+import { Record as PbRecord } from 'pocketbase';
 
 const emit = defineEmits(['update:hasReplied']);
-const props = defineProps({
-  message: {
-    type: Object,
-    default: {}
-  }
-});
-
+const message = inject<Ref<PbRecord>>('message')!;
 const { state: authState } = useAuth();
 const counter = ref<InstanceType<typeof ContentCounter> | null>(null);
 const content = ref('');
@@ -66,8 +56,8 @@ const shouldSend = computed(() => counter.value?.shouldSend(content.value) ?? fa
 const { mutate: submitReply, isLoading: isSending } = useMutation(() => {
   return pb.collection('message_replies').create({
     content: content.value,
-    sender: authState.user,
-    message: props.message.id
+    sender: authState.user.id,
+    message: message.value.id
   })
 }, {
   onSuccess() {
