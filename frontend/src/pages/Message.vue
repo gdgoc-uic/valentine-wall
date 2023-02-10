@@ -114,10 +114,6 @@
 </template>
 
 <script lang="ts" setup>
-import IconFacebook from '~icons/uil/facebook-f';
-import IconTwitter from '~icons/uil/twitter';
-import IconSend from '~icons/uil/message';
-import IconLink from '~icons/uil/link';
 import IconReply from '~icons/uil/comment-heart';
 import IconConfused from '~icons/uil/confused';
 import IconTrash from '~icons/uil/trash-alt';
@@ -126,13 +122,11 @@ import GiftIcon from '../components/GiftIcon.vue';
 
 import ReplyMessageBox from '../components/ReplyMessageBox.vue';
 import ShareDialog from '../components/ShareDialog.vue';
-import Modal from '../components/Modal.vue';
 
 import { logEvent } from '@firebase/analytics';
 // import { analytics } from '../firebase';
 import { catchAndNotifyError } from '../notify';
 import { WatchStopHandle } from '@vue/runtime-core';
-import Portal from '../components/Portal.vue';
 import ResponseHandler from '../components/ResponseHandler2.vue';
 import IconReport from '~icons/uil/exclamation-circle';
 import { fromNow, prettifyDateTime } from '../time_utils';
@@ -143,7 +137,7 @@ import { pb } from '../client';
 import { useMutation, useQuery } from '@tanstack/vue-query';
 import { useRoute, useRouter } from 'vue-router';
 import { ClientResponseError } from 'pocketbase';
-import { useAuth, useStore } from '../store_new';
+import { useAuth } from '../store_new';
 import { Gift } from '../types';
 
 const { state: authState } = useAuth();

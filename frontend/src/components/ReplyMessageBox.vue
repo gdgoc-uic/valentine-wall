@@ -14,18 +14,6 @@
     <h3 class="text-2xl font-bold">Already replied!</h3>
   </div>
 
-  <div v-else-if="authState.isLoggedIn && !hasConnections" class="flex flex-col justify-center text-center items-center space-y-8">
-    <p class="text-gray-500 text-lg">Connect your Twitter account and gain more coins!</p>
-    
-    <div class="w-full md:w-2/3 flex flex-col md:flex-row space-y-2 md:space-y-0 md:space-x-2 items-stretch justify-center">
-      <button class="w-full md:w-1/2 space-x-2 btn bg-twitter-500 hover:bg-twitter-600 rounded-lg border-none hover:border-none" @click="useTwitter">
-        <icon-twitter />
-        <span>Login to Twitter</span>
-      </button>
-      <button class="w-full md:w-1/2 btn font-normal" @click="useEmail">Skip</button>
-    </div>
-  </div>
-
   <div v-else>
     <div class="form-control">
       <textarea 
@@ -49,20 +37,13 @@
 </template>
 
 <script lang="ts" setup>
-import Modal from './Modal.vue';
 import IconReplyLock from '~icons/uil/comment-lock';
-import IconUserLocation from '~icons/uil/user-location';
 import IconSend from '~icons/uil/message';
-import IconFacebook from '~icons/uil/facebook-f';
-import IconTwitter from '~icons/uil/twitter';
-import IconAnnoyed from '~icons/uil/annoyed';
 import IconReply from '~icons/uil/comment-heart';
 import ContentCounter from './ContentCounter.vue';
 import { logEvent } from '@firebase/analytics';
 // import { analytics } from '../firebase';
 import { catchAndNotifyError, notify } from '../notify';
-import { connectToEmail, connectToTwitter } from '../auth';
-import {pb} from '../client';
 import { ref, computed } from 'vue';
 import { useAuth } from '../store_new';
 
@@ -74,44 +55,11 @@ defineProps({
   }
 });
 
-// TODO: has connections
-const hasConnections = false;
 const { state: authState } = useAuth();
 const counter = ref<InstanceType<typeof ContentCounter> | null>(null);
 const content = ref('');
 const isSending = ref(false);
 const shouldSend = computed(() => counter.value?.shouldSend(content.value) ?? false);
-
-function useTwitter() {
-  let success: boolean = false;
-  // TODO:
-  // connectToTwitter(this.$store, {
-  //   onSuccess: () => { success = true; },
-  //   onError: (e) => {
-  //     success = false;
-  //     catchAndNotifyError(this, e);
-  //   },
-  //   onFinally: () => {
-  //     // logEvent(analytics!, 'connect_twitter', { success });
-  //   }
-  // });
-}
-
-async function useEmail() {
-  let success: boolean = false;
-  // TODO:
-  // this.$notify({ type: 'info', text: 'You can connect it later ' })
-  try {
-    // TODO:
-    // connectToEmail(this.$store);
-    success = true;
-  } catch (e) {
-    success = false;
-    // catchAndNotifyError(this, e); 
-  } finally {
-    // logEvent(analytics!, 'connect_email', { success });
-  }
-}
 
 async function submitReply() {
   try {
@@ -121,10 +69,6 @@ async function submitReply() {
     //   reply: {
     //     content: this.content
     //   },
-    //   options: {
-    //     post_to_email: true,
-    //     post_to_twitter: true
-    //   }
     // });
 
     // notify(this, { type: 'success', text: json['message'] });

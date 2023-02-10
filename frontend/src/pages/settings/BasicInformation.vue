@@ -42,44 +42,13 @@
           class="btn btn-success px-12">Save</button>
       </div>
     </div>
-    <div class="py-6">
-      <h2 class="font-bold text-2xl">Connections</h2>
-      <p>Third-party accounts for use on sharing content outside the site such as replies and etc.</p>
-
-      <div class="flex flex-col">
-        <!-- TODO: work on user connections -->
-        <!-- <div v-if="user.connections.findIndex(c => c.provider === 'twitter') === -1" class="flex justify-between items-center py-2">
-          <label>twitter</label>
-          <button 
-            @click="connectUserConnection('twitter')" 
-            class="btn btn-success btn-outline">Connect</button>
-        </div>
-        <div v-if="user.connections.findIndex(c => c.provider === 'email') === -1" class="flex justify-between items-center py-2">
-          <label>email</label>
-          <button 
-            @click="connectUserConnection('email')" 
-            class="btn btn-success btn-outline">Connect</button>
-        </div>
-        <div 
-          v-for="(conn, i) in user.connections" 
-          :key="'conn_' + i" class="flex justify-between items-center py-2">
-          <label>{{ conn.provider }}</label>
-          <button 
-            :disabled="conn.provider == 'email'" 
-            @click="disconnectUserConnection(conn.provider)" 
-            class="btn btn-error btn-outline">Disconnect</button>
-        </div> -->
-      </div>
-    </div>
   </div>
 </template>
 
 <script lang="ts" setup>
 import { useMutation } from '@tanstack/vue-query';
 import { ref } from 'vue';
-import { connectToEmail, connectToTwitter } from '../../auth';
 import { pb } from '../../client';
-import { catchAndNotifyError } from '../../notify';
 import { useAuth, useStore } from '../../store_new';
 import { UserDetails } from '../../types';
 
@@ -99,42 +68,4 @@ const { mutate: saveUserInfo, isLoading: isSaving } = useMutation((newDetails: {
     // catchAndNotifyError(this, e);
   }
 });
-
-const { mutateAsync: connectUserConnection } = useMutation((provider: string) => {
-  switch (provider) {
-    case "twitter":
-      // connectToTwitter(store);
-      break;
-    case "email":
-      // connectToEmail(store);
-      break;
-    default:
-      throw new Error(`Unknown provider: ${provider}`);
-  }
-
-  // TODO:
-  // return store.state.dispatch('getUserInfo');
-  return Promise.resolve(0);
-}, {
-  onError(error) {
-    // catchAndNotifyError(this, e);
-  },
-});
-
-const { mutateAsync: disconnectUserConnection } = useMutation((name: string) => {
-  // TODO:
-  // return await this.$client.delete(`/user/connections/${name}`);
-  return Promise.resolve(name);
-}, {
-  onSuccess() {
-    // this.$notify({ type: 'success', text: data['message'] });
-  },
-  onError(error) {
-    // catchAndNotifyError(this, e);
-  },
-  onSettled() {
-    // TODO:
-    // store.state.dispatch('getUserInfo');
-  }
-})
 </script>
