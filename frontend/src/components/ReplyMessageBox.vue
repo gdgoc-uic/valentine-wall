@@ -27,7 +27,8 @@
       <content-counter ref="counter" :content="content" class="mr-auto" />
       <div class="indicator">
         <div class="indicator-item badge badge-primary">ღ150.0</div> 
-        <button @click="submitReply" class="space-x-2 btn bg-rose-500 hover:bg-rose-600 border-none hover:border-none" :disabled="!shouldSend || isSending">
+        <button @click="() => submitReply()" 
+          class="space-x-2 btn bg-rose-500 hover:bg-rose-600 border-none hover:border-none" :disabled="!shouldSend || isSending">
           <icon-send />
           <span>Send</span>
         </button>
@@ -46,9 +47,11 @@ import { logEvent } from '@firebase/analytics';
 import { catchAndNotifyError, notify } from '../notify';
 import { ref, computed } from 'vue';
 import { useAuth } from '../store_new';
+import { useMutation } from '@tanstack/vue-query';
+import { pb } from '../client';
 
 const emit = defineEmits(['update:hasReplied']);
-defineProps({
+const props = defineProps({
   message: {
     type: Object,
     default: {}
@@ -58,26 +61,19 @@ defineProps({
 const { state: authState } = useAuth();
 const counter = ref<InstanceType<typeof ContentCounter> | null>(null);
 const content = ref('');
-const isSending = ref(false);
 const shouldSend = computed(() => counter.value?.shouldSend(content.value) ?? false);
 
-async function submitReply() {
-  try {
-    isSending.value = true;
-    // TODO:
-    // const { data: json } = await this.$client.postJson(`/messages/${this.message.recipient_id}/${this.message.id}/reply`, {
-    //   reply: {
-    //     content: this.content
-    //   },
-    // });
-
+const { mutate: submitReply, isLoading: isSending } = useMutation(() => {
+  return pb.collection('message_replies').create({
+    content: content.value,
+    sender: authState.user,
+    message: props.message.id
+  })
+}, {
+  onSuccess() {
     // notify(this, { type: 'success', text: json['message'] });
-    // this.$store.commit('SET_USER_WALLET_BALANCE', json['current_balance']);
     emit('update:hasReplied', true);
     // logEvent(analytics!, 'reply-message', { id: this.message.id });
-  } catch (e) {
-    isSending.value = false;
-    // catchAndNotifyError(this, e);
-  }
-}
+  },
+})
 </script>
