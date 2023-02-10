@@ -31,6 +31,8 @@ func main() {
 
 	app.OnRecordAfterCreateRequest().Add(func(e *core.RecordCreateEvent) error {
 		switch e.Record.Collection().Name {
+		case "user_details":
+			return onAddUserDetails(app.Dao(), e)
 		case "messages":
 			return onAddMessage(app.Dao(), e)
 		case "message_replies":

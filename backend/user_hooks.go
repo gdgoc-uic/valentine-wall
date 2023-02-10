@@ -21,6 +21,16 @@ func onAddUser(dao *daos.Dao, e *core.ModelEvent) error {
 	return dao.SaveRecord(record)
 }
 
+func onAddUserDetails(dao *daos.Dao, e *core.RecordCreateEvent) error {
+	user, err := dao.FindRecordById("users", e.Record.GetString("user"))
+	if err != nil {
+		return err
+	}
+
+	user.Set("details", e.Record.Id)
+	return dao.SaveRecord(user)
+}
+
 func onUserVerified(app *pocketbase.PocketBase, e *core.RecordConfirmVerificationEvent) error {
 	// TODO: add message count
 	msg, err := emailTemplates.welcome.Message(app.Settings().Meta, e.Record.Email())
