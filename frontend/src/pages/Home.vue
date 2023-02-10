@@ -43,7 +43,6 @@
                     :src="r.sex == 'female' ? queenImg : kingImg"
                     class="w-2/12 mx-4" :alt="r.sex" />
 
-                  <!-- TODO: use shorthand dept name -->
                   <span class="font-bold">{{ (r.expand.college_department as PbRecord)?.uid ?? 'Unknown' }}</span>
                 </div>
                 <div class="flex w-3/12 px-2 bg-white">
