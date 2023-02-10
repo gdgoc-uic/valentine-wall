@@ -31,8 +31,6 @@ export async function thirdPartyLogin(provider: string, table = 'users') {
   if (!chosenProvider) return;
 
   const redirectUrl = pb.buildUrl('/user_auth/callback');
-
-  // TODO: change url on production!
   const connectUrl = `${chosenProvider.authUrl}${redirectUrl}&hd=uic.edu.ph`;
   const loginWindow = popupCenter({ url: connectUrl, title: provider + '_login_window', w: 800, h: 500 });
   if (!loginWindow) {
