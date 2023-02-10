@@ -12,9 +12,10 @@ interface UserConnection {
 }
 
 export interface Gift {
-  id: number
+  id: string
   uid: string
   label: string
+  price: number
 }
 
 export interface VirtualWallet {
@@ -213,16 +214,7 @@ export function createStore() {
             await getters.apiClient.post('/user/logout_callback');
           }
 
-          // await auth.signOut();
           pb.authStore.clear();
-
-          commit('SET_USER_ID', '');
-          commit('SET_USER_EMAIL', '');
-          commit('SET_USER_ACCESS_TOKEN', '');
-          commit('SET_USER_ASSOCIATED_ID', '');
-          commit('SET_USER_SEX', '');
-          commit('SET_USER_DEPARTMENT', '');
-          commit('SET_USER_WALLET', null);
         } catch (e) {
           // if (e instanceof APIResponseError) {
           //   throw Error('Unable to logout user.');

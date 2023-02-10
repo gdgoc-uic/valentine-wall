@@ -24,14 +24,14 @@
                 class="input input-bordered" 
                 type="text"
                 name="recipient_id" 
-                @input="recipientId = $event.target.value" 
+                @input="recipientId = $event.target!.value" 
                 pattern="[0-9]{6,12}" 
                 placeholder="6 to 12-digit Student ID (e.g. 200xxxxxxxxx)">
             </div>
             <div class="flex flex-col mt-4 -mx-2">
               <p class="pl-3 text-gray-900 text-sm my-2">Select gift (Optional)</p>
               <fieldset class="gift-list-checkboxes">
-                <div class="gift-item tooltip tooltip-top z-10" :data-tip="gift.label" :key="'gift_' + gift.uid" v-for="gift in $store.state.giftList">
+                <div class="gift-item tooltip tooltip-top z-10" :data-tip="gift.label" :key="'gift_' + gift.uid" v-for="gift in store.state.giftList">
                   <div class="gift-item-btn-wrapper indicator">
                     <div class="indicator-bottom indicator-center indicator-item badge badge-primary">ღ{{ gift.price }}</div> 
                     <input class="absolute appearance-none top-0 left-0" type="checkbox" :name="'gift_ids['+gift.id+']'" :id="gift.uid">
@@ -74,7 +74,7 @@
   </modal>
 </template>
 
-<script lang="ts">
+<script lang="ts" setup>
 import ContentCounter from './ContentCounter.vue';
 import Modal from './Modal.vue';
 import GiftIcon from './GiftIcon.vue';
@@ -84,115 +84,111 @@ import { logEvent } from '@firebase/analytics';
 // import { analytics } from '../firebase';
 import { catchAndNotifyError, notify } from '../notify';
 import { VueComponent as RulesContent } from '../assets/texts/rules.md';
+import { ref, computed, watch } from 'vue';
+import { useRoute } from 'vue-router';
+import { parseMutationArgs, useMutation } from '@tanstack/vue-query';
+import { useStore } from 'vuex';
+import { storeKey } from '../store';
+import { pb } from '../client';
 
-export default {
-  components: { 
-    Modal, 
-    ContentCounter,
-    GiftIcon,
-    IconClose,
-    RulesContent
-  },
-  emits: ['update:open'],
-  props: {
-    open: {
-      type: Boolean,
-    }
-  },
-  data() {
-    return {
-      recipientId: '',
-      content: '',
-      giftId: null as unknown as number,
-      shouldSend: false
-    };
-  },
-  watch: {
-    'open'() {
-      this.injectRecipientId();
-    },
-    recipientId(newV: string) {
-      this.checkShouldSend(newV, this.content);
-    },
-    content(newV: string, oldV: string) {
-      this.checkShouldSend(this.recipientId, newV);
-    }
-  },
-  methods: {
-    checkShouldSend(recipientId: string, content: string) {
-      const counter = (this.$refs.counter as typeof ContentCounter);
-      if (!counter || typeof counter == 'undefined') {
-        this.shouldSend = false;
-      } else {
-        this.shouldSend = recipientId.length > 0 && counter.shouldSend(content);
-      }
-    },
-    injectRecipientId() {
-      // sets the recipient id automatically if route
-      // has recipient id
-      if (this.$route.params.recipientId) {
-        setTimeout(() => {
-          const submitMessageForm = this.$refs.submitMessageForm;
-          if (!submitMessageForm || !(submitMessageForm instanceof HTMLFormElement)) {
-            return;
-          }
+const emit = defineEmits(['update:open']);
+const props = defineProps({
+  open: {
+    type: Boolean
+  }
+});
 
-          const recipientIdField = submitMessageForm.querySelector('input[name="recipient_id"]');
-          if (!recipientIdField || !(recipientIdField instanceof HTMLInputElement)) {
-            return;
-          }
+const store = useStore(storeKey);
+const route = useRoute();
+const submitMessageForm = ref<HTMLFormElement | null>(null);
+const counter = ref<InstanceType<typeof ContentCounter> | null>(null);
+const recipientId = ref('');
+const content = ref('');
 
-          recipientIdField.value = <string> this.$route.params.recipientId;
-          this.recipientId = recipientIdField.value;
-        }, 500);
-      }
-    },
-    async submitForm(e: SubmitEvent) {
-      if (this.shouldSend) {
-        this.shouldSend = false;
-      } else {
+function checkShouldSend(recipientId: string, content: string) {
+  if (!counter.value) {
+    return false;
+  }
+  return recipientId.length > 0 && counter.value.shouldSend(content);
+}
+
+function injectRecipientId() {
+  // sets the recipient id automatically if route
+  // has recipient id
+  if (props.open && route.params.recipientId) {
+    setTimeout(() => {
+      if (!submitMessageForm.value || !(submitMessageForm.value instanceof HTMLFormElement)) {
         return;
       }
 
-      if (!e.target || !(e.target instanceof HTMLFormElement)) return;
-      const formData = new FormData(e.target);
-      const giftIdRegex = /^gift_ids\[([0-9]+)\]$/;
-
-      try {
-        let giftIds: number[] = [];
-        formData.forEach((value, key) => {
-          if (key.startsWith('gift_ids') && value === 'on') {
-            const matches = giftIdRegex.exec(key);
-            if (!matches || matches.length == 0) return;
-            giftIds.push(parseInt(matches[1]));
-          }
-        });
-
-        if (giftIds.length > 3) {
-          throw new Error('Maximum of 3 gifts is allowed.');
-        }
-
-        // const { data: json } = await this.$client.postJson('/messages', {
-        //   recipient_id: formData.get('recipient_id'),
-        //   content: formData.get('content'),
-        //   gift_ids: giftIds,
-        //   uid: this.$store.state.user.id
-        // });
-
-        // logEvent(analytics!, 'post-message');
-        // notify(this, { type: 'success', text: json['message'] });
-        // this.$store.commit('SET_USER_WALLET_BALANCE', json['current_balance'])
-        e.target.reset();
-        this.$emit('update:open', false);
-        // this.$router.push(json['route']);
-      } catch(e) {
-        catchAndNotifyError(this, e);
-      } finally {
-        this.shouldSend = true;
+      const recipientIdField = submitMessageForm.value.querySelector('input[name="recipient_id"]');
+      if (!recipientIdField || !(recipientIdField instanceof HTMLInputElement)) {
+        return;
       }
-    }
+
+      recipientIdField.value = <string> route.params.recipientId;
+      recipientId.value = recipientIdField.value;
+    }, 50);
   }
 }
+
+const shouldSend = computed(() => checkShouldSend(recipientId.value, content.value));
+
+async function submitForm(e: SubmitEvent) {
+  e.preventDefault();
+
+  if (!shouldSend || !e.target || !(e.target instanceof HTMLFormElement)) return;
+  const formData = new FormData(e.target);
+  const giftIdRegex = /^gift_ids\[(\w+)\]$/;
+
+  let gifts: string[] = [];
+  formData.forEach((value, key) => {
+    if (key.startsWith('gift_ids') && value === 'on') {
+      const matches = giftIdRegex.exec(key);
+      if (!matches || matches.length == 0) return;
+      gifts.push(matches[1]);
+    }
+  });
+
+  await sendMessage({
+    gifts,
+    user: pb.authStore.model!.details,
+    recipient: formData.get('recipient_id')?.toString() ?? '',
+    content: formData.get('content')?.toString() ?? ''
+  }, {
+    onSuccess() {
+      // logEvent(analytics!, 'post-message');
+      // this.$store.commit('SET_USER_WALLET_BALANCE', json['current_balance'])  
+      (e.target! as HTMLFormElement).reset();
+      emit('update:open', false);
+      // this.$router.push(json['route']);
+    }
+  });
+}
+
+const { mutateAsync: sendMessage } = useMutation((message: {
+  gifts: string[],
+  content: string,
+  user: string,
+  recipient: string
+}) => {
+  if (message.gifts.length > 3) {
+    throw new Error('Maximum of 3 gifts is allowed.');
+  }
+
+  return pb.collection('messages').create(message);
+}, {
+  onSuccess(data, variables, context) {
+    // notify(this, { type: 'success', text: json['message'] });
+  },
+  onError(e) {
+    // catchAndNotifyError(this, e);
+  }
+});
+
+watch(props, () => {
+  injectRecipientId();
+});
 </script>
 
 <style lang="postcss" scoped>
