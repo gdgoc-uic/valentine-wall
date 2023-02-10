@@ -207,7 +207,7 @@ function generateDisplayGiftLabelString(g: Gift, i: number, arr: Gift[]) {
 }
 
 function getDisplayName(recipientId: string): string {
-  if (recipientId === authState.user!.expand.details?.student_id) {
+  if (recipientId === authState.user?.expand.details?.student_id) {
     return "you";
   } else {
     return recipientId;
