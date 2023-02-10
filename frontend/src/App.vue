@@ -82,7 +82,6 @@ import Portal from "./components/Portal.vue";
 import Navbar from "./components/Navbar.vue";
 import SubmitMessageModal from './components/SendMessageModal.vue';
 import AppFooter from "./components/Footer.vue";
-import { catchAndNotifyError } from "./notify";
 import Loading from "./components/Loading.vue";
 import WelcomeModal from "./components/WelcomeModal.vue";
 import IconCommentAdd from "~icons/uil/comment-add";

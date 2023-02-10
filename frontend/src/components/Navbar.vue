@@ -151,7 +151,6 @@ import LoginButton from './LoginButton.vue';
 import SearchForm from './SearchForm.vue';
 import { useRoute, useRouter } from 'vue-router';
 import { ref, computed } from 'vue';
-import { pb } from '../client';
 import { useAuth, useStore } from '../store_new';
 
 const props = defineProps({
@@ -198,8 +197,7 @@ const accountLinks = [
           router.replace({ name: 'home-page' });
           logout();
         } catch(e) {
-          // TODO: bring back later
-          // catchAndNotifyError(this, e);
+          catchAndNotifyError(e);
         }
       }
     },

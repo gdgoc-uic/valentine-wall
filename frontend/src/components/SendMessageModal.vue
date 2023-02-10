@@ -178,11 +178,8 @@ const { mutateAsync: sendMessage } = useMutation((message: {
 
   return pb.collection('messages').create(message);
 }, {
-  onSuccess(data, variables, context) {
-    // notify(this, { type: 'success', text: json['message'] });
-  },
-  onError(e) {
-    // catchAndNotifyError(this, e);
+  onSuccess() {
+    notify({ type: 'success', text: 'Message deleted successfully.' });
   }
 });
 

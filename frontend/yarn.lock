@@ -3171,6 +3171,11 @@ minimist@^1.2.6:
   resolved "https://registry.yarnpkg.com/minimist/-/minimist-1.2.7.tgz#daa1c4d91f507390437c6a8bc01078e7000c4d18"
   integrity sha512-bzfL1YUZsP41gmu/qjrEk0Q6i2ix/cVeAhbCbqH9u3zYutS1cLg00qhrD0M2MVdCcx4Sc0UpP2eBWo9rotpq6g==
 
+mitt@^3.0.0:
+  version "3.0.0"
+  resolved "https://registry.yarnpkg.com/mitt/-/mitt-3.0.0.tgz#69ef9bd5c80ff6f57473e8d89326d01c414be0bd"
+  integrity sha512-7dX2/10ITVyqh4aOSVI9gdape+t9l2/8QxHrFmUXu4EEUpdlxl6RudZUPZoc+zuY2hk1j7XxVroIVIan/pD/SQ==
+
 mkdirp-classic@^0.5.2, mkdirp-classic@^0.5.3:
   version "0.5.3"
   resolved "https://registry.yarnpkg.com/mkdirp-classic/-/mkdirp-classic-0.5.3.tgz#fa10c9115cc6d8865be221ba47ee9bed78601113"
@@ -3282,10 +3287,11 @@ normalize-range@^0.1.2:
   resolved "https://registry.yarnpkg.com/normalize-range/-/normalize-range-0.1.2.tgz#2d10c06bdfd312ea9777695a4d28439456b75942"
   integrity sha1-LRDAa9/TEuqXd2laTShDlFa3WUI=
 
-notiwind@^1.2.4:
-  version "1.2.4"
-  resolved "https://registry.yarnpkg.com/notiwind/-/notiwind-1.2.4.tgz#e9380e691fbba19b5b9537fee0dfecba818a0cea"
-  integrity sha512-AgvdJoeAuLOnQz5ofvqoBkLtdN2cA35XLjf1v2Q2ZSk9bVMkWmXdmAZPfYXIbOgZQenFBh1kBPyl3kF7304fAg==
+notiwind@nedpals/notiwind:
+  version "1.2.5"
+  resolved "https://codeload.github.com/nedpals/notiwind/tar.gz/8590a12b8ac6b4f1eb81b392e3fdda326352d716"
+  dependencies:
+    mitt "^3.0.0"
 
 npm-run-path@^4.0.1:
   version "4.0.1"

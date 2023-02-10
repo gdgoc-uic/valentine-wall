@@ -48,7 +48,7 @@
               </template>
             </tbody>
           </table>
-          
+
           <div v-if="query.isFetched && rankings!.pages[0].items.length === 0" class="text-center text-gray-600 font-bold py-8">
             <span class="text-3xl">No rankings yet. Check again later!</span>
           </div>
@@ -78,7 +78,6 @@ import { useStore } from "../store_new";
 const { state: { sexList } } = useStore();
 const rankingsSex = ref('male');
 
-// TODO: integrate notiwind into tanstack query
 const { fetchNextPage, hasNextPage, ...query } = useInfiniteQuery(
   ['rankings', rankingsSex], 
   ({ pageParam = 1 }) => pb.collection('rankings')

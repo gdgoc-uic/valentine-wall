@@ -49,6 +49,7 @@
 import { useMutation } from '@tanstack/vue-query';
 import { ref } from 'vue';
 import { pb } from '../../client';
+import { notify } from '../../notify';
 import { useAuth, useStore } from '../../store_new';
 import { UserDetails } from '../../types';
 
@@ -61,11 +62,8 @@ const { mutate: saveUserInfo, isLoading: isSaving } = useMutation((newDetails: {
   return pb.collection('user_details').update(authState.user!.details, newDetails);
 }, {
   onSuccess(data) {
-    // this.$notify({ type: 'success', text: data['message'] });
+    notify({ type: 'success', text: 'Account details updated successfully.' });
     authState.user!.expand.details = data as UserDetails;
-  },
-  onError(err) {
-    // catchAndNotifyError(this, e);
   }
 });
 </script>

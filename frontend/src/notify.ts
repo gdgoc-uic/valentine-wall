@@ -1,34 +1,21 @@
 import { logEvent } from "firebase/analytics";
 import { Component, h, Plugin } from "vue";
 // import { analytics } from "./firebase";
+import { notify as _notify } from 'notiwind';
+import type { NotificationItem } from "notiwind/dist/notify";
 
-export interface NotifierArguments {
-  title?: string,
-  text: string,
-  type: string,
-  group?: string,
-  duration?: number,
-  speed?: number,
-  data?: any,
-  clean?: boolean
-}
-
-export interface Notifier {
-  $notify: (args: NotifierArguments, duration?: number) => void
-}
-
-export function notify(nt: Notifier, args: NotifierArguments) {
+export function notify<T>(args: NotificationItem<T>) {
   if (!import.meta.env.SSR){
-    nt.$notify(args);
+    _notify(args);
     // logEvent(analytics!, 'server_notifications', args);
   }
 }
 
-export function catchAndNotifyError(nt: Notifier, e: unknown) {
+export function catchAndNotifyError(e: unknown) {
   if (e instanceof Error && e.message) {
-    notify(nt, { type: 'error', text: e.message });
+    notify({ type: 'error', text: e.message });
   } else {
-    notify(nt, { type: 'error', text: `Unknown error.` });
+    notify({ type: 'error', text: `Unknown error.` });
   }
 }
 
@@ -49,7 +36,6 @@ export function notiwindSSRShim(): Plugin {
 
   return {
     install(app) {
-      app.config.globalProperties.$notify = (n: any, t: any) => {};
       app.component('Notification', notificationSSR);
       app.component('NotificationGroup', notificationsGroupSSR);
 

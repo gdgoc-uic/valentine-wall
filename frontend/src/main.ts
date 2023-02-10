@@ -5,6 +5,7 @@ import App from './App.vue'
 import { createRouter } from './router'
 import { authStore as authStoreKey, createAuthStore, createStore, storeKey } from './store_new'
 import { VueQueryPlugin, VueQueryPluginOptions } from '@tanstack/vue-query'
+import { catchAndNotifyError } from './notify'
 
 export function createApp() {
     const app = createSSRApp(App);
@@ -20,7 +21,11 @@ export function createApp() {
             queryClientConfig: {
                 defaultOptions: {
                     queries: {
-                        enabled: !import.meta.env.SSR
+                        enabled: !import.meta.env.SSR,
+                        onError: catchAndNotifyError,
+                    },
+                    mutations: {
+                        onError: catchAndNotifyError
                     }
                 }
             }

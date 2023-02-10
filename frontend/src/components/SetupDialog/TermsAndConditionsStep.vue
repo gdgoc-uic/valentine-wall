@@ -39,7 +39,7 @@ export default {
         const data = await resp.text();
         this.tc = data;
       } catch (e) {
-        catchAndNotifyError(this, e);
+        catchAndNotifyError(e);
       }
     }
   }

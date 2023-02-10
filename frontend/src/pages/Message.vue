@@ -125,7 +125,7 @@ import ShareDialog from '../components/ShareDialog.vue';
 
 import { logEvent } from '@firebase/analytics';
 // import { analytics } from '../firebase';
-import { catchAndNotifyError } from '../notify';
+import { catchAndNotifyError, notify } from '../notify';
 import { WatchStopHandle } from '@vue/runtime-core';
 import ResponseHandler from '../components/ResponseHandler2.vue';
 import IconReport from '~icons/uil/exclamation-circle';
@@ -219,11 +219,8 @@ const { mutateAsync: deleteMessage } = useMutation(
   () => pb.collection('messages').delete(messageId.value.toString()),
   {
     onSuccess() {
-       // this.$notify({ type: 'success', text: json['message'] });
+      notify({ type: 'success', text: 'Message was deleted successfully.' });
       router.replace({ name: 'home-page' });
-    },
-    onError() {
-      // catchAndNotifyError(this, e);
     }
   }
 );
@@ -233,12 +230,9 @@ const { mutateAsync: deleteReply } = useMutation(
   (id: string) => pb.collection('message_replies').delete(id),
   {
     onSuccess() {
-      // this.$notify({ type: 'success', text: json['message'] });
+      notify({ type: 'success', text: 'Reply was deleted successfully.' });
       // this.message.has_replied = false;
       router.go(0);
-    },
-    onError() {
-      // catchAndNotifyError(this, e);
     }
   }
 );

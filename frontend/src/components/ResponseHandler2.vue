@@ -11,7 +11,6 @@
 <script lang="ts" setup>
 import { UseQueryReturnType } from '@tanstack/vue-query';
 import { PropType, provide } from 'vue';
-import { catchAndNotifyError } from '../notify';
 import Loading from './Loading.vue';
 
 defineEmits(['success', 'error']);

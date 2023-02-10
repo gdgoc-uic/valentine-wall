@@ -70,7 +70,6 @@
 </template>
 
 <script lang="ts" setup>
-import { catchAndNotifyError } from '../notify';
 import ClientOnly from '../components/ClientOnly.vue';
 import ResponseHandler from '../components/ResponseHandler2.vue';
 import PaginationLoadMoreButton from '../components/PaginationLoadMoreButton.vue';
@@ -114,7 +113,7 @@ async function loadStats(): Promise<void> {
     stats.messages_count = giftsResp.totalItems;
     stats.gift_messages_count = wGiftsResp.totalItems;
   } catch(e) {
-    // catchAndNotifyError(this, e);
+    console.error(e);
   }
 }
 
@@ -126,7 +125,6 @@ if (route.params.receipientId && authState.isLoggedIn) {
   hasGift.value = null;
 }
 
-// TODO: message stats
 const stats = reactive({
   messages_count: 0,
   gift_messages_count: 0

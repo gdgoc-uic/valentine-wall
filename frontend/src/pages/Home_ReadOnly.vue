@@ -50,7 +50,7 @@ export default {
         // const { data } = await this.$client.get('/messages_count');
         // this.messagesCount = data;
       } catch (e) {
-        catchAndNotifyError(this, e);
+        catchAndNotifyError(e);
       }
     }
   },

@@ -44,7 +44,7 @@ import IconReply from '~icons/uil/comment-heart';
 import ContentCounter from './ContentCounter.vue';
 import { logEvent } from '@firebase/analytics';
 // import { analytics } from '../firebase';
-import { catchAndNotifyError, notify } from '../notify';
+import { notify } from '../notify';
 import { ref, computed } from 'vue';
 import { useAuth } from '../store_new';
 import { useMutation } from '@tanstack/vue-query';
@@ -71,7 +71,7 @@ const { mutate: submitReply, isLoading: isSending } = useMutation(() => {
   })
 }, {
   onSuccess() {
-    // notify(this, { type: 'success', text: json['message'] });
+    notify({ type: 'success', text: 'Reply was sent successfully.' });
     emit('update:hasReplied', true);
     // logEvent(analytics!, 'reply-message', { id: this.message.id });
   },

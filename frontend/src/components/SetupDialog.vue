@@ -26,7 +26,7 @@
           <basic-information-step
             v-show="step == 1"
             @success="onInfoFormSuccess"
-            @error="onInfoFormError"
+            @error="catchAndNotifyError"
             @proceed="onHandleMove" />
           <terms-and-conditions-step
             v-show="step == 2"
@@ -38,7 +38,7 @@
 </template>
 
 <script lang="ts" setup>
-import { catchAndNotifyError } from '../notify';
+import { catchAndNotifyError, notify } from '../notify';
 import Modal from './Modal.vue';
 import BasicInformationStep from './SetupDialog/BasicInformationStep.vue';
 import TermsAndConditionsStep from './SetupDialog/TermsAndConditionsStep.vue';
@@ -47,9 +47,11 @@ import { pb } from '../client';
 import { reactive, ref, watch } from 'vue';
 import { useAuth, useStore } from '../store_new';
 import { UserDetails } from '../types';
+import { useRouter } from 'vue-router';
 
+const router = useRouter();
 const store = useStore();
-const { state: {user} } = useAuth();
+const { state: {user}, methods: {logout} } = useAuth();
 
 const submitDetails = reactive<{
   student_id: string | null
@@ -77,10 +79,6 @@ function onHandleMove() {
   step.value++;
 }
 
-function onInfoFormError(e: unknown) {
-  // catchAndNotifyError(this, e);
-}
-
 function onInfoFormSuccess(details: any) {
   if (details === null) {
     step.value--;
@@ -106,28 +104,24 @@ function onTCStatus(status: boolean | null) {
 
 async function submitSetupForm() {
   try {
-    try {
-      // TODO: include terms_agreed when submitting
-      const { terms_agreed, ...newSubmitDetails } = submitDetails;
-      const userDetails = await pb.collection('user_details').create({
-        ...newSubmitDetails,
-        user: user!.id
-      });
-
-      user!.expand.details = userDetails as UserDetails;
-
-      // $notify({ type: 'success', text: 'Profile saved successfully.' });
+    const { terms_agreed, ...newSubmitDetails } = submitDetails;
+    if (!terms_agreed) {
       store.state.isSetupModalOpen = false;
-      
-    } catch (e) {
-      // if (e instanceof APIResponseError && e.rawResponse.status == 403 && e.message == 'Access to the service is denied.') {
-      //   this.$router.replace({ name: 'home-page' });
-      //   await this.$store.state.dispatch('logout');
-      // }
-      throw e;
+      router.replace({ name: 'home-page' });
+      logout();
+      throw new Error('Access to the service is denied.');
     }
+
+    const userDetails = await pb.collection('user_details').create({
+      ...newSubmitDetails,
+      user: user!.id
+    });
+
+    user!.expand.details = userDetails as UserDetails;
+    notify({ type: 'success', text: 'Profile saved successfully.' });
+    store.state.isSetupModalOpen = false;
   } catch(e) {
-    // catchAndNotifyError(this, e);
+    catchAndNotifyError(e);
   }
 }
 </script>

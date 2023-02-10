@@ -32,7 +32,7 @@ import { useMutation } from '@tanstack/vue-query';
 import { ref, computed } from 'vue';
 import { useRouter } from 'vue-router';
 import { pb } from '../../client';
-import { catchAndNotifyError, notify } from '../../notify';
+import { notify } from '../../notify';
 import { useAuth } from '../../store_new';
 
 const { state: { user }, methods: { logout } } = useAuth();
@@ -46,14 +46,11 @@ const { mutateAsync: deleteAccount } = useMutation(() => {
   return pb.collection('users').delete(user!.id);
 }, {
   onSuccess(data) {
-    // notify(this, { type: 'success', text: json['message'] });
+    notify({ type: 'success', text: 'Your account was deleted succesfully.' });
   },
   onSettled() {
     recipientId.value = '';
-  },
-  onError(e) {
-    // catchAndNotifyError(this, e);
-  },
+  }
 })
 
 function proceedDelete(e: SubmitEvent) {

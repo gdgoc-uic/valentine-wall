@@ -26,7 +26,7 @@ async function googleLogin() {
         }
         emit('click');
     } catch (e) {
-        // catchAndNotifyError(this, e);
+        catchAndNotifyError(e);
     }
 }
 </script>
