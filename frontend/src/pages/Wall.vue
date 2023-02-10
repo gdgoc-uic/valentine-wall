@@ -164,6 +164,7 @@ const { hasNextPage, fetchNextPage, ...query } = useInfiniteQuery(
     }
 
     const resp = await pb.collection('messages').getList(pageParam, 10, { 
+      sort: '-created',
       filter: `(recipient = "${recipient.value}" ${hasGiftsFilter})`
     });
 
@@ -181,14 +182,6 @@ const { hasNextPage, fetchNextPage, ...query } = useInfiniteQuery(
       result.page + 1 <= result.totalPages ? result.page + 1 : undefined
   }
 );
-
-const messages = computed(() => {
-  if (!query.data.value) {
-    return null;
-  }
-
-  return query.data.value.pages[query.data.value.pages.length - 1];
-});
 
 const rawCurrentMessages = reactive<PbRecord[]>([]);
 
