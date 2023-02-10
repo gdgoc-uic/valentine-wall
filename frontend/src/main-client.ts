@@ -6,13 +6,13 @@ import { createApp } from './main'
 // import { analytics } from './firebase'
 import { logEvent, setCurrentScreen } from 'firebase/analytics'
 
-const { app, router, store } = createApp();
+const { app, router, authStore } = createApp();
 const clientApp = app.use(Notifications);
 
 router.beforeEach((to, from, next) => {
   // setCurrentScreen(analytics!, to.meta.pageTitle as string);
   const requiresAuth = to.matched.some(record => record.meta.requiresAuth);
-  if (requiresAuth && !store.getters.isLoggedIn) {
+  if (requiresAuth && !authStore.isLoggedIn) {
     next('/');
     return;
   }

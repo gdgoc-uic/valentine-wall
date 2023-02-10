@@ -1,5 +1,5 @@
 <template>
-  <modal :open="$store.state.isWelcomeModalOpen" class="w-full" modal-box-class="max-w-[50rem] w-full p-12">
+  <modal :open="store.isWelcomeModalOpen" class="w-full" modal-box-class="max-w-[50rem] w-full p-12">
     <div class="flex flex-col">
       <h2 class="text-2xl lg:text-4xl text-center font-bold mb-4">Welcome to UIC Valentine Wall!</h2>
       <div class="flex flex-col md:flex-row text-lg md:text-2xl lg:text-lg">
@@ -22,25 +22,19 @@
           <p>Discover many more messages sent by others through our public wall!</p>
         </div>
       </div>
-      <button @click="$store.dispatch('toggleWelcomeModal')" class="btn btn-primary btn-lg self-center px-12 mt-8">
+      <button @click="store.toggleWelcomeModal()" class="btn btn-primary btn-lg self-center px-12 mt-8">
         Proceed
       </button>
     </div>
   </modal>
 </template>
 
-<script>
+<script lang="ts" setup>
 import Modal from './Modal.vue';
 import IconWelcomeFeature1 from '~icons/home-icons/welcome_feature_1';
 import IconWelcomeFeature2 from '~icons/home-icons/welcome_feature_2';
 import IconWelcomeFeature3 from '~icons/home-icons/welcome_feature_3';
+import { useStore } from '../store_new';
 
-export default {
-  components: { 
-    Modal,
-    IconWelcomeFeature1,
-    IconWelcomeFeature2,
-    IconWelcomeFeature3
-  },
-}
+const store = useStore();
 </script>

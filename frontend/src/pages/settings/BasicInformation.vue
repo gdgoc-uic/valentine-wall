@@ -5,33 +5,34 @@
         <label for="firebase_student_id">User ID</label>
         <input
           type="text" name="firebase_student_id" id="firebase_student_id"
-          :value="pb.authStore.model!.id"
+          :value="user!.id"
           disabled class="w-full md:w-1/2 input input-bordered" />
       </div>
       <div class="flex flex-col md:flex-row justify-between items-start md:item-center py-2 space-y-2 lg:space-y-0">
         <label for="student_id">Student ID</label>
         <input
           type="text" name="student_id" id="student_id"
-          :value="pb.authStore.model!.expand.details?.student_id"
+          :value="user!.expand.details?.student_id"
           disabled class="w-full md:w-1/2 input input-bordered" />
       </div>
       <div class="flex flex-col md:flex-row justify-between items-start md:item-center py-2 space-y-2 lg:space-y-0">
         <label for="email">E-mail</label>
         <input
           type="text" name="email" id="email"
-          :value="pb.authStore.model!.email"
+          :value="user!.email"
           disabled class="w-full md:w-1/2 input input-bordered" />
       </div>
       <div class="flex flex-col md:flex-row justify-between items-start md:item-center py-2 space-y-2 lg:space-y-0">
         <label for="sex">Sex</label>
         <select :disabled="isSaving" name="sex" class="select select-bordered" v-model="sex">
-          <option :value="g.value" :key="g.value" v-for="g in store.getters.sexList">{{ g.label }}</option>
+          <!-- TODO: -->
+          <!-- <option :value="g.value" :key="g.value" v-for="g in store.getters.sexList">{{ g.label }}</option> -->
         </select>
       </div>
       <div class="flex flex-col md:flex-row justify-between items-start md:item-center py-2 space-y-2 lg:space-y-0">
         <label for="department">Department</label>
         <select :disabled="isSaving" name="department" class="select select-bordered" v-model="department">
-          <option :value="dept.id" :key="dept.id" v-for="dept in $store.state.departmentList">{{ dept.label }} ({{ dept.uid }})</option>
+          <option :value="dept.id" :key="dept.id" v-for="dept in store.departmentList">{{ dept.label }} ({{ dept.uid }})</option>
         </select>
       </div>
 
@@ -48,20 +49,20 @@
 
       <div class="flex flex-col">
         <!-- TODO: work on user connections -->
-        <!-- <div v-if="$store.state.user.connections.findIndex(c => c.provider === 'twitter') === -1" class="flex justify-between items-center py-2">
+        <!-- <div v-if="user.connections.findIndex(c => c.provider === 'twitter') === -1" class="flex justify-between items-center py-2">
           <label>twitter</label>
           <button 
             @click="connectUserConnection('twitter')" 
             class="btn btn-success btn-outline">Connect</button>
         </div>
-        <div v-if="$store.state.user.connections.findIndex(c => c.provider === 'email') === -1" class="flex justify-between items-center py-2">
+        <div v-if="user.connections.findIndex(c => c.provider === 'email') === -1" class="flex justify-between items-center py-2">
           <label>email</label>
           <button 
             @click="connectUserConnection('email')" 
             class="btn btn-success btn-outline">Connect</button>
         </div>
         <div 
-          v-for="(conn, i) in $store.state.user.connections" 
+          v-for="(conn, i) in user.connections" 
           :key="'conn_' + i" class="flex justify-between items-center py-2">
           <label>{{ conn.provider }}</label>
           <button 
@@ -77,21 +78,23 @@
 <script lang="ts" setup>
 import { useMutation } from '@tanstack/vue-query';
 import { ref } from 'vue';
-import { useStore } from 'vuex';
 import { connectToEmail, connectToTwitter } from '../../auth';
 import { pb } from '../../client';
 import { catchAndNotifyError } from '../../notify';
-import { storeKey } from '../../store';
+import { useAuth, useStore } from '../../store_new';
+import { UserDetails } from '../../types';
 
-const store = useStore(storeKey);
+const store = useStore();
+const { user } = useAuth();
+
 const sex = ref(pb.authStore!.model!.expand.details?.sex ?? 'unknown');
 const department = ref(pb.authStore!.model!.expand.details?.department ?? 'none');
 const { mutate: saveUserInfo, isLoading: isSaving } = useMutation((newDetails: { sex?: string, college_department?: string }) => {
-  return pb.collection('user_details').update(pb.authStore.model!.details, newDetails);
+  return pb.collection('user_details').update(user!.details, newDetails);
 }, {
   onSuccess(data) {
     // this.$notify({ type: 'success', text: data['message'] });
-    pb.authStore.model!.expand.details = data;
+    user!.expand.details = data as UserDetails;
   },
   onError(err) {
     // catchAndNotifyError(this, e);
@@ -101,16 +104,18 @@ const { mutate: saveUserInfo, isLoading: isSaving } = useMutation((newDetails: {
 const { mutateAsync: connectUserConnection } = useMutation((provider: string) => {
   switch (provider) {
     case "twitter":
-      connectToTwitter(store);
+      // connectToTwitter(store);
       break;
     case "email":
-      connectToEmail(store);
+      // connectToEmail(store);
       break;
     default:
       throw new Error(`Unknown provider: ${provider}`);
   }
 
-  return store.dispatch('getUserInfo');
+  // TODO:
+  // return store.dispatch('getUserInfo');
+  return Promise.resolve(0);
 }, {
   onError(error) {
     // catchAndNotifyError(this, e);
@@ -129,7 +134,8 @@ const { mutateAsync: disconnectUserConnection } = useMutation((name: string) => 
     // catchAndNotifyError(this, e);
   },
   onSettled() {
-    store.dispatch('getUserInfo');
+    // TODO:
+    // store.dispatch('getUserInfo');
   }
 })
 </script>

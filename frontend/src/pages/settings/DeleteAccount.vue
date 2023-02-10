@@ -17,7 +17,7 @@
         <input
           @input="recipientId = $event.target.value"
           pattern="[0-9]{6,12}"
-          :placeholder="pb.authStore.model!.expand.details?.student_id"
+          :placeholder="user!.expand.details?.student_id"
           class="w-full input input-bordered"
           name="recipient_id" type="text">
         <button :disabled="!shouldDelete" 
@@ -31,20 +31,19 @@
 import { useMutation } from '@tanstack/vue-query';
 import { ref, computed } from 'vue';
 import { useRouter } from 'vue-router';
-import { useStore } from 'vuex';
 import { pb } from '../../client';
 import { catchAndNotifyError, notify } from '../../notify';
-import { storeKey } from '../../store';
+import { useAuth } from '../../store_new';
 
+const { logout, user } = useAuth();
 const router = useRouter();
-const store = useStore(storeKey);
 const recipientId = ref('');
 const shouldDelete = computed(() => {
-  return recipientId.value === pb.authStore.model!.expand.details?.associatedId;
+  return recipientId.value === user!.expand.details?.associatedId;
 });
 
 const { mutateAsync: deleteAccount } = useMutation(() => {
-  return pb.collection('users').delete(pb.authStore.model!.id);
+  return pb.collection('users').delete(user!.id);
 }, {
   onSuccess(data) {
     // notify(this, { type: 'success', text: json['message'] });
@@ -63,7 +62,7 @@ function proceedDelete(e: SubmitEvent) {
   deleteAccount()
     .then(() => {
       router.replace({ name: 'home-page' });
-      return store.dispatch('logout');
+      return logout();
     });
 }
 </script>

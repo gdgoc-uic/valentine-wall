@@ -21,7 +21,7 @@
             <option value="none" selected>None</option>
             <option :value="dept.id"
               :key="dept.id"
-              v-for="dept in $store.state.departmentList">
+              v-for="dept in store.departmentList">
               {{ dept.label }} ({{ dept.uid }})
             </option>
           </select>
@@ -31,12 +31,13 @@
             <span class="label-text">Sex</span>
           </label>
           <select name="sex" class="select select-bordered">
-            <option
+            <!-- TODO: -->
+            <!-- <option
               :value="g.value.toLowerCase()"
               :key="g.value"
               v-for="g in $store.getters.sexList">
               {{ g.label }}
-            </option>
+            </option> -->
           </select>
         </div>
       </form>
@@ -50,55 +51,58 @@
   </div>
 </template>
 
-<script lang="ts">
+<script lang="ts" setup>
+import { onMounted, ref } from 'vue';
 import { pb } from '../../client';
+import { useAuth, useStore } from '../../store_new';
 
 const emailRegex = /^[a-z]+_([0-9]+)@uic.edu.ph$/;
+const emit = defineEmits(['success', 'error', 'proceed']);
+const form = ref<HTMLFormElement | null>();
+const store = useStore();
+const { user } = useAuth();
 
-export default {
-  emits: ['success', 'error', 'proceed'],
-  mounted() {
-    setTimeout(() => {
-      const associatedIdField = document.getElementById('student_id_field');
-      if (associatedIdField && associatedIdField instanceof HTMLInputElement) {
-        const extractedId = this.getIdFromEmail(pb.authStore.model?.email);
-        associatedIdField.value = extractedId;
-      }
-    }, 500);
-  },
-  methods: {
-    getIdFromEmail(input: string): string {
-      const matches = emailRegex.exec(input)
-      return matches?.[1] ?? '';
-    },
-    submitForm() {
-      //@ts-ignore
-      this.$refs.form.dispatchEvent(new Event('submit', {'bubbles': true, 'cancelable': true }))
-    },
-    shouldProceed(e: SubmitEvent) {
-      if (!e.target || !(e.target instanceof HTMLFormElement)) return;
-      const formData = new FormData(e.target);
-      if (!formData.get("student_id")) {
-        this.$emit('error', new Error('Please input your ID.'));
-        return;
-      } else if (formData.get('student_id')?.toString() !== this.getIdFromEmail(pb.authStore.model?.email)) {
-        this.$emit('error', new Error('Your ID from e-mail does not match with the one you have inputted.'));
-        return;
-      }
-
-      if (!formData.get('department') || formData.get('department')?.toString() == 'none') {
-        this.$emit('error', new Error('Please select your department.'));
-        return;
-      }
-
-      this.$emit('success', {
-        student_id: formData.get('student_id')?.toString(),
-        college_department: formData.get('department')?.toString(),
-        sex: formData.get('sex')?.toString(),
-      });
-
-      this.$emit('proceed');
-    },
-  }
+function getIdFromEmail(input: string): string {
+  const matches = emailRegex.exec(input)
+  return matches?.[1] ?? '';
 }
+
+function submitForm() {
+  form.value?.dispatchEvent(new Event('submit', {'bubbles': true, 'cancelable': true }))
+}
+
+function shouldProceed(e: SubmitEvent) {
+  if (!e.target || !(e.target instanceof HTMLFormElement)) return;
+  const formData = new FormData(e.target);
+  if (!formData.get("student_id")) {
+    emit('error', new Error('Please input your ID.'));
+    return;
+  } else if (formData.get('student_id')?.toString() !== getIdFromEmail(user?.email)) {
+    emit('error', new Error('Your ID from e-mail does not match with the one you have inputted.'));
+    return;
+  }
+
+  if (!formData.get('department') || formData.get('department')?.toString() == 'none') {
+    emit('error', new Error('Please select your department.'));
+    return;
+  }
+
+  emit('success', {
+    student_id: formData.get('student_id')?.toString(),
+    college_department: formData.get('department')?.toString(),
+    sex: formData.get('sex')?.toString(),
+  });
+
+  emit('proceed');
+}
+
+onMounted(() => {
+  setTimeout(() => {
+    const associatedIdField = document.getElementById('student_id_field');
+    if (associatedIdField && associatedIdField instanceof HTMLInputElement) {
+      const extractedId = getIdFromEmail(user?.email);
+      associatedIdField.value = extractedId;
+    }
+  }, 500);
+});
 </script>

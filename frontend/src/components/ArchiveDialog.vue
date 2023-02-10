@@ -24,7 +24,6 @@
 
 <script lang="ts">
 import { EventSourcePolyfill } from 'event-source-polyfill';
-import { expandAPIEndpoint } from '../client';
 import Loading from './Loading.vue';
 import Modal from './Modal.vue';
 import Portal from './Portal.vue'
@@ -69,41 +68,42 @@ export default {
       anchor.click();
     },
     initSse() {
-      this.sse = new EventSourcePolyfill(expandAPIEndpoint('/user/messages/archive'), {
-        headers: this.$store.getters.headers
-      });
+      // TODO:
+      // this.sse = new EventSourcePolyfill(expandAPIEndpoint('/user/messages/archive'), {
+      //   headers: this.$store.getters.headers
+      // });
 
-      this.sse.onmessage = (event) => {
-        if (event.data === 'null') return;
-        const { status, data } = JSON.parse(event.data);
-        this.status = status;
+      // this.sse.onmessage = (event) => {
+      //   if (event.data === 'null') return;
+      //   const { status, data } = JSON.parse(event.data);
+      //   this.status = status;
 
-        switch (status) {
-          case 'starting':
-            return;
-          case 'processing':
-            this.processed += data['len'];
-            return;
-          case 'set_file_count':
-            this.total = data['count'];
-            return;
-          case 'error':
-            this.error = data['message'];
-            this.$emit('error', new Error(data['message'] ?? 'unknown error'));
-            return;
-          case 'done':
-            this.endpoint = expandAPIEndpoint(data['endpoint'] + '?__auth_token=' + this.$store.state.user.accessToken);
-            this.sse!.close();
-            return;
-        }
-      }
+      //   switch (status) {
+      //     case 'starting':
+      //       return;
+      //     case 'processing':
+      //       this.processed += data['len'];
+      //       return;
+      //     case 'set_file_count':
+      //       this.total = data['count'];
+      //       return;
+      //     case 'error':
+      //       this.error = data['message'];
+      //       this.$emit('error', new Error(data['message'] ?? 'unknown error'));
+      //       return;
+      //     case 'done':
+      //       this.endpoint = expandAPIEndpoint(data['endpoint'] + '?__auth_token=' + this.$store.state.user.accessToken);
+      //       this.sse!.close();
+      //       return;
+      //   }
+      // }
 
-      this.sse.onerror = (ev) => {
-        this.status = 'error';
-        this.error = 'Unknown error';
-        this.$emit('error', new Error('Unknown error'));
-        this.sse!.close();
-      }
+      // this.sse.onerror = (ev) => {
+      //   this.status = 'error';
+      //   this.error = 'Unknown error';
+      //   this.$emit('error', new Error('Unknown error'));
+      //   this.sse!.close();
+      // }
     }
   },
   computed: {

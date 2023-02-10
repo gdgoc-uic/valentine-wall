@@ -1,5 +1,5 @@
 import { Store } from "vuex";
-import { State } from "./store";
+import { State } from "./store_new";
 
 export function popupCenter({ url, title, w, h }: { url: string, title: string, w: number, h: number }): Window | null {
     // Fixes dual-screen position                             Most browsers      Firefox
@@ -62,6 +62,6 @@ export function connectToTwitter(store: Store<State>, cbs?: ConnectCallbacks) {
 }
 
 export async function connectToEmail(store: Store<State>) {
-    const { data: json } = await store.getters.apiClient.post('/user/connect_email');
-    store.commit('SET_USER_CONNECTIONS', json['user_connections']);
+    // const { data: json } = await store.getters.apiClient.post('/user/connect_email');
+    // store.commit('SET_USER_CONNECTIONS', json['user_connections']);
 }

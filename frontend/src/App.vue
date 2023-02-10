@@ -42,14 +42,14 @@
 
   <!-- ID Modal -->
   <portal>
-    <setup-dialog v-if="!pb.authStore.model?.expand.details?.student_id && $store.getters.isLoggedIn" />
+    <setup-dialog v-if="!user?.expand.details?.student_id && isLoggedIn" />
     <submit-message-modal
       :key="$route.fullPath" 
-      :open="$store.state.isSendMessageModalOpen" 
-      @update:open="$store.commit('SET_SEND_MESSAGE_MODAL_OPEN', $event)" />
+      :open="store.isSendMessageModalOpen" 
+      @update:open="store.isSendMessageModalOpen = $event" />
   </portal>
 
-  <div v-if="$store.state.isAuthLoading" class="h-screen flex items-center justify-center">
+  <div v-if="isAuthLoading" class="h-screen flex items-center justify-center">
     <loading />
   </div>
 
@@ -69,9 +69,8 @@
   </template>
 </template>
 
-<script lang="ts">
-import { computed, defineComponent } from "@vue/runtime-core";
-// import { auth } from "./firebase";
+<script lang="ts" setup>
+import { computed } from "@vue/runtime-core";
 import { HeadAttrs, useHead } from "@vueuse/head";
 
 import BasicAlert from "./components/BasicAlert.vue";
@@ -82,79 +81,44 @@ import ClientOnly from "./components/ClientOnly.vue";
 import Portal from "./components/Portal.vue";
 import Navbar from "./components/Navbar.vue";
 import SubmitMessageModal from './components/SendMessageModal.vue';
-import Footer from "./components/Footer.vue";
+import AppFooter from "./components/Footer.vue";
 import { catchAndNotifyError } from "./notify";
 import Loading from "./components/Loading.vue";
 import WelcomeModal from "./components/WelcomeModal.vue";
 import IconCommentAdd from "~icons/uil/comment-add";
 import FeedbackForm from "./components/FeedbackForm.vue";
 import { pb } from "./client";
+import { useAuth, useStore } from "./store_new";
 
-export default defineComponent({
-  components: { 
-    BasicAlert, 
-    SubmitMessageModal,
-    SetupDialog: SetupDialog, 
-    ClientOnly,
-    Portal,
-    Navbar,
-    AppFooter: Footer,
-    Loading,
-    WelcomeModal,
-    IconCommentAdd,
-    FeedbackForm
+const route = useRoute();
+const { isLoggedIn, isAuthLoading } = useAuth();
+const store = useStore();
+
+useHead({
+  htmlAttrs: {
+    lang: 'en'
   },
-  setup() {
-    const route = useRoute();
-    useHead({
-      htmlAttrs: {
-        lang: 'en'
-      },
-      link: [
-        { rel: 'preconnect', href: 'https://fonts.googleapis.com' },
-        { rel: 'preconnect', href: 'https://fonts.gstatic.com' },
-        { rel: 'stylesheet', href: 'https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700&display=swap' }
-      ],
-      title: computed(() => getPageTitle(route)),
-      meta: computed(() => {
-        let metaTags: HeadAttrs[] = [];
-        if (route.meta.metaTags && route.meta.metaTags instanceof Function) {
-          metaTags = route.meta.metaTags(route);
-        } else if (Array.isArray(route.meta.metaTags)) {
-          metaTags = route.meta.metaTags;
-        }
-
-        return [
-          { charset: 'UTF-8' },
-          { name: 'viewport', content: 'width=device-width, initial-scale=1.0' },
-          ...metaTags
-        ];
-      }),
-    });
-
-    return {
-      pb
+  link: [
+    { rel: 'preconnect', href: 'https://fonts.googleapis.com' },
+    { rel: 'preconnect', href: 'https://fonts.gstatic.com' },
+    { rel: 'stylesheet', href: 'https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700&display=swap' }
+  ],
+  title: computed(() => getPageTitle(route)),
+  meta: computed(() => {
+    let metaTags: HeadAttrs[] = [];
+    if (route.meta.metaTags && route.meta.metaTags instanceof Function) {
+      metaTags = route.meta.metaTags(route);
+    } else if (Array.isArray(route.meta.metaTags)) {
+      metaTags = route.meta.metaTags;
     }
-  },
-  mounted() {
-    if (!import.meta.env.SSR) {
-      this.$store.dispatch('checkFirstTimeVisitor');
 
-      pb.authStore.onChange((_, user) => {
-        this.$store.dispatch('onReceiveUser', user);
-      }, true);
-
-      if (import.meta.env.VITE_READ_ONLY !== "true") {
-        Promise.all([
-          this.$store.dispatch('getGiftList'),
-          this.$store.dispatch('getDepartmentList')
-        ]).catch((err) => {
-          catchAndNotifyError(this, err);
-        });
-      }
-    }
-  },
-})
+    return [
+      { charset: 'UTF-8' },
+      { name: 'viewport', content: 'width=device-width, initial-scale=1.0' },
+      ...metaTags
+    ];
+  }),
+});
 </script>
 
 <style src="./assets/index.css"></style>

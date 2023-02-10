@@ -1,6 +1,6 @@
 <template>
   <div 
-    v-if="!$store.getters.isLoggedIn || pb.authStore.model!.expand.details?.student_id != message.recipient_id" 
+    v-if="!isLoggedIn || user!.expand.details?.student_id != message.recipient_id" 
     class="flex flex-col md:flex-row items-center">
     <icon-reply-lock class="text-gray-500 text-6xl mb-4 md:mb-0" />
     <div class="flex flex-col text-center items-center md:text-left md:items-start md:ml-4">
@@ -14,7 +14,7 @@
     <h3 class="text-2xl font-bold">Already replied!</h3>
   </div>
 
-  <div v-else-if="$store.getters.isLoggedIn && !$store.getters.hasConnections" class="flex flex-col justify-center text-center items-center space-y-8">
+  <div v-else-if="isLoggedIn && !hasConnections" class="flex flex-col justify-center text-center items-center space-y-8">
     <p class="text-gray-500 text-lg">Connect your Twitter account and gain more coins!</p>
     
     <div class="w-full md:w-2/3 flex flex-col md:flex-row space-y-2 md:space-y-0 md:space-x-2 items-stretch justify-center">
@@ -48,7 +48,7 @@
   </div>
 </template>
 
-<script lang="ts">
+<script lang="ts" setup>
 import Modal from './Modal.vue';
 import IconReplyLock from '~icons/uil/comment-lock';
 import IconUserLocation from '~icons/uil/user-location';
@@ -63,97 +63,77 @@ import { logEvent } from '@firebase/analytics';
 import { catchAndNotifyError, notify } from '../notify';
 import { connectToEmail, connectToTwitter } from '../auth';
 import {pb} from '../client';
+import { ref, computed } from 'vue';
+import { useAuth } from '../store_new';
 
-export default {
-  components: { 
-    Modal, 
-    ContentCounter,
-    IconReplyLock,
-    IconUserLocation,
-    IconSend,
-    IconFacebook,
-    IconTwitter,
-    IconReply,
-    IconAnnoyed
-  },
-  emits: ['update:hasReplied'],
-  props: {
-    message: {
-      type: Object,
-      default: {}
-    }
-  },
-  setup() {
-    return {
-      pb
-    }
-  },
-  data() {
-    return {
-      content: '',
-      shouldSend: false,
-      isSending: false
-    }
-  },
-  watch: {
-    content(newV: string, oldV: string) {
-      const counter = (this.$refs.counter as typeof ContentCounter);
-      if (!counter || typeof counter == 'undefined') {
-        this.shouldSend = false;
-      } else {
-        this.shouldSend =  counter.shouldSend(newV);
-      }
-    }
-  },
-  methods: {
-    useTwitter() {
-      let success: boolean = false;
-      connectToTwitter(this.$store, {
-        onSuccess: () => { success = true; },
-        onError: (e) => {
-          success = false;
-          catchAndNotifyError(this, e);
-        },
-        onFinally: () => {
-          // logEvent(analytics!, 'connect_twitter', { success });
-        }
-      });
-    },
-    async useEmail() {
-      let success: boolean = false;
-      this.$notify({ type: 'info', text: 'You can connect it later ' })
-      try {
-        connectToEmail(this.$store);
-        success = true;
-      } catch (e) {
-        success = false;
-        catchAndNotifyError(this, e); 
-      } finally {
-        // logEvent(analytics!, 'connect_email', { success });
-      }
-    },
-    async submitReply() {
-      try {
-        this.isSending = true;
-        // const { data: json } = await this.$client.postJson(`/messages/${this.message.recipient_id}/${this.message.id}/reply`, {
-        //   reply: {
-        //     content: this.content
-        //   },
-        //   options: {
-        //     post_to_email: true,
-        //     post_to_twitter: true
-        //   }
-        // });
+const emit = defineEmits(['update:hasReplied']);
+defineProps({
+  message: {
+    type: Object,
+    default: {}
+  }
+});
 
-        // notify(this, { type: 'success', text: json['message'] });
-        // this.$store.commit('SET_USER_WALLET_BALANCE', json['current_balance']);
-        this.$emit('update:hasReplied', true);
-        // logEvent(analytics!, 'reply-message', { id: this.message.id });
-      } catch (e) {
-        this.isSending = false;
-        catchAndNotifyError(this, e);
-      }
-    }
+// TODO: has connections
+const hasConnections = false;
+const { isLoggedIn, user } = useAuth();
+const counter = ref<InstanceType<typeof ContentCounter> | null>(null);
+const content = ref('');
+const isSending = ref(false);
+const shouldSend = computed(() => counter.value?.shouldSend(content.value) ?? false);
+
+function useTwitter() {
+  let success: boolean = false;
+  // TODO:
+  // connectToTwitter(this.$store, {
+  //   onSuccess: () => { success = true; },
+  //   onError: (e) => {
+  //     success = false;
+  //     catchAndNotifyError(this, e);
+  //   },
+  //   onFinally: () => {
+  //     // logEvent(analytics!, 'connect_twitter', { success });
+  //   }
+  // });
+}
+
+async function useEmail() {
+  let success: boolean = false;
+  // TODO:
+  // this.$notify({ type: 'info', text: 'You can connect it later ' })
+  try {
+    // TODO:
+    // connectToEmail(this.$store);
+    success = true;
+  } catch (e) {
+    success = false;
+    // catchAndNotifyError(this, e); 
+  } finally {
+    // logEvent(analytics!, 'connect_email', { success });
+  }
+}
+
+async function submitReply() {
+  try {
+    isSending.value = true;
+    // TODO:
+    // const { data: json } = await this.$client.postJson(`/messages/${this.message.recipient_id}/${this.message.id}/reply`, {
+    //   reply: {
+    //     content: this.content
+    //   },
+    //   options: {
+    //     post_to_email: true,
+    //     post_to_twitter: true
+    //   }
+    // });
+
+    // notify(this, { type: 'success', text: json['message'] });
+    // this.$store.commit('SET_USER_WALLET_BALANCE', json['current_balance']);
+    emit('update:hasReplied', true);
+    // logEvent(analytics!, 'reply-message', { id: this.message.id });
+  } catch (e) {
+    isSending.value = false;
+    // catchAndNotifyError(this, e);
   }
 }
 </script>

@@ -4,11 +4,11 @@
       <div>
         <img src="../assets/images/logo.png" class="w-4/5 md:w-2/3 lg:w-full pb-8 mx-auto" alt="Valentine Wall">
         <p class="text-gray-500 text-lg font-bold pb-4">Send, confess, and share your feelings anonymously!</p>
-        <login-button v-if="!$store.getters.isLoggedIn" class="btn-lg" />
+        <login-button v-if="!isLoggedIn" class="btn-lg" />
         <!-- move send message to the homepage -->
         <button
           v-else
-          @click="$store.commit('SET_SEND_MESSAGE_MODAL_OPEN', true)"
+          @click="store.isSendMessageModalOpen = true"
           class="btn btn-lg bg-rose-500 hover:bg-rose-600 normal-case border-0 shadow-md rounded-2xl w-2/3 lg:w-full space-x-3">
           <span>Start Writing</span>
           <icon-send />
@@ -114,6 +114,7 @@ import { pb } from '../client';
 import { Record as PbRecord, UnsubscribeFunc } from 'pocketbase';
 import { onMounted, onUnmounted, ref, reactive } from 'vue';
 import { useQuery } from '@tanstack/vue-query';
+import { useAuth, useStore } from '../store_new';
 
 function ordinalSuffixOf(i: number): string {
   var j = i % 10,
@@ -130,6 +131,8 @@ function ordinalSuffixOf(i: number): string {
   return i + "th";
 }
 
+const store = useStore();
+const { isLoggedIn } = useAuth();
 const rankingsSex = ref('male');
 const recentMessages = reactive<PbRecord[]>([]);
 const recentsSSE = ref<UnsubscribeFunc>();

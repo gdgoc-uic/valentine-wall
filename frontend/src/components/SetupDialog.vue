@@ -1,7 +1,7 @@
 <template>
   <modal 
-    :open="$store.state.isSetupModalOpen" 
-    @update:open="commit('SET_SETUP_MODAL_OPEN', $event)"
+    :open="store.isSetupModalOpen" 
+    @update:open="store.isSetupModalOpen = $event"
     modal-box-class="max-w-[70rem] min-h-[80%] h-full">
     <div class="flex flex-col items-center h-full">
       <ul class="steps steps-horizontal text-lg">
@@ -37,96 +37,97 @@
   </modal>
 </template>
 
-<script lang="ts">
+<script lang="ts" setup>
 import { catchAndNotifyError } from '../notify';
 import Modal from './Modal.vue';
 import BasicInformationStep from './SetupDialog/BasicInformationStep.vue';
 import TermsAndConditionsStep from './SetupDialog/TermsAndConditionsStep.vue';
 import IconSetupWelcome from '~icons/home-icons/setup_welcome';
 import { pb } from '../client';
+import { reactive, ref, watch } from 'vue';
+import { useAuth, useStore } from '../store_new';
+import { UserDetails } from '../types';
 
-export default {
-  components: { 
-    Modal, 
-    BasicInformationStep,
-    TermsAndConditionsStep,
-    IconSetupWelcome
-  },
-  data() {
-    return {
-      submitDetails: {
-        student_id: null as string | null,
-        college_department: null as string | null,
-        sex: null as string | null,
-        terms_agreed: false,
-      },
-      step: 0
-    };
-  },
-  watch: {
-    step(newVal, oldVal) {
-      if (newVal == null || newVal < 0) {
-        this.step = 0;
-      } else if (newVal > 2) {
-        this.step = 2;
-      }
+const store = useStore();
+const { user } = useAuth();
+
+const submitDetails = reactive<{
+  student_id: string | null
+  college_department: string | null
+  sex: string | null
+  terms_agreed: boolean
+}>({
+  student_id: null,
+  college_department: null,
+  sex: null,
+  terms_agreed: false
+});
+
+const step = ref(0);
+
+watch(step, (newVal, oldVal) => {
+  if (newVal == null || newVal < 0) {
+    step.value = 0;
+  } else if (newVal > 2) {
+    step.value = 2;
+  }
+});
+
+function onHandleMove() {
+  step.value++;
+}
+
+function onInfoFormError(e: unknown) {
+  // catchAndNotifyError(this, e);
+}
+
+function onInfoFormSuccess(details: any) {
+  if (details === null) {
+    step.value--;
+  }
+
+  submitDetails.student_id = details.student_id;
+  submitDetails.college_department = details.college_department;
+  submitDetails.sex = details.sex;
+}
+
+function onTCStatus(status: boolean | null) {
+  switch (status) {
+    case true:
+    case false:
+      submitDetails.terms_agreed = status;
+      submitSetupForm();
+      break;
+    case null:
+      step.value--;
+      break;
+  }
+}
+
+async function submitSetupForm() {
+  try {
+    try {
+      // TODO: include terms_agreed when submitting
+      const { terms_agreed, ...newSubmitDetails } = submitDetails;
+      const userDetails = await pb.collection('user_details').create({
+        ...newSubmitDetails,
+        user: user!.id
+      });
+
+      user!.expand.details = userDetails as UserDetails;
+
+      // $notify({ type: 'success', text: 'Profile saved successfully.' });
+      store.isSetupModalOpen = false;
+      
+    } catch (e) {
+      // if (e instanceof APIResponseError && e.rawResponse.status == 403 && e.message == 'Access to the service is denied.') {
+      //   this.$router.replace({ name: 'home-page' });
+      //   await this.$store.dispatch('logout');
+      // }
+      throw e;
     }
-  },
-  methods: {
-    onHandleMove() {
-      this.step++;
-    },
-    onInfoFormError(e: unknown) {
-      catchAndNotifyError(this, e);
-    },
-    onInfoFormSuccess(details: any) {
-      if (details === null) {
-        this.step--;
-      }
-
-      this.submitDetails.student_id = details.student_id;
-      this.submitDetails.college_department = details.college_department;
-      this.submitDetails.sex = details.sex;
-    },
-    onTCStatus(status: boolean | null) {
-      switch (status) {
-        case true:
-        case false:
-          this.submitDetails.terms_agreed = status;
-          this.submitSetupForm();
-          break;
-        case null:
-          this.step--;
-          break;
-      }
-    },
-    async submitSetupForm() {
-      try {
-        try {
-          // TODO: include terms_agreed when submitting
-          const { terms_agreed, ...submitDetails } = this.submitDetails;
-          const userDetails = await pb.collection('user_details').create({
-            ...submitDetails,
-            user: pb.authStore.model!.id
-          });
-
-          await pb.collection('users').update(pb.authStore.model!.id, { details: userDetails.id });
-          pb.authStore.model!.expand['details'] = userDetails;
-
-          this.$notify({ type: 'success', text: 'Profile saved successfully.' });
-          await this.$store.dispatch('getUserInfo');
-          this.$store.commit('SET_SETUP_MODAL_OPEN', false);
-        } catch (e) {
-          // if (e instanceof APIResponseError && e.rawResponse.status == 403 && e.message == 'Access to the service is denied.') {
-          //   this.$router.replace({ name: 'home-page' });
-          //   await this.$store.dispatch('logout');
-          // }
-          throw e;
-        }
-      } catch(e) {
-        catchAndNotifyError(this, e);
-      }
-    }
+  } catch(e) {
+    // catchAndNotifyError(this, e);
   }
 }
 </script>

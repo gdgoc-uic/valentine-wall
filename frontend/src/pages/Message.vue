@@ -60,7 +60,7 @@
               <report-dialog 
                 :key="reportDialogKey"
                 @success="onReportSuccess"
-                :email="store.getters.isLoggedIn ? pb.authStore.model!.email : undefined" 
+                :email="isLoggedIn ? user!.email : undefined" 
                 :message-id="message!.id">
                 <template #default="{ openDialog }">
                   <button 
@@ -81,7 +81,7 @@
 
             <div class="flex items-end w-full">
               <delete-dialog
-                v-if="pb.authStore.model!.expand.details?.student_id == message!.recipient"
+                v-if="user!.expand.details?.student_id == message!.recipient"
                 @confirm="onMessageReplyDeletion" v-slot="{ openDialog }">
                 <button
                   @click="openDialog" class="btn btn-error space-x-2 mt-8 self-end flex items-center">
@@ -91,8 +91,8 @@
               </delete-dialog>
             </div>
           </div>
-          <div v-else-if="!message!.expand.message_replies || !store.getters.isLoggedIn" class="p-6 lg:p-8 bg-white rounded-xl shadow-lg">
-            <div v-if="pb.authStore.model!.expand.details?.student_id == message!.recipient"
+          <div v-else-if="!message!.expand.message_replies || !isLoggedIn" class="p-6 lg:p-8 bg-white rounded-xl shadow-lg">
+            <div v-if="user!.expand.details?.student_id == message!.recipient"
               class="flex space-x-2 items-center text-2xl">
               <icon-reply class="text-pink-500 mb-4" />
               <h2 class="font-bold mb-4">Your reply</h2>
@@ -131,7 +131,6 @@ import Modal from '../components/Modal.vue';
 import { logEvent } from '@firebase/analytics';
 // import { analytics } from '../firebase';
 import { catchAndNotifyError } from '../notify';
-import { Gift, storeKey } from '../store';
 import { WatchStopHandle } from '@vue/runtime-core';
 import Portal from '../components/Portal.vue';
 import ResponseHandler from '../components/ResponseHandler2.vue';
@@ -140,15 +139,16 @@ import { fromNow, prettifyDateTime } from '../time_utils';
 import DeleteDialog from '../components/DeleteDialog.vue';
 import ReportDialog from '../components/ReportDialog.vue';
 import { ref, computed } from 'vue';
-import { useStore } from 'vuex';
 import { pb } from '../client';
 import { useMutation, useQuery } from '@tanstack/vue-query';
 import { useRoute, useRouter } from 'vue-router';
 import { ClientResponseError } from 'pocketbase';
+import { useAuth, useStore } from '../store_new';
+import { Gift } from '../types';
 
+const { isLoggedIn, user } = useAuth();
 const router = useRouter();
 const route = useRoute();
-const store = useStore(storeKey);
 const isDeletable = ref(false);
 const openReportModal = ref(false);
 const revealContent = ref(false);
@@ -213,7 +213,7 @@ function generateDisplayGiftLabelString(g: Gift, i: number, arr: Gift[]) {
 }
 
 function getDisplayName(recipientId: string): string {
-  if (recipientId === pb.authStore.model!.expand.details?.student_id) {
+  if (recipientId === user!.expand.details?.student_id) {
     return "you";
   } else {
     return recipientId;

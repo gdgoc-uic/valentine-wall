@@ -20,7 +20,7 @@ export default {
         try {
           // await this.$client.get(`/invite/${invCode}`, { credentials: 'include' });
         } catch (e) {
-          catchAndNotifyError(this, e);
+          // catchAndNotifyError(this, e);
         } finally {
           this.$router.replace({ name: 'home-page' });
         }

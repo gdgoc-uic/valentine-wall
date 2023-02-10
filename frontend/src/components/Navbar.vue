@@ -41,10 +41,10 @@
       </search-form>
       <client-only>
         <div class="flex-none hidden md:ml-auto md:flex">
-          <div v-if="$store.getters.isLoggedIn" class="dropdown dropdown-end dropdown-hover -mb-2">
+          <div v-if="isLoggedIn" class="dropdown dropdown-end dropdown-hover -mb-2">
             <div tabindex="0" class="rounded-r-none mb-2 shadow-md btn normal-case text-black bg-white border-0 hover:bg-gray-100">
               <span class="overflow-hidden text-ellipsis">
-                {{ $store.getters.username }}
+                {{ user.username }}
               </span>
               <icon-dropdown />
             </div>
@@ -61,20 +61,20 @@
           <!-- TODO: add 'add coins' modal -->
           <button 
             :class="[!shouldSendButtonHide ? 'rounded-none' : 'rounded-l-none']" 
-            v-if="$store.getters.isLoggedIn" 
+            v-if="isLoggedIn" 
             class="btn shadow-md normal-case text-black bg-white border-0 hover:bg-gray-100">
             <icon-coin class="mr-2" />
-            <span>ღ{{ pb.authStore.model!.expand.wallet?.balance ?? 'unknown' }}</span>
+            <span>ღ{{ user!.expand.wallet?.balance ?? 'unknown' }}</span>
           </button>
           <button
-            v-if="!shouldSendButtonHide && $store.getters.isLoggedIn"
-            @click="$store.commit('SET_SEND_MESSAGE_MODAL_OPEN', true)"
+            v-if="!shouldSendButtonHide && isLoggedIn"
+            @click="store.isSendMessageModalOpen = true"
             class="shadow-md btn border-none rounded-l-none bg-rose-500 hover:bg-rose-600 lg:px-8 space-x-2">
             <icon-send />
             <span class="hidden lg:block">Send a Message</span>
             <span class="lg:hidden">Send</span>
           </button>
-          <login-button v-if="!isHome && !$store.getters.isLoggedIn" />
+          <login-button v-if="!isHome && !isLoggedIn" />
         </div>
       </client-only>
     </header>
@@ -101,10 +101,10 @@
               {{ link.label }}
             </router-link>
           </div>
-          <div v-if="$store.getters.isLoggedIn" class="bg-white bg-opacity-60 p-4 rounded-xl mt-auto">
+          <div v-if="isLoggedIn" class="bg-white bg-opacity-60 p-4 rounded-xl mt-auto">
             <p>Signing in as</p>
             <h3 class="text-2xl text-ellipsis overflow-hidden font-bold">
-              {{ $store.getters.username }}
+              {{ user.username }}
             </h3>
             <ul class="space-y-4 py-4">
               <li class="text-xl"
@@ -118,14 +118,14 @@
               </li>
             </ul>
             <button 
-              v-if="$store.getters.isLoggedIn" 
+              v-if="isLoggedIn" 
               class="btn shadow-md normal-case text-black bg-white border-0 hover:bg-gray-100 w-full mb-2">
               <icon-coin class="mr-2" />
-              <span>ღ{{ pb.authStore.model!.expand.wallet?.balance ?? 'unknown' }}</span>
+              <span>ღ{{ user!.expand.wallet?.balance ?? 'unknown' }}</span>
             </button>
             <button
               v-if="!shouldSendButtonHide"
-              @click="$store.commit('SET_SEND_MESSAGE_MODAL_OPEN', true); menuOpen = false"
+              @click="store.isSendMessageModalOpen = true; menuOpen = false"
               class="shadow-md btn border-none w-full bg-rose-500 hover:bg-rose-600 px-8 space-x-2">
               <icon-send />
               <span>Send a Message</span>
@@ -150,10 +150,9 @@ import ClientOnly from './ClientOnly.vue';
 import LoginButton from './LoginButton.vue';
 import SearchForm from './SearchForm.vue';
 import { useRoute, useRouter } from 'vue-router';
-import { useStore } from 'vuex';
-import { State, storeKey } from '../store';
 import { ref, computed } from 'vue';
 import { pb } from '../client';
+import { useAuth, useStore } from '../store_new';
 
 const props = defineProps({
   isHome: {
@@ -164,18 +163,8 @@ const props = defineProps({
 
 const router = useRouter();
 const route = useRoute();
-const store = useStore<State>(storeKey);
-
-async function logout(e: Event) {
-  e.preventDefault();
-  try {
-    router.replace({ name: 'home-page' });
-    await store.dispatch('logout');
-  } catch(e) {
-    // TODO: bring back later
-    // catchAndNotifyError(this, e);
-  }
-}
+const { isLoggedIn, user, logout } = useAuth();
+const store = useStore();
 
 const menuOpen = ref(false);
 const navbarLinks = [
@@ -203,7 +192,16 @@ const accountLinks = [
     tag: 'a',
     props: {
       class: 'cursor-pointer',
-      onClick: logout
+      onClick: function(e: Event) {
+        e.preventDefault();
+        try {
+          router.replace({ name: 'home-page' });
+          logout();
+        } catch(e) {
+          // TODO: bring back later
+          // catchAndNotifyError(this, e);
+        }
+      }
     },
     children: 'Logout' 
   }
