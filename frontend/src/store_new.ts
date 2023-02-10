@@ -1,6 +1,7 @@
+import { useQuery } from '@tanstack/vue-query';
 import { ClientResponseError } from 'pocketbase';
 import { computed, inject, InjectionKey, onMounted, onUnmounted, reactive, readonly, watch } from 'vue';
-import { popupCenter } from './auth';
+import { popupCenter, thirdPartyLogin } from './auth';
 import { backendUrl, pb } from './client';
 import { CollegeDepartment, Gift, User, VirtualWallet } from './types';
 
@@ -101,40 +102,7 @@ export function createAuthStore(): Store<AuthState, AuthMethods> {
   async function login() {
     try {
       state.isAuthLoading = true;
-  
-      const authMethods = await pb.collection('users').listAuthMethods();
-      const googleProvider = authMethods.authProviders.find(p => p.name === 'google');
-      if (!googleProvider) return;
-  
-      const redirectUrl = pb.buildUrl('/user_auth/callback');
-  
-      // TODO: change url on production!
-      const connectUrl = `${googleProvider.authUrl}${redirectUrl}&hd=uic.edu.ph`;
-      const loginWindow = popupCenter({ url: connectUrl, title: 'twitter_login_window', w: 800, h: 500 });
-      if (!loginWindow) {
-        throw new Error('Failed to open window.');
-      }
-  
-      const handleFn = function (this: Window, e: MessageEvent) {
-        if (e.origin === backendUrl && typeof e.data === 'object' && 'state' in e.data) {
-          const data = e.data;
-          if (googleProvider.state !== data['state']) {
-            throw new Error();
-          }
-  
-          pb.collection('users').authWithOAuth2(
-            googleProvider.name,
-            data['code'],
-            googleProvider.codeVerifier,
-            redirectUrl,
-          ).then(() => {
-            window.removeEventListener('message', handleFn);
-            loginWindow.close();
-          });
-        }
-      }
-  
-      window.addEventListener('message', handleFn);
+      await thirdPartyLogin('google');
     } catch (e) {
       throw e;
     } finally {
