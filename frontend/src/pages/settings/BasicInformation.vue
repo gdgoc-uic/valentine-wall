@@ -55,8 +55,8 @@ import { UserDetails } from '../../types';
 const store = useStore();
 const { state: authState } = useAuth();
 
-const sex = ref(pb.authStore!.model!.expand.details?.sex ?? 'unknown');
-const department = ref(pb.authStore!.model!.expand.details?.department ?? 'none');
+const sex = ref(authState.user.expand.details?.sex ?? 'unknown');
+const department = ref(authState.user.expand.details?.college_department ?? 'none');
 const { mutate: saveUserInfo, isLoading: isSaving } = useMutation((newDetails: { sex?: string, college_department?: string }) => {
   return pb.collection('user_details').update(authState.user!.details, newDetails);
 }, {

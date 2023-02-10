@@ -1,8 +1,8 @@
 import { useQuery } from '@tanstack/vue-query';
 import { ClientResponseError } from 'pocketbase';
-import { computed, inject, InjectionKey, onMounted, onUnmounted, reactive, readonly, watch } from 'vue';
-import { popupCenter, thirdPartyLogin } from './auth';
-import { backendUrl, pb } from './client';
+import { computed, inject, InjectionKey, reactive, readonly } from 'vue';
+import { thirdPartyLogin } from './auth';
+import { pb } from './client';
 import { CollegeDepartment, Gift, User, VirtualWallet } from './types';
 
 interface StoreMethods {
