@@ -62,7 +62,6 @@ function applyChanges(newMessages: any[]) {
     // limit list to (limit - nm.len)
     messageList.value = messageList.value.splice(0, props.limit - newMessages.length);
   } else if (props.prepend) {
-    console.log('PREPEND');
     messageList.value.unshift(...processResults(newMessages));
   } else {
     messageList.value.push(...processResults(newMessages));

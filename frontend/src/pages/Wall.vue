@@ -46,10 +46,10 @@
     <response-handler :query="query">
       <template #default>
         <div class="max-w-7xl w-full mx-auto flex flex-col">
-          <message-tiles :messages="messages?.items ?? []" replace />
+          <message-tiles :messages="currentMessages" />
           <pagination-load-more-button 
-            :should-go-next="(messages?.page ?? 0) < (messages?.totalPages ?? 0)" 
-            @click="page++" />
+            :should-go-next="hasNextPage" 
+            @click="fetchNextPage" />
         </div>
       </template>
 
@@ -81,8 +81,8 @@ import { onBeforeRouteUpdate, useRoute } from 'vue-router';
 import { useStore } from 'vuex';
 import { State } from '../store';
 import { pb } from '../client';
-import { useQuery } from '@tanstack/vue-query';
-import { ClientResponseError } from 'pocketbase';
+import { useInfiniteQuery } from '@tanstack/vue-query';
+import { ClientResponseError, Record as PbRecord } from 'pocketbase';
 import { storeKey } from '../store';
 
 function isEmptyError(error: unknown) {
@@ -155,16 +155,16 @@ onBeforeRouteUpdate((to, from) => {
   loadStats();
 });
 
-const query = useQuery(
-  ['wall', recipient, hasGift, page],
-  async () => {
+const { hasNextPage, fetchNextPage, ...query } = useInfiniteQuery(
+  ['wall', recipient, hasGift],
+  async ({ pageParam = 1 }) => {
     let hasGiftsFilter = '';
     if (hasGift.value !== null) {
       hasGiftsFilter = '&& ' + (hasGift.value ? `gifts != "[]"` : `gifts = "[]"`);
     }
 
-    const resp = await pb.collection('messages').getList(1, 10, { 
-      filter: `(recipient = "${recipient.value}" ${hasGiftsFilter})` 
+    const resp = await pb.collection('messages').getList(pageParam, 10, { 
+      filter: `(recipient = "${recipient.value}" ${hasGiftsFilter})`
     });
 
     if (resp.items.length === 0) {
@@ -176,9 +176,30 @@ const query = useQuery(
   {
     keepPreviousData: true,
     retry: 1,
-    refetchOnWindowFocus: () => false
+    refetchOnWindowFocus: () => false,
+    getNextPageParam: (result) => 
+      result.page + 1 <= result.totalPages ? result.page + 1 : undefined
   }
 );
 
-const messages = query.data;
+const messages = computed(() => {
+  if (!query.data.value) {
+    return null;
+  }
+
+  return query.data.value.pages[query.data.value.pages.length - 1];
+});
+
+const rawCurrentMessages = reactive<PbRecord[]>([]);
+
+const currentMessages = computed(() => {
+  if (!query.data.value) {
+    return [];
+  }
+
+  rawCurrentMessages.splice(0, rawCurrentMessages.length - 1);
+  rawCurrentMessages.push(...query.data.value.pages[query.data.value.pages.length - 1].items);
+  return rawCurrentMessages;
+});
+
 </script>

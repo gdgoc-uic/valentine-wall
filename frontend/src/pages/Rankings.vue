@@ -36,22 +36,23 @@
               </tr>
             </thead>
             <tbody>
-              <tr :key="r.recipient_id" v-for="(r, i) in rankings?.items" :class="{'border-b-2': i < (rankings?.items ?? []).length - 1}">
-                <td class="text-xl font-bold text-gray-700">#{{ i + 1 }}</td>
-                <td class="text-xl font-semibold text-gray-500">{{ r.department }}</td>
-                <td class="text-xl text-gray-500 text-center">
-                  <div>
-                    <span class="text-rose-500 font-bold">{{ r.total_coins }}</span>
-                    <span class="text-2xl">ღ</span>
-                  </div>
-                </td>
-              </tr>
+              <template :key="`rankings_`+page" v-for="(ranking, page) in rankings?.pages">
+                <tr :key="r.recipient_id" v-for="(r, i) in ranking.items" :class="{'border-b-2': i < ranking.items.length - 1}">
+                  <td class="text-xl font-bold text-gray-700">#{{ i + 1 }}</td>
+                  <td class="text-xl font-semibold text-gray-500">{{ r.department }}</td>
+                  <td class="text-xl text-gray-500 text-center">
+                    <div>
+                      <span class="text-rose-500 font-bold">{{ r.total_coins }}</span>
+                      <span class="text-2xl">ღ</span>
+                    </div>
+                  </td>
+                </tr>
+              </template>
             </tbody>
           </table>
 
           <pagination-load-more-button 
-            :should-go-next="(rankings?.page ?? 0) < (rankings?.totalPages ?? 0)" 
-            @click="page++" />
+            :should-go-next="hasNextPage" @click="fetchNextPage" />
         </template>
 
         <template #error="{ error }">
@@ -67,7 +68,7 @@ import ResponseHandler from "../components/ResponseHandler2.vue";
 import PaginationLoadMoreButton from '../components/PaginationLoadMoreButton.vue';
 import IconCoin from '~icons/twemoji/coin';
 import { ref, watch } from "vue";
-import { useQuery, useQueryClient } from "@tanstack/vue-query";
+import { useInfiniteQuery, useQuery, useQueryClient } from "@tanstack/vue-query";
 import { pb } from "../client";
 
 const availableSexes = [
@@ -82,16 +83,14 @@ const availableSexes = [
 ];
 
 const queryClient = useQueryClient();
-const page = ref(1);
 const rankingsSex = ref('male');
 
 // TODO: integrate notiwind into tanstack query
-// TODO: retrofit tanstack query to ResponseHandler
-const query = useQuery(
-  ['rankings', rankingsSex, page], 
-  () => pb.collection('rankings')
-          .getList(page.value, 10, { filter: `sex="${rankingsSex.value}"` }), {
-    keepPreviousData: true
+const { fetchNextPage, hasNextPage, ...query } = useInfiniteQuery(
+  ['rankings', rankingsSex], 
+  ({ pageParam = 1 }) => pb.collection('rankings')
+          .getList(pageParam, 10, { filter: `sex="${rankingsSex.value}"` }), {
+    getNextPageParam: (result) => result.page + 1 <= result.totalPages ? result.page + 1 : undefined
   });
 
 const rankings = query.data;
