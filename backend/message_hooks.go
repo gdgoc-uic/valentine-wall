@@ -34,7 +34,7 @@ func expandMessage(dao *daos.Dao, record *models.Record) error {
 }
 
 func expandMessageReply(dao *daos.Dao, record *models.Record) error {
-	errs := dao.ExpandRecord(record, []string{"sender"}, func(relCollection *models.Collection, relIds []string) ([]*models.Record, error) {
+	errs := dao.ExpandRecord(record, []string{"sender", "message"}, func(relCollection *models.Collection, relIds []string) ([]*models.Record, error) {
 		return dao.FindRecordsByIds(relCollection.Name, relIds)
 	})
 	if len(errs) != 0 {
@@ -199,5 +199,23 @@ func onAddMessageReply(dao *daos.Dao, e *core.RecordCreateEvent) error {
 		dao.SaveRecord(user) //TODO: error
 	}
 
+	msg, msgOk := e.Record.Expand()["message"].(*models.Record)
+	if msgOk {
+		msg.Set("replies_count", msg.GetInt("replies_count")+1)
+		passivePrintError(dao.SaveRecord(msg))
+	}
+
 	return createTransactionFromUser(dao, e.Record.GetString("sender"), sendPrice, fmt.Sprintf("Reply message %s", e.Record.Id))
+}
+
+func onRemoveMessageReply(dao *daos.Dao, e *core.RecordDeleteEvent) error {
+	expandMessageReply(dao, e.Record)
+
+	msg, msgOk := e.Record.Expand()["message"].(*models.Record)
+	if msgOk {
+		msg.Set("replies_count", msg.GetInt("replies_count")-1)
+		passivePrintError(dao.SaveRecord(msg))
+	}
+
+	return nil
 }

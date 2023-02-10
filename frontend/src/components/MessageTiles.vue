@@ -13,8 +13,7 @@
           </div>
           <div class="message-meta-info">
             <p :class="[msg.gifts.length != 0 ? 'text-white' : 'text-gray-500']" class="text-sm">{{ toNow(msg.created) }} ago</p>
-            <!-- TODO: has_replied -->
-            <!-- <icon-reply v-if="msg.has_replied" class="text-pink-500" /> -->
+            <icon-reply v-if="msg.replies_count > 0" class="text-pink-500" />
           </div>
       </router-link>
     </div>

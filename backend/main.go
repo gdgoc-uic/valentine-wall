@@ -61,6 +61,9 @@ func main() {
 			return onRemoveUser(app.Dao(), e)
 		case "messages":
 			return onRemoveMessage(app.Dao(), e)
+		case "message_replies":
+			// NOTE: temp added
+			return onRemoveMessageReply(app.Dao(), e)
 		}
 
 		return nil
