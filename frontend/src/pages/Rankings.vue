@@ -39,7 +39,7 @@
               <template :key="`rankings_`+page" v-for="(ranking, page) in rankings?.pages">
                 <tr :key="r.recipient_id" v-for="(r, i) in ranking.items" :class="{'border-b-2': i < ranking.items.length - 1}">
                   <td class="text-xl font-bold text-gray-700">#{{ i + 1 }}</td>
-                  <td class="text-xl font-semibold text-gray-500">{{ r.department }}</td>
+                  <td class="text-xl font-semibold text-gray-500">{{ (r.expand.college_department as unknown as CollegeDepartment).label ?? 'Unknown' }}</td>
                   <td class="text-xl text-gray-500 text-center">
                     <div>
                       <span class="text-rose-500 font-bold">{{ r.total_coins }}</span>
@@ -70,6 +70,7 @@ import IconCoin from '~icons/twemoji/coin';
 import { ref, watch } from "vue";
 import { useInfiniteQuery, useQuery, useQueryClient } from "@tanstack/vue-query";
 import { pb } from "../client";
+import { CollegeDepartment } from "../types";
 
 const availableSexes = [
   {
@@ -88,7 +89,7 @@ const rankingsSex = ref('male');
 const { fetchNextPage, hasNextPage, ...query } = useInfiniteQuery(
   ['rankings', rankingsSex], 
   ({ pageParam = 1 }) => pb.collection('rankings')
-          .getList(pageParam, 10, { filter: `sex="${rankingsSex.value}"` }), {
+          .getList(pageParam, 10, { filter: `sex="${rankingsSex.value}"`, expand: 'college_department' }), {
     getNextPageParam: (result) => result.page + 1 <= result.totalPages ? result.page + 1 : undefined
   });
 
