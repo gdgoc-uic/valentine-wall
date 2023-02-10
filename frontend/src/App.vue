@@ -88,12 +88,13 @@ import WelcomeModal from "./components/WelcomeModal.vue";
 import IconCommentAdd from "~icons/uil/comment-add";
 import FeedbackForm from "./components/FeedbackForm.vue";
 import { useAuth, useStore } from "./store_new";
-import { onMounted, onUnmounted } from "vue";
+import { onMounted, onUnmounted, toRefs } from "vue";
 import { pb } from "./client";
 import { User } from "./types";
 
 const route = useRoute();
-const { state: { isLoggedIn, isAuthLoading, user }, methods: { onReceiveUser } } = useAuth();
+const { state, methods: { onReceiveUser } } = useAuth();
+const { isLoggedIn, isAuthLoading, user } = toRefs(state);
 const store = useStore();
 
 useHead({
@@ -123,7 +124,7 @@ useHead({
 });
 
 if (!import.meta.env.SSR) {
-  const unwatchUser = watch(user, (newUser) => {
+  const unwatchUser = watch(state, (newUser) => {
     console.log(newUser);
     if (!newUser) return;
 
@@ -131,6 +132,8 @@ if (!import.meta.env.SSR) {
   });
 
   onMounted(() => {
+    store.methods.loadGiftsAndDepartments();
+
     pb.authStore.onChange((_, user) => {
       store.methods.checkFirstTimeVisitor();
 

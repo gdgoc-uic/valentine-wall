@@ -41,10 +41,10 @@
       </search-form>
       <client-only>
         <div class="flex-none hidden md:ml-auto md:flex">
-          <div v-if="isLoggedIn" class="dropdown dropdown-end dropdown-hover -mb-2">
+          <div v-if="authState.isLoggedIn" class="dropdown dropdown-end dropdown-hover -mb-2">
             <div tabindex="0" class="rounded-r-none mb-2 shadow-md btn normal-case text-black bg-white border-0 hover:bg-gray-100">
               <span class="overflow-hidden text-ellipsis">
-                {{ user.username }}
+                {{ authState.user.username }}
               </span>
               <icon-dropdown />
             </div>
@@ -61,20 +61,20 @@
           <!-- TODO: add 'add coins' modal -->
           <button 
             :class="[!shouldSendButtonHide ? 'rounded-none' : 'rounded-l-none']" 
-            v-if="isLoggedIn" 
+            v-if="authState.isLoggedIn" 
             class="btn shadow-md normal-case text-black bg-white border-0 hover:bg-gray-100">
             <icon-coin class="mr-2" />
-            <span>ღ{{ user!.expand.wallet?.balance ?? 'unknown' }}</span>
+            <span>ღ{{ authState.user!.expand.wallet?.balance ?? 'unknown' }}</span>
           </button>
           <button
-            v-if="!shouldSendButtonHide && isLoggedIn"
+            v-if="!shouldSendButtonHide && authState.isLoggedIn"
             @click="store.state.isSendMessageModalOpen = true"
             class="shadow-md btn border-none rounded-l-none bg-rose-500 hover:bg-rose-600 lg:px-8 space-x-2">
             <icon-send />
             <span class="hidden lg:block">Send a Message</span>
             <span class="lg:hidden">Send</span>
           </button>
-          <login-button v-if="!isHome && !isLoggedIn" />
+          <login-button v-if="!isHome && !authState.isLoggedIn" />
         </div>
       </client-only>
     </header>
@@ -101,10 +101,10 @@
               {{ link.label }}
             </router-link>
           </div>
-          <div v-if="isLoggedIn" class="bg-white bg-opacity-60 p-4 rounded-xl mt-auto">
+          <div v-if="authState.isLoggedIn" class="bg-white bg-opacity-60 p-4 rounded-xl mt-auto">
             <p>Signing in as</p>
             <h3 class="text-2xl text-ellipsis overflow-hidden font-bold">
-              {{ user.username }}
+              {{ authState.user.username }}
             </h3>
             <ul class="space-y-4 py-4">
               <li class="text-xl"
@@ -118,10 +118,10 @@
               </li>
             </ul>
             <button 
-              v-if="isLoggedIn" 
+              v-if="authState.isLoggedIn" 
               class="btn shadow-md normal-case text-black bg-white border-0 hover:bg-gray-100 w-full mb-2">
               <icon-coin class="mr-2" />
-              <span>ღ{{ user!.expand.wallet?.balance ?? 'unknown' }}</span>
+              <span>ღ{{ authState.user!.expand.wallet?.balance ?? 'unknown' }}</span>
             </button>
             <button
               v-if="!shouldSendButtonHide"
@@ -163,7 +163,7 @@ const props = defineProps({
 
 const router = useRouter();
 const route = useRoute();
-const { state: {isLoggedIn, user}, methods: {logout} } = useAuth();
+const { state: authState, methods: {logout} } = useAuth();
 const store = useStore();
 
 const menuOpen = ref(false);

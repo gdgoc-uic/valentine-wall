@@ -1,8 +1,8 @@
 import { ClientResponseError } from 'pocketbase';
-import { computed, inject, InjectionKey, onMounted, onUnmounted, reactive, watch } from 'vue';
+import { computed, inject, InjectionKey, onMounted, onUnmounted, reactive, readonly, watch } from 'vue';
 import { popupCenter } from './auth';
 import { backendUrl, pb } from './client';
-import { Gift, User, VirtualWallet } from './types';
+import { CollegeDepartment, Gift, User, VirtualWallet } from './types';
 
 interface StoreMethods {
   loadGiftsAndDepartments(): Promise<void>
@@ -20,7 +20,8 @@ export interface State {
   isSetupModalOpen: boolean,
   isWelcomeModalOpen: boolean,
   giftList: Gift[],
-  departmentList: Record<string, string>[]
+  departmentList: CollegeDepartment[],
+  sexList: readonly { value: string, label: string }[]
 }
 
 export const storeKey = Symbol() as InjectionKey<Store<State, StoreMethods>>;
@@ -35,7 +36,12 @@ export const createStore = (): Store<State, StoreMethods> => {
     isSendMessageModalOpen: false,
     isSetupModalOpen: false,
     isWelcomeModalOpen: false,
-    departmentList: []
+    departmentList: [],
+    sexList: readonly([
+      { value: 'male', label: 'Male' },
+      { value: 'female', label: 'Female' },
+      // { value: 'unknown', label: 'Prefer not to say' }
+    ])
   });
 
   const checkFirstTimeVisitor = () => {
@@ -57,16 +63,6 @@ export const createStore = (): Store<State, StoreMethods> => {
     localStorage.setItem(firstTimeKey, '1');
     state.isWelcomeModalOpen = false;
   }
-
-  // onMounted(() => {
-  //   if (import.meta.env.VITE_READ_ONLY !== "true") {
-  //     loadGiftsAndDepartments()
-  //       .catch((err) => {
-  //         // catchAndNotifyError(this, err);
-  //         console.error(err);
-  //       });
-  //   }
-  // })
   
   return reactive({
     state,
@@ -178,6 +174,7 @@ export function createAuthStore(): Store<AuthState, AuthMethods> {
 
       // setUserId(analytics!, user.uid);
       // setUserProperties(analytics!, { account_type: 'student' });
+      state.user = user;
     } catch (e) {
       console.error(e);
       logout();

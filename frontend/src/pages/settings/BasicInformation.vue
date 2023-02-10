@@ -25,8 +25,7 @@
       <div class="flex flex-col md:flex-row justify-between items-start md:item-center py-2 space-y-2 lg:space-y-0">
         <label for="sex">Sex</label>
         <select :disabled="isSaving" name="sex" class="select select-bordered" v-model="sex">
-          <!-- TODO: -->
-          <!-- <option :value="g.value" :key="g.value" v-for="g in store.state.getters.sexList">{{ g.label }}</option> -->
+          <option :value="g.value" :key="g.value" v-for="g in store.state.sexList">{{ g.label }}</option>
         </select>
       </div>
       <div class="flex flex-col md:flex-row justify-between items-start md:item-center py-2 space-y-2 lg:space-y-0">

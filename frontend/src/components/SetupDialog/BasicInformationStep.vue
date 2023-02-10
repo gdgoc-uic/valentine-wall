@@ -31,13 +31,12 @@
             <span class="label-text">Sex</span>
           </label>
           <select name="sex" class="select select-bordered">
-            <!-- TODO: -->
-            <!-- <option
+            <option
               :value="g.value.toLowerCase()"
               :key="g.value"
-              v-for="g in $store.state.getters.sexList">
+              v-for="g in store.state.sexList">
               {{ g.label }}
-            </option> -->
+            </option>
           </select>
         </div>
       </form>

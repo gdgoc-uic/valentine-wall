@@ -15,7 +15,7 @@
     <client-only>
       <div class="max-w-7xl mx-auto w-full bg-white rounded-xl shadow-lg flex justify-center">
         <div 
-          v-if="recipient && isLoggedIn && user!.expand.details?.student_id === recipient" 
+          v-if="recipient && authState.isLoggedIn && authState.user!.expand.details.student_id === recipient" 
           class="tabs">
           <button @click="hasGift = null" :class="{'tab-active': hasGift == null}" class="tab tab-lg px-12 space-x-2 tab-bordered">
             <span>All</span>
@@ -32,7 +32,7 @@
       </div>
 
       <section 
-        v-if="!isLoggedIn && recipient" 
+        v-if="!authState.isLoggedIn && recipient" 
         class="max-w-7xl space-y-8 lg:space-y-0 mx-auto mt-3 p-8 w-full border bg-[#ffeded] border-rose-500 rounded-xl shadow-lg flex flex-col lg:flex-row text-center lg:text-left items-center justify-between">
         <div class="flex flex-col">
           <h3 class="text-2xl lg:text-3xl mb-1 text-rose-400 font-semibold">Are you {{ recipient }}?</h3>
@@ -119,10 +119,10 @@ async function loadStats(): Promise<void> {
 }
 
 const route = useRoute();
-const { state: { isLoggedIn, user } } = useAuth();
+const { state: authState } = useAuth();
 const hasGift = ref<boolean | null>(false);
 
-if (route.params.receipientId && isLoggedIn) {
+if (route.params.receipientId && authState.isLoggedIn) {
   hasGift.value = null;
 }
 
@@ -135,8 +135,8 @@ const stats = reactive({
 const totalCount = computed(() => {
   if (import.meta.env.SSR) {
     return 0;
-  } else if (isLoggedIn
-    && user!.expand.details?.student_id === recipient.value) {
+  } else if (authState.isLoggedIn
+    && authState.user!.expand.details?.student_id === recipient.value) {
     return stats.gift_messages_count + stats.messages_count;
   } else {
     return stats.messages_count;

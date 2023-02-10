@@ -4,7 +4,7 @@
       <div>
         <img src="../assets/images/logo.png" class="w-4/5 md:w-2/3 lg:w-full pb-8 mx-auto" alt="Valentine Wall">
         <p class="text-gray-500 text-lg font-bold pb-4">Send, confess, and share your feelings anonymously!</p>
-        <login-button v-if="!isLoggedIn" class="btn-lg" />
+        <login-button v-if="!authState.isLoggedIn" class="btn-lg" />
         <!-- move send message to the homepage -->
         <button
           v-else
@@ -23,10 +23,10 @@
 
         <div class="tabs">
           <button 
-            v-for="sex in [{id: 'male', label: 'Male'}, {id: 'female', label: 'Female'}]"
-            :key="'ranking_btn_' + sex.id"
-            @click="rankingsSex = sex.id" 
-            :class="{ 'tab-active': rankingsSex == sex.id }" 
+            v-for="sex in store.state.sexList"
+            :key="'ranking_btn_' + sex.value"
+            @click="rankingsSex = sex.value" 
+            :class="{ 'tab-active': rankingsSex == sex.value }" 
             class="tab tab-lg flex-1 tab-bordered">{{ sex.label }}</button>
         </div>
 
@@ -132,7 +132,7 @@ function ordinalSuffixOf(i: number): string {
 }
 
 const store = useStore();
-const { state: {isLoggedIn} } = useAuth();
+const { state: authState } = useAuth();
 const rankingsSex = ref('male');
 const recentMessages = reactive<PbRecord[]>([]);
 const recentsSSE = ref<UnsubscribeFunc>();

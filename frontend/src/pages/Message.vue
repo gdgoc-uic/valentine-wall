@@ -60,7 +60,7 @@
               <report-dialog 
                 :key="reportDialogKey"
                 @success="onReportSuccess"
-                :email="isLoggedIn ? user!.email : undefined" 
+                :email="authState.isLoggedIn ? authState.user!.email : undefined" 
                 :message-id="message!.id">
                 <template #default="{ openDialog }">
                   <button 
@@ -81,7 +81,7 @@
 
             <div class="flex items-end w-full">
               <delete-dialog
-                v-if="user!.expand.details?.student_id == message!.recipient"
+                v-if="authState.user!.expand.details?.student_id == message!.recipient"
                 @confirm="onMessageReplyDeletion" v-slot="{ openDialog }">
                 <button
                   @click="openDialog" class="btn btn-error space-x-2 mt-8 self-end flex items-center">
@@ -91,8 +91,8 @@
               </delete-dialog>
             </div>
           </div>
-          <div v-else-if="!message!.expand.message_replies || !isLoggedIn" class="p-6 lg:p-8 bg-white rounded-xl shadow-lg">
-            <div v-if="user!.expand.details?.student_id == message!.recipient"
+          <div v-else-if="!message!.expand.message_replies || !authState.isLoggedIn" class="p-6 lg:p-8 bg-white rounded-xl shadow-lg">
+            <div v-if="authState.user!.expand.details?.student_id == message!.recipient"
               class="flex space-x-2 items-center text-2xl">
               <icon-reply class="text-pink-500 mb-4" />
               <h2 class="font-bold mb-4">Your reply</h2>
@@ -146,7 +146,7 @@ import { ClientResponseError } from 'pocketbase';
 import { useAuth, useStore } from '../store_new';
 import { Gift } from '../types';
 
-const { state: {isLoggedIn, user} } = useAuth();
+const { state: authState } = useAuth();
 const router = useRouter();
 const route = useRoute();
 const isDeletable = ref(false);
@@ -213,7 +213,7 @@ function generateDisplayGiftLabelString(g: Gift, i: number, arr: Gift[]) {
 }
 
 function getDisplayName(recipientId: string): string {
-  if (recipientId === user!.expand.details?.student_id) {
+  if (recipientId === authState.user!.expand.details?.student_id) {
     return "you";
   } else {
     return recipientId;

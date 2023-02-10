@@ -82,7 +82,6 @@ const availableSexes = [
   }
 ];
 
-const queryClient = useQueryClient();
 const rankingsSex = ref('male');
 
 // TODO: integrate notiwind into tanstack query
