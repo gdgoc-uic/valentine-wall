@@ -5,21 +5,21 @@
         <label for="firebase_student_id">User ID</label>
         <input
           type="text" name="firebase_student_id" id="firebase_student_id"
-          :value="user!.id"
+          :value="authState.user!.id"
           disabled class="w-full md:w-1/2 input input-bordered" />
       </div>
       <div class="flex flex-col md:flex-row justify-between items-start md:item-center py-2 space-y-2 lg:space-y-0">
         <label for="student_id">Student ID</label>
         <input
           type="text" name="student_id" id="student_id"
-          :value="user!.expand.details?.student_id"
+          :value="authState.user!.expand.details?.student_id"
           disabled class="w-full md:w-1/2 input input-bordered" />
       </div>
       <div class="flex flex-col md:flex-row justify-between items-start md:item-center py-2 space-y-2 lg:space-y-0">
         <label for="email">E-mail</label>
         <input
           type="text" name="email" id="email"
-          :value="user!.email"
+          :value="authState.user!.email"
           disabled class="w-full md:w-1/2 input input-bordered" />
       </div>
       <div class="flex flex-col md:flex-row justify-between items-start md:item-center py-2 space-y-2 lg:space-y-0">
@@ -84,16 +84,16 @@ import { useAuth, useStore } from '../../store_new';
 import { UserDetails } from '../../types';
 
 const store = useStore();
-const { state: {user} } = useAuth();
+const { state: authState } = useAuth();
 
 const sex = ref(pb.authStore!.model!.expand.details?.sex ?? 'unknown');
 const department = ref(pb.authStore!.model!.expand.details?.department ?? 'none');
 const { mutate: saveUserInfo, isLoading: isSaving } = useMutation((newDetails: { sex?: string, college_department?: string }) => {
-  return pb.collection('user_details').update(user!.details, newDetails);
+  return pb.collection('user_details').update(authState.user!.details, newDetails);
 }, {
   onSuccess(data) {
     // this.$notify({ type: 'success', text: data['message'] });
-    user!.expand.details = data as UserDetails;
+    authState.user!.expand.details = data as UserDetails;
   },
   onError(err) {
     // catchAndNotifyError(this, e);

@@ -128,15 +128,6 @@ const routes: RouteRecordRaw[] = [
         }
       },
       {
-        name: 'settings-invitations-section',
-        path: 'invitations',
-        component: () => import('./pages/settings/Invitations.vue'),
-        meta: {
-          pageTitle: 'Invitations | Settings',
-          label: 'Invitations'
-        }
-      },
-      {
         name: 'settings-delete-account-section',
         path: 'delete-account',
         component: () => import('./pages/settings/DeleteAccount.vue'),
@@ -146,14 +137,6 @@ const routes: RouteRecordRaw[] = [
         }
       }
     ]
-  },
-  {
-    name: 'invitation-page',
-    path: '/invite/:invitationCode',
-    component: () => import('./pages/Invitation.vue'),
-    meta: {
-      disableAppHeader: true
-    }
   }
 ];
 

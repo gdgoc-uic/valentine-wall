@@ -52,14 +52,13 @@
 
 <script lang="ts" setup>
 import { onMounted, ref } from 'vue';
-import { pb } from '../../client';
 import { useAuth, useStore } from '../../store_new';
 
 const emailRegex = /^[a-z]+_([0-9]+)@uic.edu.ph$/;
 const emit = defineEmits(['success', 'error', 'proceed']);
 const form = ref<HTMLFormElement | null>();
 const store = useStore();
-const { state: {user} } = useAuth();
+const { state: authState } = useAuth();
 
 function getIdFromEmail(input: string): string {
   const matches = emailRegex.exec(input)
@@ -76,7 +75,7 @@ function shouldProceed(e: SubmitEvent) {
   if (!formData.get("student_id")) {
     emit('error', new Error('Please input your ID.'));
     return;
-  } else if (formData.get('student_id')?.toString() !== getIdFromEmail(user?.email)) {
+  } else if (formData.get('student_id')?.toString() !== getIdFromEmail(authState.user?.email)) {
     emit('error', new Error('Your ID from e-mail does not match with the one you have inputted.'));
     return;
   }
@@ -99,7 +98,7 @@ onMounted(() => {
   setTimeout(() => {
     const associatedIdField = document.getElementById('student_id_field');
     if (associatedIdField && associatedIdField instanceof HTMLInputElement) {
-      const extractedId = getIdFromEmail(user?.email);
+      const extractedId = getIdFromEmail(authState.user?.email);
       associatedIdField.value = extractedId;
     }
   }, 500);

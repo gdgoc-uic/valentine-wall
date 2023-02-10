@@ -97,7 +97,7 @@ const props = defineProps({
   }
 });
 
-const { state: {user} } = useAuth();
+const { state: authState } = useAuth();
 const store = useStore();
 const route = useRoute();
 const submitMessageForm = ref<HTMLFormElement | null>(null);
@@ -152,7 +152,7 @@ async function submitForm(e: SubmitEvent) {
 
   await sendMessage({
     gifts,
-    user: user!.details,
+    user: authState.user!.details,
     recipient: formData.get('recipient_id')?.toString() ?? '',
     content: formData.get('content')?.toString() ?? ''
   }, {

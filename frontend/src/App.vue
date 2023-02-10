@@ -125,7 +125,6 @@ useHead({
 
 if (!import.meta.env.SSR) {
   const unwatchUser = watch(state, (newUser) => {
-    console.log(newUser);
     if (!newUser) return;
 
     // TODO: auto-update last active at
