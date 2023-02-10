@@ -17,62 +17,53 @@
         <input
           @input="recipientId = $event.target.value"
           pattern="[0-9]{6,12}"
-          :placeholder="$store.state.user.associatedId"
+          :placeholder="pb.authStore.model!.expand.details?.student_id"
           class="w-full input input-bordered"
           name="recipient_id" type="text">
-        <button :disabled="!shouldDelete" class="btn btn-error bg-red-500 border-red-600 hover:bg-red-600 hover:border-red-700">Delete</button>
+        <button :disabled="!shouldDelete" 
+          class="btn btn-error bg-red-500 border-red-600 hover:bg-red-600 hover:border-red-700">Delete</button>
       </div>
     </div>
   </form>
 </template>
 
-<script lang="ts">
+<script lang="ts" setup>
+import { useMutation } from '@tanstack/vue-query';
+import { ref, computed } from 'vue';
+import { useRouter } from 'vue-router';
+import { useStore } from 'vuex';
+import { pb } from '../../client';
 import { catchAndNotifyError, notify } from '../../notify';
-export default {
-  data() {
-    return {
-      recipientId: '',
-      shouldDelete: false
-    }
-  },
-  watch: {
-    recipientId(newV: string) {
-      if (newV === this.$store.state.user.associatedId) {
-        this.shouldDelete = true;
-      } else {
-        this.shouldDelete = false;
-      }
-    }
-  },
-  methods: {
-    async proceedDelete(e: SubmitEvent) {
-      if (this.shouldDelete) {
-        this.shouldDelete = false;
-      } else {
-        return;
-      }
+import { storeKey } from '../../store';
 
-      try {
-        // if (!e.target || !(e.target instanceof HTMLFormElement)) return;
-        // const formData = new FormData(e.target);
-        // const { data: json } = await this.$client.postJson('/user/delete', {
-        //   input_sid: formData.get('recipient_id'),
-        //   input_uid: this.$store.state.user.id
-        // });
+const router = useRouter();
+const store = useStore(storeKey);
+const recipientId = ref('');
+const shouldDelete = computed(() => {
+  return recipientId.value === pb.authStore.model!.expand.details?.associatedId;
+});
 
-        // notify(this, { type: 'success', text: json['message'] });
-        // this.$router.replace({ name: 'home-page' });
-        // await this.$store.dispatch('logout');
-      } catch(e) {
-        catchAndNotifyError(this, e);
-      } finally {
-        this.shouldDelete = true;
-      }
-    }
-  }
+const { mutateAsync: deleteAccount } = useMutation(() => {
+  return pb.collection('users').delete(pb.authStore.model!.id);
+}, {
+  onSuccess(data) {
+    // notify(this, { type: 'success', text: json['message'] });
+  },
+  onSettled() {
+    recipientId.value = '';
+  },
+  onError(e) {
+    // catchAndNotifyError(this, e);
+  },
+})
+
+function proceedDelete(e: SubmitEvent) {
+  if (!e.target || !(e.target instanceof HTMLFormElement)) return;
+
+  deleteAccount()
+    .then(() => {
+      router.replace({ name: 'home-page' });
+      return store.dispatch('logout');
+    });
 }
 </script>
-
-<style>
-
-</style>

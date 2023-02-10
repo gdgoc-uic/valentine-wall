@@ -63,6 +63,10 @@ import ResponseHandler from '../../components/ResponseHandler.vue';
 import IconPlus from '~icons/uil/plus'
 import Portal from '../../components/Portal.vue';
 import GenerateInvitationModal from '../../components/GenerateInvitationModal.vue';
+
+
+// TODO: user invitations
+
 export default defineComponent({
   components: { 
     ResponseHandler, 

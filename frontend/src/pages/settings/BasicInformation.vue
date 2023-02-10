@@ -2,41 +2,44 @@
   <div class="flex flex-col divide-y">
     <div>
       <div class="flex flex-col md:flex-row justify-between items-start md:item-center py-2 space-y-2 lg:space-y-0">
-        <label for="firebase_student_id">Firebase User ID</label>
+        <label for="firebase_student_id">User ID</label>
         <input
           type="text" name="firebase_student_id" id="firebase_student_id"
-          :value="$store.state.user.id"
+          :value="pb.authStore.model!.id"
           disabled class="w-full md:w-1/2 input input-bordered" />
       </div>
       <div class="flex flex-col md:flex-row justify-between items-start md:item-center py-2 space-y-2 lg:space-y-0">
         <label for="student_id">Student ID</label>
         <input
           type="text" name="student_id" id="student_id"
-          :value="$store.state.user.associatedId"
+          :value="pb.authStore.model!.expand.details?.student_id"
           disabled class="w-full md:w-1/2 input input-bordered" />
       </div>
       <div class="flex flex-col md:flex-row justify-between items-start md:item-center py-2 space-y-2 lg:space-y-0">
         <label for="email">E-mail</label>
         <input
           type="text" name="email" id="email"
-          :value="$store.state.user.email"
+          :value="pb.authStore.model!.email"
           disabled class="w-full md:w-1/2 input input-bordered" />
       </div>
       <div class="flex flex-col md:flex-row justify-between items-start md:item-center py-2 space-y-2 lg:space-y-0">
         <label for="sex">Sex</label>
         <select :disabled="isSaving" name="sex" class="select select-bordered" v-model="sex">
-          <option :value="g.value" :key="g.value" v-for="g in $store.getters.sexList">{{ g.label }}</option>
+          <option :value="g.value" :key="g.value" v-for="g in store.getters.sexList">{{ g.label }}</option>
         </select>
       </div>
       <div class="flex flex-col md:flex-row justify-between items-start md:item-center py-2 space-y-2 lg:space-y-0">
         <label for="department">Department</label>
         <select :disabled="isSaving" name="department" class="select select-bordered" v-model="department">
-          <option :value="dept.id" :key="dept.id" v-for="dept in $store.state.departmentList">{{ dept.label }} ({{ dept.id }})</option>
+          <option :value="dept.id" :key="dept.id" v-for="dept in $store.state.departmentList">{{ dept.label }} ({{ dept.uid }})</option>
         </select>
       </div>
 
       <div class="flex items-center justify-end mb-8">
-        <button :disabled="isSaving" @click="saveUserInfo" class="btn btn-success px-12">Save</button>
+        <button 
+          :disabled="isSaving" 
+          @click="() => saveUserInfo({ sex, college_department: department })" 
+          class="btn btn-success px-12">Save</button>
       </div>
     </div>
     <div class="py-6">
@@ -44,7 +47,8 @@
       <p>Third-party accounts for use on sharing content outside the site such as replies and etc.</p>
 
       <div class="flex flex-col">
-        <div v-if="$store.state.user.connections.findIndex(c => c.provider === 'twitter') === -1" class="flex justify-between items-center py-2">
+        <!-- TODO: work on user connections -->
+        <!-- <div v-if="$store.state.user.connections.findIndex(c => c.provider === 'twitter') === -1" class="flex justify-between items-center py-2">
           <label>twitter</label>
           <button 
             @click="connectUserConnection('twitter')" 
@@ -64,78 +68,67 @@
             :disabled="conn.provider == 'email'" 
             @click="disconnectUserConnection(conn.provider)" 
             class="btn btn-error btn-outline">Disconnect</button>
-        </div>
+        </div> -->
       </div>
     </div>
   </div>
 </template>
 
-<script lang="ts">
+<script lang="ts" setup>
+import { useMutation } from '@tanstack/vue-query';
+import { ref } from 'vue';
+import { useStore } from 'vuex';
 import { connectToEmail, connectToTwitter } from '../../auth';
+import { pb } from '../../client';
 import { catchAndNotifyError } from '../../notify';
-export default {
-  mounted() {
-    // TODO:
-    this.sex = this.$store.state.user.sex;
-    this.department = this.$store.state.user.department;
-  },
-  data() {
-    return {
-      sex: 'unknown',
-      department: 'none',
-      isSaving: false
-    }
-  },
-  methods: {
-    async saveUserInfo() {
-      try {
-        this.isSaving = true;
-        // const { data } = await this.$client.patchJson('/user/info', {
-        //   sex: this.sex,
-        //   department: this.department
-        // });
+import { storeKey } from '../../store';
 
-        // this.$notify({ type: 'success', text: data['message'] });
-        // await this.$store.dispatch('getUserInfo');
-        // this.sex = this.$store.state.user.sex;
-        // this.department = this.$store.state.user.department;
-      } catch (e) {
-        catchAndNotifyError(this, e);
-      } finally {
-        this.isSaving = false;
-      }
-    },
-    async connectUserConnection(provider: string) {
-      try {
-        switch (provider) {
-          case "twitter":
-            connectToTwitter(this.$store);
-            break;
-          case "email":
-            connectToEmail(this.$store);
-            break;
-          default:
-            throw new Error(`Unknown provider: ${provider}`);
-        }
-        await this.$store.dispatch('getUserInfo');
-      } catch (e) {
-        catchAndNotifyError(this, e);
-      }
-    },
-    async disconnectUserConnection(name: string) {
-      try {
-        // const { data } = await this.$client.delete(`/user/connections/${name}`);
-        // this.$notify({ type: 'success', text: data['message'] });
-      } catch (e) {
-        catchAndNotifyError(this, e);
-      } finally {
-        try {
-          await this.$store.dispatch('getUserInfo');
-        } catch (e) {
-          catchAndNotifyError(this, e);
-        }
-      }
-    }
+const store = useStore(storeKey);
+const sex = ref(pb.authStore!.model!.expand.details?.sex ?? 'unknown');
+const department = ref(pb.authStore!.model!.expand.details?.department ?? 'none');
+const { mutate: saveUserInfo, isLoading: isSaving } = useMutation((newDetails: { sex?: string, college_department?: string }) => {
+  return pb.collection('user_details').update(pb.authStore.model!.details, newDetails);
+}, {
+  onSuccess(data) {
+    // this.$notify({ type: 'success', text: data['message'] });
+    pb.authStore.model!.expand.details = data;
+  },
+  onError(err) {
+    // catchAndNotifyError(this, e);
   }
-}
+});
+
+const { mutateAsync: connectUserConnection } = useMutation((provider: string) => {
+  switch (provider) {
+    case "twitter":
+      connectToTwitter(store);
+      break;
+    case "email":
+      connectToEmail(store);
+      break;
+    default:
+      throw new Error(`Unknown provider: ${provider}`);
+  }
+
+  return store.dispatch('getUserInfo');
+}, {
+  onError(error) {
+    // catchAndNotifyError(this, e);
+  },
+});
+
+const { mutateAsync: disconnectUserConnection } = useMutation((name: string) => {
+  // return await this.$client.delete(`/user/connections/${name}`);
+  return Promise.resolve(name);
+}, {
+  onSuccess() {
+    // this.$notify({ type: 'success', text: data['message'] });
+  },
+  onError(error) {
+    // catchAndNotifyError(this, e);
+  },
+  onSettled() {
+    store.dispatch('getUserInfo');
+  }
+})
 </script>
