@@ -26,13 +26,13 @@
         <label for="sex">Sex</label>
         <select :disabled="isSaving" name="sex" class="select select-bordered" v-model="sex">
           <!-- TODO: -->
-          <!-- <option :value="g.value" :key="g.value" v-for="g in store.getters.sexList">{{ g.label }}</option> -->
+          <!-- <option :value="g.value" :key="g.value" v-for="g in store.state.getters.sexList">{{ g.label }}</option> -->
         </select>
       </div>
       <div class="flex flex-col md:flex-row justify-between items-start md:item-center py-2 space-y-2 lg:space-y-0">
         <label for="department">Department</label>
         <select :disabled="isSaving" name="department" class="select select-bordered" v-model="department">
-          <option :value="dept.id" :key="dept.id" v-for="dept in store.departmentList">{{ dept.label }} ({{ dept.uid }})</option>
+          <option :value="dept.id" :key="dept.id" v-for="dept in store.state.departmentList">{{ dept.label }} ({{ dept.uid }})</option>
         </select>
       </div>
 
@@ -85,7 +85,7 @@ import { useAuth, useStore } from '../../store_new';
 import { UserDetails } from '../../types';
 
 const store = useStore();
-const { user } = useAuth();
+const { state: {user} } = useAuth();
 
 const sex = ref(pb.authStore!.model!.expand.details?.sex ?? 'unknown');
 const department = ref(pb.authStore!.model!.expand.details?.department ?? 'none');
@@ -114,7 +114,7 @@ const { mutateAsync: connectUserConnection } = useMutation((provider: string) =>
   }
 
   // TODO:
-  // return store.dispatch('getUserInfo');
+  // return store.state.dispatch('getUserInfo');
   return Promise.resolve(0);
 }, {
   onError(error) {
@@ -135,7 +135,7 @@ const { mutateAsync: disconnectUserConnection } = useMutation((name: string) => 
   },
   onSettled() {
     // TODO:
-    // store.dispatch('getUserInfo');
+    // store.state.dispatch('getUserInfo');
   }
 })
 </script>

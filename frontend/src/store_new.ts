@@ -2,12 +2,17 @@ import { ClientResponseError } from 'pocketbase';
 import { computed, inject, InjectionKey, onMounted, onUnmounted, reactive, watch } from 'vue';
 import { popupCenter } from './auth';
 import { backendUrl, pb } from './client';
-import { Gift, User, UserDetails, VirtualWallet } from './types';
+import { Gift, User, VirtualWallet } from './types';
 
 interface StoreMethods {
   loadGiftsAndDepartments(): Promise<void>
   checkFirstTimeVisitor(): void
   toggleWelcomeModal(): void
+}
+
+export interface Store<T, U = {}> {
+  state: T,
+  methods: U
 }
 
 export interface State {
@@ -18,14 +23,14 @@ export interface State {
   departmentList: Record<string, string>[]
 }
 
-export const storeKey = Symbol() as InjectionKey<State & StoreMethods>;
+export const storeKey = Symbol() as InjectionKey<Store<State, StoreMethods>>;
 
 export const useStore = () => inject(storeKey)!;
 
 const firstTimeKey = '__vw_13042021';
 
-export const createStore = () => {
-  const store = reactive<State>({
+export const createStore = (): Store<State, StoreMethods> => {
+  const state = reactive<State>({
     giftList: [],
     isSendMessageModalOpen: false,
     isSetupModalOpen: false,
@@ -36,21 +41,21 @@ export const createStore = () => {
   const checkFirstTimeVisitor = () => {
     if (import.meta.env.VITE_READ_ONLY === "true") return;
     if (!localStorage.getItem(firstTimeKey)) {
-      store.isWelcomeModalOpen = true;
+      state.isWelcomeModalOpen = true;
     }
   }
 
   const loadGiftsAndDepartments = async () => {
     const depts = await pb.send('/departments', {});
-    store.departmentList.push(...depts);
+    state.departmentList.push(...depts);
 
     const gifts = await pb.send('/gifts', {});
-    store.giftList.push(...gifts);
+    state.giftList.push(...gifts);
   }
 
   const toggleWelcomeModal = () => {
     localStorage.setItem(firstTimeKey, '1');
-    store.isWelcomeModalOpen = false;
+    state.isWelcomeModalOpen = false;
   }
 
   // onMounted(() => {
@@ -63,39 +68,43 @@ export const createStore = () => {
   //   }
   // })
   
-  return {
-    ...store,
-    loadGiftsAndDepartments,
-    checkFirstTimeVisitor,
-    toggleWelcomeModal
-  };
+  return reactive({
+    state,
+    methods: {
+      loadGiftsAndDepartments,
+      checkFirstTimeVisitor,
+      toggleWelcomeModal
+    }
+  });
 }
 
 // Auth Store
-export interface AuthStore {
+export interface AuthState {
   user: User
   isAuthLoading: boolean
   isLoggedIn: boolean
+}
+
+export interface AuthMethods {
   login(): Promise<void>
   logout(): void
+  onReceiveUser(user: User | null, state: State): Promise<void>
 }
 
 export const useAuth = () => inject(authStore)!;
 
-export const authStore: InjectionKey<AuthStore> = Symbol();
+export const authStore: InjectionKey<Store<AuthState, AuthMethods>> = Symbol();
 
-export function createAuthStore(): AuthStore {
-  const store = reactive({
+export function createAuthStore(): Store<AuthState, AuthMethods> {
+  const state = reactive({
     user: null!,
     isAuthLoading: false,
-    isLoggedIn: computed(() => !!pb.authStore.model),
-  }) as Omit<AuthStore, 'login' | 'logout'>;
-
-  const mainStore = useStore();
+    isLoggedIn: computed(() => !!state.user),
+  }) as AuthState;
 
   async function login() {
     try {
-      store.isAuthLoading = true;
+      state.isAuthLoading = true;
   
       const authMethods = await pb.collection('users').listAuthMethods();
       const googleProvider = authMethods.authProviders.find(p => p.name === 'google');
@@ -122,9 +131,7 @@ export function createAuthStore(): AuthStore {
             data['code'],
             googleProvider.codeVerifier,
             redirectUrl,
-          ).then((authData) => {
-            console.log(authData);
-            
+          ).then(() => {
             window.removeEventListener('message', handleFn);
             loginWindow.close();
           });
@@ -132,47 +139,32 @@ export function createAuthStore(): AuthStore {
       }
   
       window.addEventListener('message', handleFn);
-      if (mainStore.isSetupModalOpen) {
-        // logEvent(analytics!, 'sign_up');
-      } else {
-        // logEvent(analytics!, 'login');
-      }
     } catch (e) {
       throw e;
     } finally {
-      store.isAuthLoading = false;
+      state.isAuthLoading = false;
     }
   }
 
-  async function onReceiveUser(user: User | null): Promise<void> {  
+  async function onReceiveUser(receivedUser: User | null, mainStore: State): Promise<void> {  
     try {
-      if (!user) {
+      if (!receivedUser) {
         return;
       }
 
-      // TODO: use vue reactive state
-      try {
-        const wallet = await pb.collection('virtual_wallets').getFirstListItem(`user="${user.id}"`);
-        user!.expand.wallet = wallet as VirtualWallet;
-      } catch {}
+      // verify user
+      const user = await pb.collection('users').getOne<User>(receivedUser.id, {
+        expand: 'virtual_wallets(user),details'
+      });
 
-      try {
-        if (user.details) {
-          const result = await pb.collection('user_details').getOne(user.details);
-          user.expand.details = result as UserDetails;
-        } else {
-          const result = await pb.collection('user_details').getFirstListItem(`user="${user.id}"`);
-          user.expand.details = result as UserDetails;
-        }
+      user.expand.wallet = user.expand['virtual_wallets(user)'] as VirtualWallet;
+      delete user.expand['virtual_wallets(user)'];
 
-        store.user = user;
-      } catch (e) {
-        if (e instanceof ClientResponseError && e.status === 404) {
+      if (import.meta.env.VITE_READ_ONLY !== 'true') {  
+        if (!user.details) {
           mainStore.isSetupModalOpen = true;
         }
-      }
-      
-      if (import.meta.env.VITE_READ_ONLY !== 'true') {  
+
         // it should not affect the whole flow just in case
         // updateLastActiveAt won't go through
         try {
@@ -190,7 +182,7 @@ export function createAuthStore(): AuthStore {
       console.error(e);
       logout();
     } finally {
-      store.isAuthLoading = false;
+      state.isAuthLoading = false;
     }
   }
 
@@ -200,6 +192,7 @@ export function createAuthStore(): AuthStore {
         // await getters.apiClient.post('/user/logout_callback');
       }
 
+      console.log('LOGOUT');
       pb.authStore.clear();
     } catch (e) {
       // if (e instanceof APIResponseError) {
@@ -209,21 +202,12 @@ export function createAuthStore(): AuthStore {
     }
   }
 
-  const unwatchUser = watch(store.user, (newUser) => {
-    if (!newUser) return;
-
-    // TODO: auto-update last active at
-  });
-
-  // onMounted(() => {
-  //   pb.authStore.onChange((_, user) => {
-  //     onReceiveUser(user as User | null);
-  //   }, true);
-  // });
-
-  // onUnmounted(() => {
-  //   unwatchUser();
-  // });
-
-  return { ...store, login, logout } as unknown as AuthStore;
+  return reactive({
+    state,
+    methods: {
+      login, 
+      logout,
+      onReceiveUser
+    }
+  }) as Store<AuthState, AuthMethods>;
 }

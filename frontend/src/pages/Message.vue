@@ -146,7 +146,7 @@ import { ClientResponseError } from 'pocketbase';
 import { useAuth, useStore } from '../store_new';
 import { Gift } from '../types';
 
-const { isLoggedIn, user } = useAuth();
+const { state: {isLoggedIn, user} } = useAuth();
 const router = useRouter();
 const route = useRoute();
 const isDeletable = ref(false);
@@ -277,9 +277,4 @@ const displayedGiftLabels = computed(() => {
   return message.value.expand.gifts.map(generateDisplayGiftLabelString).join(
     message.value.expand.gifts.length > 2 ? ', ' : message.value.expand.gifts.length == 2 ? ' ' : '');
 });
-
-const { data: recipientData } = useQuery(
-  ['recipient_data', recipient],
-  () => pb.collection('user_details').getFirstListItem(`student_id = "${recipient}"`)
-);
 </script>

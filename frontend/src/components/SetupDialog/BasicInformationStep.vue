@@ -21,7 +21,7 @@
             <option value="none" selected>None</option>
             <option :value="dept.id"
               :key="dept.id"
-              v-for="dept in store.departmentList">
+              v-for="dept in store.state.departmentList">
               {{ dept.label }} ({{ dept.uid }})
             </option>
           </select>
@@ -35,7 +35,7 @@
             <!-- <option
               :value="g.value.toLowerCase()"
               :key="g.value"
-              v-for="g in $store.getters.sexList">
+              v-for="g in $store.state.getters.sexList">
               {{ g.label }}
             </option> -->
           </select>
@@ -60,7 +60,7 @@ const emailRegex = /^[a-z]+_([0-9]+)@uic.edu.ph$/;
 const emit = defineEmits(['success', 'error', 'proceed']);
 const form = ref<HTMLFormElement | null>();
 const store = useStore();
-const { user } = useAuth();
+const { state: {user} } = useAuth();
 
 function getIdFromEmail(input: string): string {
   const matches = emailRegex.exec(input)

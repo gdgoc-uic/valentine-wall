@@ -1,7 +1,7 @@
 <template>
   <modal 
-    :open="store.isSetupModalOpen" 
-    @update:open="store.isSetupModalOpen = $event"
+    :open="store.state.isSetupModalOpen" 
+    @update:open="store.state.isSetupModalOpen = $event"
     modal-box-class="max-w-[70rem] min-h-[80%] h-full">
     <div class="flex flex-col items-center h-full">
       <ul class="steps steps-horizontal text-lg">
@@ -49,7 +49,7 @@ import { useAuth, useStore } from '../store_new';
 import { UserDetails } from '../types';
 
 const store = useStore();
-const { user } = useAuth();
+const { state: {user} } = useAuth();
 
 const submitDetails = reactive<{
   student_id: string | null
@@ -117,12 +117,12 @@ async function submitSetupForm() {
       user!.expand.details = userDetails as UserDetails;
 
       // $notify({ type: 'success', text: 'Profile saved successfully.' });
-      store.isSetupModalOpen = false;
+      store.state.isSetupModalOpen = false;
       
     } catch (e) {
       // if (e instanceof APIResponseError && e.rawResponse.status == 403 && e.message == 'Access to the service is denied.') {
       //   this.$router.replace({ name: 'home-page' });
-      //   await this.$store.dispatch('logout');
+      //   await this.$store.state.dispatch('logout');
       // }
       throw e;
     }

@@ -76,7 +76,7 @@ defineProps({
 
 // TODO: has connections
 const hasConnections = false;
-const { isLoggedIn, user } = useAuth();
+const { state: {isLoggedIn, user} } = useAuth();
 const counter = ref<InstanceType<typeof ContentCounter> | null>(null);
 const content = ref('');
 const isSending = ref(false);

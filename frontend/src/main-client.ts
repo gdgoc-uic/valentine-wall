@@ -12,7 +12,7 @@ const clientApp = app.use(Notifications);
 router.beforeEach((to, from, next) => {
   // setCurrentScreen(analytics!, to.meta.pageTitle as string);
   const requiresAuth = to.matched.some(record => record.meta.requiresAuth);
-  if (requiresAuth && !authStore.isLoggedIn) {
+  if (requiresAuth && !authStore.state.isLoggedIn) {
     next('/');
     return;
   }

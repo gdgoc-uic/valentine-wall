@@ -45,8 +45,8 @@
     <setup-dialog v-if="!user?.expand.details?.student_id && isLoggedIn" />
     <submit-message-modal
       :key="$route.fullPath" 
-      :open="store.isSendMessageModalOpen" 
-      @update:open="store.isSendMessageModalOpen = $event" />
+      :open="store.state.isSendMessageModalOpen" 
+      @update:open="store.state.isSendMessageModalOpen = $event" />
   </portal>
 
   <div v-if="isAuthLoading" class="h-screen flex items-center justify-center">
@@ -70,7 +70,7 @@
 </template>
 
 <script lang="ts" setup>
-import { computed } from "@vue/runtime-core";
+import { computed, watch } from "@vue/runtime-core";
 import { HeadAttrs, useHead } from "@vueuse/head";
 
 import BasicAlert from "./components/BasicAlert.vue";
@@ -87,11 +87,13 @@ import Loading from "./components/Loading.vue";
 import WelcomeModal from "./components/WelcomeModal.vue";
 import IconCommentAdd from "~icons/uil/comment-add";
 import FeedbackForm from "./components/FeedbackForm.vue";
-import { pb } from "./client";
 import { useAuth, useStore } from "./store_new";
+import { onMounted, onUnmounted } from "vue";
+import { pb } from "./client";
+import { User } from "./types";
 
 const route = useRoute();
-const { isLoggedIn, isAuthLoading } = useAuth();
+const { state: { isLoggedIn, isAuthLoading, user }, methods: { onReceiveUser } } = useAuth();
 const store = useStore();
 
 useHead({
@@ -119,6 +121,27 @@ useHead({
     ];
   }),
 });
+
+if (!import.meta.env.SSR) {
+  const unwatchUser = watch(user, (newUser) => {
+    console.log(newUser);
+    if (!newUser) return;
+
+    // TODO: auto-update last active at
+  });
+
+  onMounted(() => {
+    pb.authStore.onChange((_, user) => {
+      store.methods.checkFirstTimeVisitor();
+
+      onReceiveUser(user as User | null, store.state);
+    }, true);
+  });
+
+  onUnmounted(() => {
+    unwatchUser();
+  });
+}
 </script>
 
 <style src="./assets/index.css"></style>

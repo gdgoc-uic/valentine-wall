@@ -8,7 +8,7 @@
         <!-- move send message to the homepage -->
         <button
           v-else
-          @click="store.isSendMessageModalOpen = true"
+          @click="store.state.isSendMessageModalOpen = true"
           class="btn btn-lg bg-rose-500 hover:bg-rose-600 normal-case border-0 shadow-md rounded-2xl w-2/3 lg:w-full space-x-3">
           <span>Start Writing</span>
           <icon-send />
@@ -132,7 +132,7 @@ function ordinalSuffixOf(i: number): string {
 }
 
 const store = useStore();
-const { isLoggedIn } = useAuth();
+const { state: {isLoggedIn} } = useAuth();
 const rankingsSex = ref('male');
 const recentMessages = reactive<PbRecord[]>([]);
 const recentsSSE = ref<UnsubscribeFunc>();

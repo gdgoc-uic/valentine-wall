@@ -68,7 +68,7 @@
           </button>
           <button
             v-if="!shouldSendButtonHide && isLoggedIn"
-            @click="store.isSendMessageModalOpen = true"
+            @click="store.state.isSendMessageModalOpen = true"
             class="shadow-md btn border-none rounded-l-none bg-rose-500 hover:bg-rose-600 lg:px-8 space-x-2">
             <icon-send />
             <span class="hidden lg:block">Send a Message</span>
@@ -125,7 +125,7 @@
             </button>
             <button
               v-if="!shouldSendButtonHide"
-              @click="store.isSendMessageModalOpen = true; menuOpen = false"
+              @click="store.state.isSendMessageModalOpen = true; menuOpen = false"
               class="shadow-md btn border-none w-full bg-rose-500 hover:bg-rose-600 px-8 space-x-2">
               <icon-send />
               <span>Send a Message</span>
@@ -163,7 +163,7 @@ const props = defineProps({
 
 const router = useRouter();
 const route = useRoute();
-const { isLoggedIn, user, logout } = useAuth();
+const { state: {isLoggedIn, user}, methods: {logout} } = useAuth();
 const store = useStore();
 
 const menuOpen = ref(false);

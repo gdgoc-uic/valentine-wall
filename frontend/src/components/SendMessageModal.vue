@@ -31,7 +31,7 @@
             <div class="flex flex-col mt-4 -mx-2">
               <p class="pl-3 text-gray-900 text-sm my-2">Select gift (Optional)</p>
               <fieldset class="gift-list-checkboxes">
-                <div class="gift-item tooltip tooltip-top z-10" :data-tip="gift.label" :key="'gift_' + gift.uid" v-for="gift in store.giftList">
+                <div class="gift-item tooltip tooltip-top z-10" :data-tip="gift.label" :key="'gift_' + gift.uid" v-for="gift in store.state.giftList">
                   <div class="gift-item-btn-wrapper indicator">
                     <div class="indicator-bottom indicator-center indicator-item badge badge-primary">ღ{{ gift.price }}</div> 
                     <input class="absolute appearance-none top-0 left-0" type="checkbox" :name="'gift_ids['+gift.id+']'" :id="gift.uid">
@@ -97,7 +97,7 @@ const props = defineProps({
   }
 });
 
-const { user } = useAuth();
+const { state: {user} } = useAuth();
 const store = useStore();
 const route = useRoute();
 const submitMessageForm = ref<HTMLFormElement | null>(null);
@@ -158,7 +158,7 @@ async function submitForm(e: SubmitEvent) {
   }, {
     onSuccess() {
       // logEvent(analytics!, 'post-message');
-      // this.$store.commit('SET_USER_WALLET_BALANCE', json['current_balance'])  
+      // this.$store.state.commit('SET_USER_WALLET_BALANCE', json['current_balance'])  
       (e.target! as HTMLFormElement).reset();
       emit('update:open', false);
       // this.$router.push(json['route']);

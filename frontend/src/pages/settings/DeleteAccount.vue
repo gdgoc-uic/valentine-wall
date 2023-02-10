@@ -35,7 +35,7 @@ import { pb } from '../../client';
 import { catchAndNotifyError, notify } from '../../notify';
 import { useAuth } from '../../store_new';
 
-const { logout, user } = useAuth();
+const { state: { user }, methods: { logout } } = useAuth();
 const router = useRouter();
 const recipientId = ref('');
 const shouldDelete = computed(() => {

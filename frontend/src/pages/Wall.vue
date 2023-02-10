@@ -119,7 +119,7 @@ async function loadStats(): Promise<void> {
 }
 
 const route = useRoute();
-const { isLoggedIn, user } = useAuth();
+const { state: { isLoggedIn, user } } = useAuth();
 const hasGift = ref<boolean | null>(false);
 
 if (route.params.receipientId && isLoggedIn) {

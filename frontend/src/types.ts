@@ -27,7 +27,7 @@ export interface User extends PbRecord {
   email: string
   avatar: string | null
   details: string
-  expand: {
+  expand: PbRecord['expand'] & {
     wallet: VirtualWallet
     details: UserDetails
   }

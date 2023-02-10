@@ -10,14 +10,20 @@
 <script lang="ts" setup>
 import GoogleIcon from '~icons/logos/google-icon';
 import { catchAndNotifyError } from '../notify';
-import { useAuth } from '../store_new';
+import { useAuth, useStore } from '../store_new';
 
 const emit = defineEmits(['click']);
-const { login, isLoggedIn } = useAuth();
+const { state: { isLoggedIn }, methods: { login } } = useAuth();
+const mainStore = useStore();
 
 async function googleLogin() {
     try {
         await login();
+        if (mainStore.state.isSetupModalOpen) {
+            // logEvent(analytics!, 'sign_up');
+        } else {
+            // logEvent(analytics!, 'login');
+        }
         emit('click');
     } catch (e) {
         // catchAndNotifyError(this, e);
