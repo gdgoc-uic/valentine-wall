@@ -25,7 +25,7 @@ import Masonry from './Masonry.vue';
 import IconReply from '~icons/uil/comment-heart';
 import IconGift from '~icons/uil/gift';
 import { toNow } from '../time_utils';
-import { watch, onMounted, ref } from 'vue';
+import { watch, ref } from 'vue';
 
 const props = defineProps({
   prepend: {
@@ -52,8 +52,6 @@ const props = defineProps({
 const messageList = ref<any[]>([]);
 
 function applyChanges(newMessages: any[]) {
-  if (!newMessages) return;
-
   if (props.replace) {
     messageList.value = processResults(newMessages);
     return;
@@ -68,6 +66,10 @@ function applyChanges(newMessages: any[]) {
 }
 
 function processResults(data: any[]): any[] {
+  if (data.length === 0) {
+    return data;
+  }
+
   const availablePaperColorId = [1,2,3,4];
   const quo = data.length / availablePaperColorId.length;
   let paperColorIds: number[] = [];

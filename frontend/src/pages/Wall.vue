@@ -46,7 +46,7 @@
     <response-handler :query="query">
       <template #default>
         <div class="max-w-7xl w-full mx-auto flex flex-col">
-          <message-tiles :messages="currentMessages" />
+          <message-tiles :messages="currentMessages" replace />
           <pagination-load-more-button 
             :should-go-next="hasNextPage" 
             @click="fetchNextPage" />
@@ -76,11 +76,11 @@ import ResponseHandler from '../components/ResponseHandler2.vue';
 import PaginationLoadMoreButton from '../components/PaginationLoadMoreButton.vue';
 import LoginButton from '../components/LoginButton.vue';
 import MessageTiles from '../components/MessageTiles.vue';
-import { ref, reactive, computed } from 'vue';
+import { ref, reactive, computed, onMounted, onUnmounted } from 'vue';
 import { onBeforeRouteUpdate, useRoute } from 'vue-router';
 import { pb } from '../client';
 import { useInfiniteQuery } from '@tanstack/vue-query';
-import { ClientResponseError, Record as PbRecord } from 'pocketbase';
+import { ClientResponseError, Record as PbRecord, UnsubscribeFunc } from 'pocketbase';
 import { useAuth } from '../store_new';
 
 function isEmptyError(error: unknown) {
@@ -143,10 +143,6 @@ const totalCount = computed(() => {
   }
 });
 
-// TODO: work on it on SSR
-// if (stats.messages_count == 0 && !import.meta.env.SSR) {
-// }
-
 onBeforeRouteUpdate((to, from) => {
   if (to.params === from.params) return;
   loadStats();
@@ -188,8 +184,39 @@ const currentMessages = computed(() => {
   }
 
   rawCurrentMessages.splice(0, rawCurrentMessages.length - 1);
-  rawCurrentMessages.push(...query.data.value.pages[query.data.value.pages.length - 1].items);
+  rawCurrentMessages.push(...query.data.value.pages.map(p => p.items).flat());
   return rawCurrentMessages;
 });
 
+const unsubscribeFunc = ref<UnsubscribeFunc | null>(null);
+
+onMounted(() => {
+  if (!import.meta.env.SSR) {
+    if (stats.messages_count == 0) {
+      loadStats();
+    }
+
+    pb.collection('messages').subscribe('*', (data) => {
+      if (data.action === 'create' && data.record.recipient === recipient.value) {
+        if (data.record.gifts.length === 0) {
+          stats.messages_count++;
+        } else {
+          stats.gift_messages_count++;
+        }
+       
+        if (hasGift.value === true && data.record.gifts.length === 0) {
+          return;
+        }
+        
+        rawCurrentMessages.unshift(data.record);
+      }
+    }).then((unsub) => {
+      unsubscribeFunc.value = unsub;
+    });
+  }
+});
+
+onUnmounted(() => {
+  unsubscribeFunc.value?.();
+})
 </script>
