@@ -64,7 +64,7 @@ func updateRanking(dao *daos.Dao, recipientId string, coinsToAdd float64) error 
 	if err == nil {
 		if ranking.GetString("college_department") == "unknown" && ranking.GetString("sex") == "unknown" {
 			cDept, _ := dao.FindRecordById("college_departments", recipient.GetString("college_department"))
-			ranking.Set("college_department", cDept.GetString("uid"))
+			ranking.Set("college_department", cDept.Id)
 			ranking.Set("sex", recipient.GetString("sex"))
 		}
 	}
@@ -129,7 +129,7 @@ func onAddMessage(dao *daos.Dao, e *core.RecordCreateEvent) error {
 	}
 
 	studentId := e.Record.GetString("recipient")
-	if err := updateRanking(dao, studentId, totalAmount); err != nil {
+	if err := updateRanking(dao, studentId, totalAmount+sendPrice); err != nil {
 		// TODO: add error
 		// return err
 		return nil
