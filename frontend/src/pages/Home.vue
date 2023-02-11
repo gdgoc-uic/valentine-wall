@@ -5,14 +5,6 @@
         <img src="../assets/images/logo.png" class="w-4/5 md:w-2/3 lg:w-full pb-8 mx-auto" alt="Valentine Wall">
         <p class="text-gray-500 text-lg font-bold pb-4">Send, confess, and share your feelings anonymously!</p>
         <login-button v-if="!authState.isLoggedIn" class="btn-lg" />
-        <!-- move send message to the homepage -->
-        <button
-          v-else
-          @click="store.state.isSendMessageModalOpen = true"
-          class="btn btn-lg bg-rose-500 hover:bg-rose-600 normal-case border-0 shadow-md rounded-2xl w-2/3 lg:w-full space-x-3">
-          <span>Start Writing</span>
-          <icon-send />
-        </button>
       </div>
 
       <aside class="bg-white min-h-[30rem] shadow-md rounded-2xl flex flex-col">
@@ -69,6 +61,12 @@
     </section>
 
     <section class="lg:w-2/3 flex flex-col space-y-2 md:space-y-8 lg:pl-8">
+      <div class="bg-white p-12 space-y-2 rounded-2xl shadow-md h-full">
+        <h2 class="text-3xl font-bold">Start writing your message!</h2>
+
+        <send-message-form />
+      </div>
+
       <div class="hidden md:block w-full">
         <div class="bg-white p-12 space-y-8 rounded-2xl shadow-md h-full">
           <div>
@@ -103,6 +101,7 @@
 import kingImg from '../assets/images/home/king.png';
 import queenImg from '../assets/images/home/queen.png';
 
+import SendMessageForm from '../components/SendMessageForm.vue';
 import IconCoin from '~icons/twemoji/coin';
 import SearchForm from '../components/SearchForm.vue';
 import IconSend from '~icons/uil/message';
