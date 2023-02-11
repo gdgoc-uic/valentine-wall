@@ -1,4 +1,5 @@
 import { createRouter as createVueRouter, createWebHistory, createMemoryHistory, RouteLocationNormalizedLoaded, RouteRecordRaw } from 'vue-router';
+import { pb } from './client';
 
 const pageSuffix = 'UIC Valentine Wall';
 const pageSeparator = ' | ';
@@ -67,8 +68,7 @@ const routes: RouteRecordRaw[] = [
       metaTags: (route: RouteLocationNormalizedLoaded) => [
         {
           name: 'og:image',
-          // content: expandAPIEndpoint(`/messages/${route.params.recipientId}/${route.params.messageId}?image`)
-          content: ''
+          content: pb.buildUrl(`/messages/${route.params.messageId}/image`)
         },
         {
           name: 'og:image:width',
