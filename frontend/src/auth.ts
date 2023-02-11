@@ -37,8 +37,10 @@ export async function thirdPartyLogin(provider: string, table = 'users') {
     throw new Error('Failed to open window.');
   }
 
+  const expectedOrigin = (new URL(backendUrl)).origin;
+
   const handleFn = function (this: Window, e: MessageEvent) {
-    if (e.origin === backendUrl && typeof e.data === 'object' && 'state' in e.data) {
+    if (e.origin === expectedOrigin && typeof e.data === 'object' && 'state' in e.data) {
       const data = e.data;
       if (chosenProvider.state !== data['state']) {
         throw new Error();
