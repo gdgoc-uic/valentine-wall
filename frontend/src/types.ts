@@ -11,7 +11,7 @@ export interface UserDetails extends PbRecord {
 }
 
 export interface Gift {
-  id: number
+  id: string
   uid: string
   label: string
   price: number

@@ -16,6 +16,7 @@
 
         <div class="flex flex-col-reverse lg:flex-row max-h-[80vh] overflow-y-scroll md:overflow-y-hidden md:max-h-full">
           <send-message-form 
+            class="flex flex-col lg:w-2/3 lg:pr-8 overflow-y-none lg:overflow-y-auto md:max-h-[80vh]"
             @success="handleSendSuccess"
             :existing-recipient="route.params.recipientId?.toString()" />          
 
