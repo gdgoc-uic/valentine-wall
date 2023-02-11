@@ -120,7 +120,7 @@ func init() {
 			{
 				"id": "caqiysan7yf0wve",
 				"created": "2023-01-21 02:43:38.501Z",
-				"updated": "2023-02-10 04:06:41.037Z",
+				"updated": "2023-02-10 13:46:20.991Z",
 				"name": "messages",
 				"type": "base",
 				"system": false,
@@ -188,6 +188,18 @@ func init() {
 							"max": 12,
 							"pattern": ""
 						}
+					},
+					{
+						"system": false,
+						"id": "xjc2zwan",
+						"name": "replies_count",
+						"type": "number",
+						"required": false,
+						"unique": false,
+						"options": {
+							"min": 0,
+							"max": null
+						}
 					}
 				],
 				"listRule": "",
@@ -200,7 +212,7 @@ func init() {
 			{
 				"id": "55bmnoqmzjhnng0",
 				"created": "2023-01-21 02:47:07.014Z",
-				"updated": "2023-01-21 02:47:07.014Z",
+				"updated": "2023-02-10 13:56:17.657Z",
 				"name": "user_connections",
 				"type": "auth",
 				"system": false,
@@ -217,19 +229,32 @@ func init() {
 							"collectionId": "_pb_users_auth_",
 							"cascadeDelete": true
 						}
+					},
+					{
+						"system": false,
+						"id": "v9kwnaqi",
+						"name": "provider",
+						"type": "text",
+						"required": true,
+						"unique": false,
+						"options": {
+							"min": null,
+							"max": null,
+							"pattern": ""
+						}
 					}
 				],
-				"listRule": null,
-				"viewRule": null,
+				"listRule": "@request.auth.user.id = user.id",
+				"viewRule": "@request.auth.user.id = user.id",
 				"createRule": null,
 				"updateRule": null,
-				"deleteRule": null,
+				"deleteRule": "@request.auth.user.id = user.id",
 				"options": {
 					"allowEmailAuth": false,
 					"allowOAuth2Auth": true,
 					"allowUsernameAuth": false,
 					"exceptEmailDomains": [],
-					"manageRule": null,
+					"manageRule": "@request.auth.user.id = user.id",
 					"minPasswordLength": 8,
 					"onlyEmailDomains": [],
 					"requireEmail": false
@@ -238,7 +263,7 @@ func init() {
 			{
 				"id": "35mnuyxwxc8xvs6",
 				"created": "2023-01-21 02:52:37.027Z",
-				"updated": "2023-02-06 09:35:28.846Z",
+				"updated": "2023-02-11 04:52:52.643Z",
 				"name": "message_replies",
 				"type": "base",
 				"system": false,
@@ -265,7 +290,7 @@ func init() {
 						"unique": false,
 						"options": {
 							"maxSelect": 1,
-							"collectionId": "_pb_users_auth_",
+							"collectionId": "px00yjig95x0mcw",
 							"cascadeDelete": true
 						}
 					},
@@ -281,13 +306,22 @@ func init() {
 							"max": null,
 							"pattern": ""
 						}
+					},
+					{
+						"system": false,
+						"id": "bgot1d9q",
+						"name": "liked",
+						"type": "bool",
+						"required": false,
+						"unique": false,
+						"options": {}
 					}
 				],
-				"listRule": "@request.auth.user.id = message.user.id || @request.auth.user.id = sender.id",
-				"viewRule": "@request.auth.user.id = message.user.id || @request.auth.user.id = sender.id",
-				"createRule": "@request.auth.user.id = sender.id",
-				"updateRule": "@request.auth.user.id = sender.id",
-				"deleteRule": "@request.auth.user.id = sender.id",
+				"listRule": "@request.auth.details = message.user.id || @request.auth.details = sender.id",
+				"viewRule": "@request.auth.id = message.user.id || @request.auth.id = sender.id",
+				"createRule": "@request.auth.details = @request.data.sender",
+				"updateRule": "@request.auth.details = sender.id",
+				"deleteRule": "@request.auth.details = sender.id",
 				"options": {}
 			},
 			{
@@ -444,7 +478,7 @@ func init() {
 			{
 				"id": "rs07r3dxff0hxbz",
 				"created": "2023-02-05 05:32:43.476Z",
-				"updated": "2023-02-09 12:43:43.377Z",
+				"updated": "2023-02-10 12:17:48.206Z",
 				"name": "virtual_wallets",
 				"type": "base",
 				"system": false,
@@ -476,7 +510,7 @@ func init() {
 					}
 				],
 				"listRule": "@request.auth.id != \"\"",
-				"viewRule": "@request.auth.id != user.id",
+				"viewRule": "@request.auth.id = user.id",
 				"createRule": null,
 				"updateRule": null,
 				"deleteRule": null,
@@ -538,8 +572,8 @@ func init() {
 			},
 			{
 				"id": "_pb_users_auth_",
-				"created": "2023-02-06 05:58:46.661Z",
-				"updated": "2023-02-06 09:35:28.886Z",
+				"created": "2023-02-10 11:44:13.368Z",
+				"updated": "2023-02-10 11:44:13.372Z",
 				"name": "users",
 				"type": "auth",
 				"system": false,
