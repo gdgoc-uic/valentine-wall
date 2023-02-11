@@ -1,99 +1,90 @@
 <template>
-  <main class="max-w-7xl mx-auto flex flex-col lg:flex-row px-4">
-    <section class="lg:w-1/3 pb-8 flex flex-col text-center space-y-8">
-      <div>
-        <img src="../assets/images/logo.png" class="w-4/5 md:w-2/3 lg:w-full pb-8 mx-auto" alt="Valentine Wall">
-        <p class="text-gray-500 text-lg font-bold pb-4">Send, confess, and share your feelings anonymously!</p>
-        <login-button v-if="!authState.isLoggedIn" class="btn-lg" />
-      </div>
-
-      <aside class="bg-white min-h-[30rem] shadow-md rounded-2xl flex flex-col">
-        <div class="flex items-center space-x-4 rounded-t-2xl py-4 px-8 font-bold bg-rose-400 text-white">
-          <img src="../assets/images/home/leaderboard.png">
-          <p>Valentine Ranking Board</p>
+  <main class="max-w-7xl mx-auto flex flex-col px-4">
+    <section class="flex flex-col lg:flex-row">
+      <section class="lg:w-1/3 pb-8 flex flex-col text-center space-y-8">
+        <div>
+          <img src="../assets/images/logo.png" class="w-4/5 md:w-2/3 lg:w-full pb-8 mx-auto" alt="Valentine Wall">
+          <p class="text-gray-500 text-lg font-bold pb-4">Send, confess, and share your feelings anonymously!</p>
+          <login-button v-if="!authState.isLoggedIn" class="btn-lg" />
         </div>
-
-        <div class="tabs">
-          <button 
-            v-for="sex in store.state.sexList"
-            :key="'ranking_btn_' + sex.value"
-            @click="rankingsSex = sex.value" 
-            :class="{ 'tab-active': rankingsSex == sex.value }" 
-            class="tab tab-lg flex-1 tab-bordered">{{ sex.label }}</button>
-        </div>
-
-        <div class="flex-1 flex flex-col ranking-board">
-          <response-handler :query="rankingsQuery">
-            <template #default>
-              <!-- TODO: add empty state -->
-              <div class="min-h-12 flex my-4 shadow ranking-info" :key="i" v-for="(r, i) in rankingsQuery.data.value?.items">
-                <div class="w-2/12 bg-black text-white inline-flex items-center justify-center font-bold ranking-placement">
-                  {{ ordinalSuffixOf(i + 1) }}
-                </div>
-                <div class="flex-1 py-2 pl-2 inline-flex items-center">
-                  <img 
-                    :src="r.sex == 'female' ? queenImg : kingImg"
-                    class="w-2/12 mx-4" :alt="r.sex" />
-
-                  <span class="font-bold">{{ (r.expand.college_department as PbRecord)?.uid ?? 'Unknown' }}</span>
-                </div>
-                <div class="flex w-3/12 px-2 bg-white">
-                  <div class="pl-1 inline-flex items-center space-x-1 py-6">
-                    <icon-coin />
-                    <span>{{ r.total_coins }}ღ</span>
+        <aside class="flex-1 bg-white shadow-md rounded-2xl flex flex-col">
+          <div class="flex items-center space-x-4 rounded-t-2xl py-4 px-8 font-bold bg-rose-400 text-white">
+            <img src="../assets/images/home/leaderboard.png">
+            <p>Valentine Ranking Board</p>
+          </div>
+          <div class="tabs">
+            <button
+              v-for="sex in store.state.sexList"
+              :key="'ranking_btn_' + sex.value"
+              @click="rankingsSex = sex.value"
+              :class="{ 'tab-active': rankingsSex == sex.value }"
+              class="tab tab-lg flex-1 tab-bordered">{{ sex.label }}</button>
+          </div>
+          <div class="flex-1 flex flex-col ranking-board">
+            <response-handler :query="rankingsQuery">
+              <template #default>
+                <!-- TODO: add empty state -->
+                <div class="min-h-12 flex my-4 shadow ranking-info" :key="i" v-for="(r, i) in rankingsQuery.data.value?.items">
+                  <div class="w-2/12 bg-black text-white inline-flex items-center justify-center font-bold ranking-placement">
+                    {{ ordinalSuffixOf(i + 1) }}
+                  </div>
+                  <div class="flex-1 py-2 pl-2 inline-flex items-center">
+                    <img
+                      :src="r.sex == 'female' ? queenImg : kingImg"
+                      class="w-2/12 mx-4" :alt="r.sex" />
+                    <span class="font-bold">{{ (r.expand.college_department as PbRecord)?.uid ?? 'Unknown' }}</span>
+                  </div>
+                  <div class="flex w-3/12 px-2 bg-white">
+                    <div class="pl-1 inline-flex items-center space-x-1 py-6">
+                      <icon-coin />
+                      <span>{{ r.total_coins }}ღ</span>
+                    </div>
                   </div>
                 </div>
-              </div>
-            </template>
-
-            <template #error="{ error }">
-              <p>{{ errorMessage(error) }}</p>
-            </template>
-          </response-handler>
-        </div>
-
-        <router-link 
-          :to="{ name: 'rankings-page' }"
-          class="btn w-full normal-case rounded-b-2xl rounded-t-none bg-rose-400 hover:bg-rose-500 border-none">
-          Show all
-        </router-link>
-      </aside>
-    </section>
-
-    <section class="lg:w-2/3 flex flex-col space-y-2 md:space-y-8 lg:pl-8">
-      <div class="bg-white p-12 space-y-2 rounded-2xl shadow-md h-full">
-        <h2 class="text-3xl font-bold">Start writing your message!</h2>
-
-        <send-message-form />
-      </div>
-
-      <div class="hidden md:block w-full">
-        <div class="bg-white p-12 space-y-8 rounded-2xl shadow-md h-full">
-          <div>
-            <h2 class="text-3xl font-bold mb-4">Search Messages</h2>
-            <p class="w-2/3 text-xl text-gray-500">Search your messages or even other's messages for free through the school ID.</p>
+              </template>
+              <template #error="{ error }">
+                <p>{{ errorMessage(error) }}</p>
+              </template>
+            </response-handler>
           </div>
-
-          <search-form>
-            <div class="form-control space-y-4">
-              <div class="flex space-x-2 items-stretch">
-                <input type="text" class="flex-1 input input-lg input-bordered" name="recipient_id" placeholder="6 to 12-digit Student ID (e.g. 200xxxxxxxxx)">
-                <button class="btn bg-rose-600 hover:bg-rose-700 border-0 px-16 h-16">Search</button>
-              </div>
-            </div>
-          </search-form>
+          <router-link
+            :to="{ name: 'rankings-page' }"
+            class="btn w-full normal-case rounded-b-2xl rounded-t-none bg-rose-400 hover:bg-rose-500 border-none">
+            Show all
+          </router-link>
+        </aside>
+      </section>
+      <section class="lg:w-2/3 flex flex-col space-y-2 md:space-y-8 lg:pl-8">
+        <div class="bg-white p-12 space-y-2 rounded-2xl shadow-md h-full">
+          <h2 class="text-3xl font-bold">Start writing your message!</h2>
+          <send-message-form />
         </div>
-      </div>
-
-      <div>
-        <h2 class="text-xl font-bold text-rose-600 mb-3">Recent Messages</h2>
-        <message-tiles 
-          :limit="20" 
-          box-class="w-1/2 md:w-1/3"
-          :messages="recentMessages"
-          prepend />
-      </div>
+        <div class="hidden md:block w-full">
+          <div class="bg-white p-12 space-y-8 rounded-2xl shadow-md h-full">
+            <div>
+              <h2 class="text-3xl font-bold mb-4">Search Messages</h2>
+              <p class="w-2/3 text-xl text-gray-500">Search your messages or even other's messages for free through the school ID.</p>
+            </div>
+            <search-form>
+              <div class="form-control space-y-4">
+                <div class="flex space-x-2 items-stretch">
+                  <input type="text" class="flex-1 input input-lg input-bordered" name="recipient_id" placeholder="6 to 12-digit Student ID (e.g. 200xxxxxxxxx)">
+                  <button class="btn bg-rose-600 hover:bg-rose-700 border-0 px-16 h-16">Search</button>
+                </div>
+              </div>
+            </search-form>
+          </div>
+        </div>
+      </section>
     </section>
+
+    <div class="w-full mt-8">
+      <h2 class="text-xl font-bold text-rose-600 mb-3">Recent Messages</h2>
+      <message-tiles 
+        :limit="12"
+        :messages="recentMessages"
+        prepend />
+    </div>
   </main>
 </template>
 
