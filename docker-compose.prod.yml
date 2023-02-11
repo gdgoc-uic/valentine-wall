@@ -1,4 +1,8 @@
 services:
+  headless_chrome:
+    ports:
+      - '3000:3000'
+
   www:
     container_name: www
     image: lucaslorentz/caddy-docker-proxy:ci-alpine
