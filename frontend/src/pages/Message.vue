@@ -48,7 +48,7 @@
               <delete-dialog @confirm="onMessageDeletion">
                 <template #default="{ openDialog }">
                   <button
-                    v-if="isDeletable"
+                    v-if="message?.user === authState.user?.details"
                     @click="openDialog"
                     class="hover:bg-gray-100 flex-1 lg:flex-none normal-case btn btn-md border-none space-x-2 bg-white text-red-500">
                     <icon-trash class="text-red-500" />
@@ -59,7 +59,7 @@
 
               <report-dialog 
                 :key="reportDialogKey"
-                @success="onReportSuccess"
+                @success="reportDialogKey++"
                 :email="authState.isLoggedIn ? authState.user!.email : undefined" 
                 :message-id="message!.id">
                 <template #default="{ openDialog }">
@@ -71,23 +71,6 @@
                   </button>
                 </template>
               </report-dialog>
-            </div>
-          </div>
-
-          <div v-if="message!.expand.message_replies" class="shadow-lg w-full bg-white rounded-lg p-6 md:p-12">
-            <p class="text-gray-500 mb-2">{{ message!.recipient }} replied</p>
-            <p class="text-2xl">{{ message!.expand.message_replies.toString() }}</p>
-
-            <div class="flex items-end w-full">
-              <delete-dialog
-                v-if="authState.user!.expand.details?.student_id == message!.recipient"
-                @confirm="onMessageReplyDeletion" v-slot="{ openDialog }">
-                <button
-                  @click="openDialog" class="btn btn-error space-x-2 mt-8 self-end flex items-center">
-                  <icon-trash />
-                  <span>Delete</span>
-                </button>
-              </delete-dialog>
             </div>
           </div>
           
@@ -140,17 +123,11 @@ import { Gift } from '../types';
 const { state: authState } = useAuth();
 const router = useRouter();
 const route = useRoute();
-const isDeletable = ref(false);
-const openReportModal = ref(false);
 const revealContent = ref(false);
 const reportDialogKey = ref(1);
 
 function isClientError(err: unknown): err is ClientResponseError {
   return err instanceof ClientResponseError;
-}
-
-function onReportSuccess() {
-  reportDialogKey.value++;
 }
 
 function onShareSuccess(provider: string) {
@@ -160,29 +137,9 @@ function onShareSuccess(provider: string) {
   }
 }
 
-function onShareFailed(err: unknown) {
-  console.error(err);
-}
-
-async function onMessageDeletion(confirmed: boolean, closeDialog: Function) {
+async function onMessageDeletion(confirmed: boolean) {
   if (confirmed) {
     await deleteMessage();
-  }
-  closeDialog();
-}
-
-async function onMessageReplyDeletion(confirmed: boolean, closeDialog: Function) {
-  if (confirmed) {
-    // TODO:
-    // await deleteReply();
-  }
-  closeDialog();
-}
-
-function handleHasReplied(hasReplied: boolean) {
-  // this.message.has_replied = hasReplied;
-  if (hasReplied) {
-    router.go(0);
   }
 }
 
@@ -213,19 +170,6 @@ const { mutateAsync: deleteMessage } = useMutation(
   }
 );
 
-// TODO(backend): add safe guards when deleting message reply
-const { mutateAsync: deleteReply } = useMutation(
-  (id: string) => pb.collection('message_replies').delete(id),
-  {
-    onSuccess() {
-      notify({ type: 'success', text: 'Reply was deleted successfully.' });
-      // this.message.has_replied = false;
-      router.go(0);
-    }
-  }
-);
-
-// const hasGifts = computed(() => )
 const hasGifts = computed(() => message.value?.expand.gifts?.length !== 0);
 const recipient = computed(() => route.params.recipientId ?? ''); 
 const messageId = computed(() => route.params.messageId ?? '');

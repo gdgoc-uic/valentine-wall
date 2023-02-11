@@ -40,12 +40,16 @@
                   <icon-heart />
                 </button>
 
-                <button 
-                  v-if="authState.user.expand.details.student_id === message.recipient"
-                  @click="deleteReply(reply.id)"
-                  class="btn-sm btn btn-circle shadow-md !text-gray-900 bg-white border-gray-200 hover:bg-gray-200">
-                  <icon-trash />
-                </button>
+                <delete-dialog @confirm="(confirmed: boolean) => {if (confirmed){ deleteReply(reply.id)}}">
+                  <template #default="{ openDialog }">
+                    <button 
+                      v-if="message.recipient === authState.user.expand.details.student_id"
+                      @click="openDialog"
+                      class="btn-sm btn btn-circle shadow-md !text-gray-900 bg-white border-gray-200 hover:bg-gray-200">
+                      <icon-trash />
+                    </button>
+                  </template>
+                </delete-dialog>
               </div>
             </div>
           </section>
@@ -56,6 +60,7 @@
 </template>
 
 <script lang="ts" setup>
+import DeleteDialog from '../components/DeleteDialog.vue';
 import IconTrash from '~icons/uil/trash-alt';
 import IconHeart from '~icons/uil/heart';
 import IconReply from '~icons/uil/comment-heart';

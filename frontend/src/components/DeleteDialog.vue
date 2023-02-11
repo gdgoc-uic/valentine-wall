@@ -10,8 +10,8 @@
         <p>Are you sure you want to delete this?</p>
       </slot>
       <template #actions>
-        <button class="btn" @click="$emit('confirm', false, closeDialog);">Cancel</button>
-        <button class="btn btn-error" @click="$emit('confirm', true, closeDialog);">Delete</button>
+        <button class="btn" @click="() => {$emit('confirm', false); closeDialog();}">Cancel</button>
+        <button class="btn btn-error" @click="() => {$emit('confirm', true); closeDialog();}">Delete</button>
       </template>
     </modal>
   </portal>
