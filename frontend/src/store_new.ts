@@ -163,7 +163,7 @@ export function createAuthStore(): Store<AuthState, AuthMethods> {
         // await getters.apiClient.post('/user/logout_callback');
       }
 
-      console.log('LOGOUT');
+      state.user = null!;
       pb.authStore.clear();
     } catch (e) {
       // if (e instanceof APIResponseError) {
