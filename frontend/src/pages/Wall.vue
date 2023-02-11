@@ -115,8 +115,8 @@ async function loadStats(): Promise<void> {
 
     const msgs = pb.collection('messages');
     const [giftsResp, wGiftsResp] = await Promise.all([
-      msgs.getList(1, 1),
-      msgs.getList(1, 1, { filter: 'gifts != "[]"' }) // w/ gifts
+      msgs.getList(1, 1, { filter: `recipient="${recipient.value}"` }),
+      msgs.getList(1, 1, { filter: `recipient="${recipient.value}" && gifts != "[]"` })
     ]);
 
     stats.messages_count = giftsResp.totalItems;
