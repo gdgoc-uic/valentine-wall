@@ -5,7 +5,7 @@
     @update:open="$emit('update:open', $event)"
     with-closing-button>
     <template #modal-box>
-      <div class="bg-white max-w-7xl w-full rounded-xl flex p-8 flex-col">
+      <div class="bg-white max-w-5xl w-full rounded-xl flex p-8 flex-col">
         <div class="relative">
           <h2 class="text-left text-3xl font-bold mb-4">Send a Message</h2>
           <button @click="$emit('update:open', false)"
@@ -15,10 +15,11 @@
         </div>
 
         <div class="flex flex-col-reverse lg:flex-row max-h-[80vh] overflow-y-scroll md:overflow-y-hidden md:max-h-full">
-          <send-message-form 
-            class="flex flex-col lg:w-2/3 lg:pr-8 overflow-y-none lg:overflow-y-auto md:max-h-[80vh]"
-            @success="handleSendSuccess"
-            :existing-recipient="route.params.recipientId?.toString()" />          
+          <div class="flex flex-col lg:w-2/3 lg:pr-8 overflow-y-none lg:overflow-y-auto md:max-h-[80vh]">
+            <send-message-form
+              @success="handleSendSuccess"
+              :existing-recipient="route.params.recipientId?.toString()" />
+          </div>        
 
           <div class="bg-white lg:w-1/3 border shadow-lg rounded-xl p-5">
             <h2 class="text-rose-500 text-2xl font-semibold">Rules</h2>
