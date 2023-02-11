@@ -3,7 +3,6 @@ package main
 import (
 	"archive/zip"
 	"bytes"
-	"context"
 	"fmt"
 	htmlTemplate "html/template"
 	"log"
@@ -12,7 +11,6 @@ import (
 	"sync"
 	"time"
 
-	"github.com/chromedp/chromedp"
 	"github.com/labstack/echo/v5"
 	"github.com/labstack/echo/v5/middleware"
 	vModels "github.com/nedpals/valentine-wall/backend/models"
@@ -36,6 +34,9 @@ func internalError(data any) *apis.ApiError {
 }
 
 var htmlTemplates = &htmlTemplate.Template{}
+var imageRenderer = &ImageRenderer{
+	CacheStore: cache.New(time.Duration(10*time.Minute), time.Duration(5*time.Second)),
+}
 
 func setupRoutes(app *pocketbase.PocketBase) hook.Handler[*core.ServeEvent] {
 	return func(e *core.ServeEvent) error {
@@ -46,24 +47,10 @@ func setupRoutes(app *pocketbase.PocketBase) hook.Handler[*core.ServeEvent] {
 			log.Printf("%d html templates have been loaded\n", len(htmlTemplates.Templates()))
 		}
 
-		imageRenderer := &ImageRenderer{
-			CacheStore: cache.New(time.Duration(10*time.Minute), time.Duration(5*time.Second)),
-		}
-
 		// chrome/browser-based image rendering specific code
 		if len(chromeDevtoolsURL) != 0 {
-			// launch chrome instance
-			log.Printf("connecting chrome via: %s\n", chromeDevtoolsURL)
-			remoteChromeCtx, remoteCtxCancel := chromedp.NewRemoteAllocator(context.Background(), chromeDevtoolsURL)
-			defer remoteCtxCancel()
-
-			chromeCtx, chromeCancel := chromedp.NewContext(remoteChromeCtx)
-			defer chromeCancel()
-
 			// load template
 			log.Println("loading image template...")
-
-			imageRenderer.ChromeCtx = chromeCtx
 			imageRenderer.Template = htmlTemplates.Lookup("message_image.html.tpl")
 		}
 

@@ -1,8 +1,10 @@
 package main
 
 import (
+	"context"
 	"log"
 
+	"github.com/chromedp/chromedp"
 	"github.com/pocketbase/pocketbase"
 	"github.com/pocketbase/pocketbase/core"
 	"github.com/pocketbase/pocketbase/plugins/migratecmd"
@@ -15,6 +17,19 @@ func main() {
 	migratecmd.MustRegister(app, app.RootCmd, &migratecmd.Options{
 		Automigrate: true,
 	})
+
+	// chrome/browser-based image rendering specific code
+	if len(chromeDevtoolsURL) != 0 {
+		// launch chrome instance
+		log.Printf("connecting chrome via: %s\n", chromeDevtoolsURL)
+		remoteChromeCtx, remoteCtxCancel := chromedp.NewRemoteAllocator(context.Background(), chromeDevtoolsURL)
+		defer remoteCtxCancel()
+
+		chromeCtx, chromeCancel := chromedp.NewContext(remoteChromeCtx)
+		defer chromeCancel()
+
+		imageRenderer.ChromeCtx = chromeCtx
+	}
 
 	app.OnRecordAfterConfirmVerificationRequest().Add(func(e *core.RecordConfirmVerificationEvent) error {
 		return onUserVerified(app, e)
