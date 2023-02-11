@@ -126,12 +126,12 @@
   <body>
     <div id="image-preview" class="image-wrapper">
       <div class="content-wrapper">
-        <p class="content">{{ .Content }}</p>
-        <p class="timestamp">Posted on {{ .CreatedAt }}</p>
+        <p class="content">{{ .RawMessage.GetString "content" }}</p>
+        <p class="timestamp">Posted on {{ .RawMessage.Created }}</p>
       </div>
       <div class="gifts">
-        {{ range $i, $giftId := .GiftIDs }}
-          <img src="{{ $.BackendURL }}/renderer_assets/emojis/{{ $giftId }}.svg" class="gift-{{ $i }}" />
+        {{ range $i, $gift := (.RawMessage.Expand).gifts }}
+          <img src="{{ $.BackendURL }}/renderer_assets/emojis/{{ $gift.GetString "uid" }}.svg" class="gift-{{ $i }}" />
         {{ end }}
       </div>
       <img class="logo" src="{{ .BackendURL }}/renderer_assets/images/logo.png" />

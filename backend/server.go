@@ -132,7 +132,10 @@ func setupRoutes(app *pocketbase.PocketBase) hook.Handler[*core.ServeEvent] {
 
 		e.Router.GET("/user_messages/archive", func(c echo.Context) error {
 			authRecord := c.Get(apis.ContextAuthRecordKey).(*models.Record)
-			authDetails := authRecord.Expand()["details"].(*models.Record)
+			authDetails, err := app.Dao().FindRecordById("user_details", authRecord.GetString("details"))
+			if err != nil {
+				return apis.NewForbiddenError("Forbidden", err)
+			}
 
 			// get recipient id
 			recipientId := authDetails.GetString("student_id")
@@ -151,26 +154,30 @@ func setupRoutes(app *pocketbase.PocketBase) hook.Handler[*core.ServeEvent] {
 			encodeDataSSE(rw, map[string]any{"status": "starting"})
 
 			go func() {
-				// TODO:
-				// stats, err := getRecipientStatsBySID(messagesSearchIndex, recipientId)
-				// if err != nil {
-				// 	errChan <- err
-				// 	return
-				// }
+				messages, err := app.Dao().FindRecordsByExpr("messages", dbx.HashExp{"recipient": recipientId})
+				if err != nil {
+					errChan <- err
+					return
+				}
 
-				// encodeDataSSE(rw, map[string]any{
-				// 	"status": "set_file_count",
-				// 	"data": map[string]int{
-				// 		"count": stats.GiftMessagesCount + stats.MessagesCount,
-				// 	},
-				// })
+				encodeDataSSE(rw, map[string]any{
+					"status": "set_file_count",
+					"data": map[string]int{
+						"count": len(messages),
+					},
+				})
 
-				_, loaded := zipFiles.LoadAndDelete(recipientId)
+				_, loaded := zipFiles.LoadAndDelete(authRecord.Id)
 				if !loaded {
-					messages, err := app.Dao().FindRecordsByExpr("messages", dbx.HashExp{"recipient": recipientId})
-					if err != nil {
-						errChan <- err
-						return
+					errs := app.Dao().ExpandRecords(messages, []string{"user", "gifts"}, func(relCollection *models.Collection, relIds []string) ([]*models.Record, error) {
+						return app.Dao().FindRecordsByIds(relCollection.Name, relIds)
+					})
+
+					if len(errs) != 0 {
+						for i := range errs {
+							errChan <- errs[i]
+							return
+						}
 					}
 
 					zipArchive := &bytes.Buffer{}
@@ -200,21 +207,13 @@ func setupRoutes(app *pocketbase.PocketBase) hook.Handler[*core.ServeEvent] {
 
 					// TODO: generate summary
 					passivePrintError(zipWriter.Close())
-					zipFiles.Store(recipientId, zipArchive.Bytes())
+					zipFiles.Store(authRecord.Id, zipArchive.Bytes())
 				}
-
-				// TODO: add archive stats
-				// if _, err := db.NamedExec(
-				// 	"INSERT INTO archived_stats (email, total) VALUES (:email, :total) ON CONFLICT (email) DO NOTHING",
-				// 	&ArchiveStats{gotUser.Email, stats.GiftMessagesCount + stats.MessagesCount},
-				// ); err != nil {
-				// 	passivePrintError(err)
-				// }
 
 				encodeDataSSE(rw, map[string]any{
 					"status": "done",
 					"data": map[string]string{
-						"endpoint": "/user_messages/download_archive",
+						"endpoint": "/user_messages/download_archive/" + authRecord.Id,
 					},
 				})
 
@@ -224,9 +223,11 @@ func setupRoutes(app *pocketbase.PocketBase) hook.Handler[*core.ServeEvent] {
 			for {
 				select {
 				case err := <-errChan:
+					apiErr := apis.NewApiError(http.StatusInternalServerError, err.Error(), err)
+
 					encodeDataSSE(rw, map[string]any{
 						"status": "error",
-						"data":   map[string]string{"message": err.Error()},
+						"data":   apiErr,
 					})
 					<-connCloseChan
 				case <-connCloseChan:
@@ -237,23 +238,20 @@ func setupRoutes(app *pocketbase.PocketBase) hook.Handler[*core.ServeEvent] {
 			}
 		}, apis.RequireRecordAuth("users"))
 
-		e.Router.GET("/user_messages/download_archive", func(c echo.Context) error {
-			authRecord := c.Get(apis.ContextAuthRecordKey).(*models.Record)
-			authDetails := authRecord.Expand()["details"].(*models.Record)
-
+		e.Router.GET("/user_messages/download_archive/:userId", func(c echo.Context) error {
 			// get email
-			recipientId := authDetails.GetString("student_id")
-			gotZip, loaded := zipFiles.LoadAndDelete(recipientId)
+			userId := c.PathParam("userId")
+			gotZip, loaded := zipFiles.LoadAndDelete(userId)
 			if !loaded {
 				return apis.NewNotFoundError("Not found", nil)
 			}
 
-			zipName := fmt.Sprintf("archive_%s.zip", recipientId)
+			zipName := fmt.Sprintf("archive_%s.zip", userId)
 			c.Response().Header().Set("Content-Type", "application/zip")
 			c.Response().Header().Set("Content-Disposition", fmt.Sprintf("attachment; filename=%s", zipName))
 			_, err := c.Response().Write(gotZip.([]byte))
 			return err
-		}, apis.RequireRecordAuth("users"))
+		})
 
 		e.Router.GET("/user_auth/callback", func(c echo.Context) error {
 			// collection :=

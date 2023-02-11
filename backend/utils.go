@@ -11,6 +11,9 @@ import (
 )
 
 func passivePrintError(err error) {
+	if err == nil {
+		return
+	}
 	log.Println(err.Error())
 }
 
