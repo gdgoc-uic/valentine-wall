@@ -46,12 +46,11 @@ import IconSetupWelcome from '~icons/home-icons/setup_welcome';
 import { pb } from '../client';
 import { reactive, ref, watch } from 'vue';
 import { useAuth, useStore } from '../store_new';
-import { UserDetails } from '../types';
 import { useRouter } from 'vue-router';
 
 const router = useRouter();
 const store = useStore();
-const { state: {user}, methods: {logout} } = useAuth();
+const { state, methods: {logout} } = useAuth();
 
 const submitDetails = reactive<{
   student_id: string | null
@@ -112,14 +111,14 @@ async function submitSetupForm() {
       throw new Error('Access to the service is denied.');
     }
 
-    const userDetails = await pb.collection('user_details').create({
+    await pb.collection('user_details').create({
       ...newSubmitDetails,
-      user: user!.id
+      user: state.user!.id
     });
 
-    user!.expand.details = userDetails as UserDetails;
     notify({ type: 'success', text: 'Profile saved successfully.' });
     store.state.isSetupModalOpen = false;
+    router.go(0);
   } catch(e) {
     catchAndNotifyError(e);
   }
