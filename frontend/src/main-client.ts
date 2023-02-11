@@ -5,6 +5,7 @@ import Notifications from 'notiwind'
 import { createApp } from './main'
 // import { analytics } from './firebase'
 import { logEvent, setCurrentScreen } from 'firebase/analytics'
+import 'floating-vue/dist/style.css'
 
 const { app, router, authStore } = createApp();
 const clientApp = app.use(Notifications);
