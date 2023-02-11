@@ -50,7 +50,7 @@ const message = inject<Ref<PbRecord>>('message')!;
 const { state: authState } = useAuth();
 const counter = ref<InstanceType<typeof ContentCounter> | null>(null);
 const content = ref('');
-const shouldSend = computed(() => counter.value?.shouldSend(content.value) ?? false);
+const shouldSend = computed(() => counter.value?.shouldSend);
 
 const { mutate: submitReply, isLoading: isSending } = useMutation(() => {
   return pb.collection('message_replies').create({

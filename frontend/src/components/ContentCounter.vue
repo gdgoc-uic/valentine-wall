@@ -1,5 +1,5 @@
 <template>
-  <p class="text-lg" :class="[this.charLeft <= 0 ? 'text-red-600' : 'text-gray-500']">{{ charLeft }}</p>
+  <p class="text-lg" :class="[charLeft <= 0 ? 'text-red-600' : 'text-gray-500']">{{ charLeft }}</p>
 </template>
 
 <script lang="ts">
@@ -22,12 +22,11 @@ export default {
     charLeft() {
       return this.getCharLeft(this.content);
     },
+    shouldSend(): boolean {
+      return this.charLeft != this.max && this.charLeft >= 0; 
+    }
   },
   methods: {
-    shouldSend(content: string): boolean {
-      const charLeft = this.getCharLeft(content);
-      return charLeft != this.max && charLeft >= 0;
-    },
     getCharLeft(content: string): number {
       const linesMinusOne =  (content.match(/\n/g) ?? '').length;
       const actualContentCount = (content.match(/[^\n]/g) ?? '').length;
