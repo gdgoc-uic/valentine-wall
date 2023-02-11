@@ -19,12 +19,11 @@ services:
       - caddy
     labels:
       caddy: ${BASE_DOMAIN}
-      caddy.0_tls.dns: cloudflare
-      caddy.1_redir: "/pb /pb/_/"
-      caddy.2_redir: "/pb/_ /pb/_/"
-      caddy.3_handle_path: /pb/*
-      caddy.3_handle_path.0_rewrite: "/pb/* /{path}"
-      caddy.3_handle_path.1_reverse_proxy: "{{upstreams 8090}}"
+      caddy.0_redir: "/pb /pb/_/"
+      caddy.1_redir: "/pb/_ /pb/_/"
+      caddy.2_handle_path: /pb/*
+      caddy.2_handle_path.0_rewrite: "/pb/* /{path}"
+      caddy.2_handle_path.1_reverse_proxy: "{{upstreams 8090}}"
 
     restart: always
 
