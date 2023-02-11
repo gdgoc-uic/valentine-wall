@@ -2,8 +2,7 @@
   <div class="flex-col">
     <div>
       <h2 class="text-center text-2xl mb-5">Terms and Conditions</h2>
-      <div class="bg-gray-200 p-8 rounded-md max-h-[30rem] overflow-y-scroll overflow-x-hidden whitespace-pre-wrap">
-        {{ tc }}
+      <div v-html="tc" class="bg-gray-200 p-8 rounded-md max-h-[30rem] overflow-y-scroll overflow-x-hidden whitespace-pre-wrap">
       </div>
       <p class="mt-4">By clicking "Agree", you have agreed to the terms and conditions of this site. Should you violate any of the text above will result to account termination.</p>
     </div>
