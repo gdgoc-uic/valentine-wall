@@ -29,7 +29,7 @@ export default defineConfig({
       mode: [Mode.HTML, Mode.VUE]
     }),
     ...(process.env.NODE_ENV == 'production' ? [
-      vitePluginFaviconsInject("./src/assets/images/icon.png")
+      vitePluginFaviconsInject("./src/assets/images/icon.png", {}, { failGraciously: true })
     ] : [])
   ]
 })
