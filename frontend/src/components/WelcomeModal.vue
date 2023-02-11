@@ -7,7 +7,7 @@
           <div class="w-1/3 md:w-full bg-rose-400 rounded-full p-4 md:p-8 mr-8 md:mr-0">
             <icon-welcome-feature-1 class="w-full h-full text-white" />
           </div>
-          <p>Post, confess, or share your thoughts to your fellow ignacian anonymously!</p>
+          <p>Post, confess, or share your thoughts to your fellow Ignacian Marian anonymously!</p>
         </div>
         <div class="p-3 w-full lg:w-1/3 flex flex-row md:flex-col items-center justify-center md:justify-start md:space-y-4 text-left md:text-center">
           <div class="w-1/3 md:w-full bg-blue-400 rounded-full p-4 md:p-8 mr-8 md:mr-0">

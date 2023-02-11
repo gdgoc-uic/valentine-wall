@@ -7,7 +7,7 @@
           <p class="text-gray-500 text-lg font-bold pb-4">Send, confess, and share your feelings anonymously!</p>
           <login-button v-if="!authState.isLoggedIn" class="btn-lg" />
         </div>
-        <aside class="flex-1 bg-white shadow-md rounded-2xl flex flex-col">
+        <aside class="min-h-[40rem] bg-white shadow-md rounded-2xl flex flex-col">
           <div class="flex items-center space-x-4 rounded-t-2xl py-4 px-8 font-bold bg-rose-400 text-white">
             <img src="../assets/images/home/leaderboard.png">
             <p>Valentine Ranking Board</p>
@@ -55,9 +55,36 @@
         </aside>
       </section>
       <section class="lg:w-2/3 flex flex-col space-y-2 md:space-y-8 lg:pl-8">
-        <div class="bg-white p-12 space-y-2 rounded-2xl shadow-md h-full">
-          <h2 class="text-3xl font-bold">Start writing your message!</h2>
-          <send-message-form />
+        <div class="bg-white p-12 space-y-2 rounded-2xl shadow-md">
+          <div v-if="authState.isLoggedIn">
+            <h2 class="text-3xl font-bold">Start writing your message!</h2>
+            <send-message-form />
+          </div>
+          <div v-else>
+            <div class="flex flex-col">
+              <h2 class="text-2xl lg:text-4xl text-center font-bold mb-4">Welcome to UIC Valentine Wall!</h2>
+              <div class="flex flex-col text-lg md:text-2xl lg:text-lg">
+                <div class="p-3 w-full flex flex-row items-center justify-center text-left">
+                  <div class="w-1/3 md:w-1/4 bg-rose-400 rounded-full p-4 mr-8">
+                    <icon-welcome-feature-1 class="w-full h-full text-white" />
+                  </div>
+                  <p>Post, confess, or share your thoughts to your fellow Ignacian Marian anonymously!</p>
+                </div>
+                <div class="p-3 w-full flex flex-row items-center justify-center text-left">
+                  <div class="w-1/3 md:w-1/4 bg-blue-400 rounded-full p-4 mr-8">
+                    <icon-welcome-feature-2 class="w-full h-full text-rose-100" />
+                  </div>
+                  <p>No money? No problem! You can also send virtual gifts alongside your message!</p>
+                </div>
+                <div class="p-3 w-full flex flex-row items-center justify-center text-left">
+                  <div class="w-1/3 md:w-1/4 bg-orange-300 rounded-full p-4 mr-8">
+                    <icon-welcome-feature-3 class="w-full h-full text-white" />
+                  </div>
+                  <p>Discover many more messages sent by others through our public wall!</p>
+                </div>
+              </div>
+            </div>
+          </div>
         </div>
         <div class="hidden md:block w-full">
           <div class="bg-white p-12 space-y-8 rounded-2xl shadow-md h-full">
@@ -95,7 +122,6 @@ import queenImg from '../assets/images/home/queen.png';
 import SendMessageForm from '../components/SendMessageForm.vue';
 import IconCoin from '~icons/twemoji/coin';
 import SearchForm from '../components/SearchForm.vue';
-import IconSend from '~icons/uil/message';
 import LoginButton from '../components/LoginButton.vue';
 import ResponseHandler from '../components/ResponseHandler2.vue';
 import MessageTiles from '../components/MessageTiles.vue';
@@ -104,6 +130,11 @@ import { Record as PbRecord, UnsubscribeFunc } from 'pocketbase';
 import { onMounted, onUnmounted, ref, reactive } from 'vue';
 import { useQuery } from '@tanstack/vue-query';
 import { useAuth, useStore } from '../store_new';
+
+// welcome modal but in home page
+import IconWelcomeFeature1 from '~icons/home-icons/welcome_feature_1';
+import IconWelcomeFeature2 from '~icons/home-icons/welcome_feature_2';
+import IconWelcomeFeature3 from '~icons/home-icons/welcome_feature_3';
 
 function ordinalSuffixOf(i: number): string {
   var j = i % 10,
