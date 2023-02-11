@@ -6,7 +6,6 @@ import (
 	"log"
 	"os"
 	"path/filepath"
-	"regexp"
 	"strconv"
 
 	goaway "github.com/TwiN/go-away"
@@ -42,15 +41,6 @@ func loadCustomProfanityDetector(customDictionary *CustomProfanityDictionary) *g
 }
 
 func init() {
-	log.Println("compiling email regex...")
-	{
-		var err error
-		emailRegex, err = regexp.Compile(`\A[a-z]+_([0-9]+)@uic.edu.ph\z`)
-		if err != nil {
-			log.Panicln(err)
-		}
-	}
-
 	// if err := godotenv.Load("./.server.env"); err != nil {
 	// 	log.Panicln(err)
 	// }
@@ -103,9 +93,5 @@ func init() {
 
 	if gotChromeDevtoolsURL, exists := os.LookupEnv("CHROME_DEVTOOLS_URL"); exists {
 		chromeDevtoolsURL = gotChromeDevtoolsURL
-	}
-
-	if gotReadOnly, exists := os.LookupEnv("READ_ONLY"); exists {
-		readOnly = gotReadOnly == "true"
 	}
 }
