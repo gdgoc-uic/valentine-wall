@@ -30,7 +30,7 @@ services:
       - TWITTER_CLIENT_ID
       - TWITTER_CLIENT_SECRET
       - TWITTER_CALLBACK_URL
-      - CHROME_DEVTOOLS_URL=ws://headless_chrome:3000
+      - CHROME_DEVTOOLS_URL=ws://headless_chrome:5000
       - READ_ONLY
     networks:
       - backend

@@ -1,7 +1,7 @@
 services:
   headless_chrome:
     ports:
-      - '3000:3000'
+      - '5000:3000'
 
   www:
     container_name: www
