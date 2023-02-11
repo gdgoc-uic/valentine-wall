@@ -101,7 +101,7 @@ func setupRoutes(app *pocketbase.PocketBase) hook.Handler[*core.ServeEvent] {
 			return c.JSON(200, gifts)
 		})
 
-		e.Router.GET("/messages/{messageId}/image", func(c echo.Context) error {
+		e.Router.GET("/messages/:messageId/image", func(c echo.Context) error {
 			id := c.PathParam("messageId")
 			message, err := app.Dao().FindRecordById("messages", id)
 			if err != nil {
