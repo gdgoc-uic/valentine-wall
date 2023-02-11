@@ -3,7 +3,7 @@
     <div class="text-center flex flex-col items-center justify-center mb-4">
       <div class="pt-8 pb-6">
         <div v-if="recipient">
-          <p class="text-3xl mb-2 text-gray-500">Messages for </p>
+          <p class="text-2xl mb-2 text-gray-500">Messages for </p>
           <div class="indicator">
             <div v-if="totalCount != 0" class="indicator-item badge">{{ totalCount }}</div>
             <h2 class="text-5xl lg:text-6xl font-bold text-rose-600">{{ recipient }}</h2>
@@ -13,6 +13,14 @@
       </div>
     </div>
     <client-only>
+      <div 
+        v-if="authState.isLoggedIn && recipient" 
+        class="max-w-3xl bg-white p-8 mb-8 mx-auto w-full space-y-2 rounded-2xl shadow-md h-full">
+        <h2 class="text-3xl font-bold text-center">Send a message</h2>
+
+        <send-message-form :existing-recipient="recipient" />
+      </div>
+      
       <div class="max-w-7xl mx-auto w-full bg-white rounded-xl shadow-lg flex justify-center">
         <div 
           v-if="recipient && authState.isLoggedIn && authState.user!.expand.details.student_id === recipient" 
@@ -70,6 +78,7 @@
 </template>
 
 <script lang="ts" setup>
+import SendMessageForm from '../components/SendMessageForm.vue';
 import ClientOnly from '../components/ClientOnly.vue';
 import ResponseHandler from '../components/ResponseHandler2.vue';
 import PaginationLoadMoreButton from '../components/PaginationLoadMoreButton.vue';
