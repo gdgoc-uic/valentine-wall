@@ -18,12 +18,10 @@ type CustomProfanityDictionary struct {
 	FalseNegatives []string
 }
 
-var emailRegex *regexp.Regexp
-
 // uninit'ed variables
 var baseUrl string
 var chromeDevtoolsURL string
-var readOnly = false
+var frontendUrl = "http://localhost:3000"
 
 // TODO: add custom dictionary for bisaya and tagalog
 var profanityDetector *goaway.ProfanityDetector
@@ -69,6 +67,10 @@ func init() {
 		baseUrl = gotBaseUrl
 	} else {
 		baseUrl = fmt.Sprintf("http://localhost:%d", serverPort)
+	}
+
+	if gotFrontendUrl, exists := os.LookupEnv("FRONTEND_URL"); exists {
+		frontendUrl = gotFrontendUrl
 	}
 
 	if gotTargetEnv, exists := os.LookupEnv("ENV"); exists {

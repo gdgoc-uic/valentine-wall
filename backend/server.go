@@ -256,7 +256,9 @@ func setupRoutes(app *pocketbase.PocketBase) hook.Handler[*core.ServeEvent] {
 		e.Router.GET("/user_auth/callback", func(c echo.Context) error {
 			// collection :=
 			tpl := htmlTemplates.Lookup("auth_callback.html.tpl")
-			return tpl.Execute(c.Response(), nil)
+			return tpl.Execute(c.Response(), map[string]any{
+				"FrontendURL": frontendUrl,
+			})
 		})
 
 		return nil
