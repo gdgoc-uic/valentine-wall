@@ -11,7 +11,7 @@ export function toNow(dt: Date): string {
   return dayjs(dt).toNow(true);
 }
 
-export function fromNow(dt: Date): string {
+export function fromNow(dt: Date | string): string {
   return dayjs(dt).fromNow();
 }
 

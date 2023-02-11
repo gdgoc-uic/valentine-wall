@@ -94,7 +94,7 @@
           <reply-thread v-if="
             authState.isLoggedIn && (
               message!.recipient == authState.user!.expand.details.student_id || 
-              message!.user == authState.user.id
+              (message!.user == authState.user.id && message!.replies_count > 0)
             )" />
         </template>
 
@@ -237,12 +237,7 @@ const query = useQuery(
     {
       expand: 'gifts,message_replies(message)'
     }
-  ),
-  {
-    onSuccess(d) {
-      console.log(d);
-    }
-  }
+  )
 );
 
 const message = query.data;

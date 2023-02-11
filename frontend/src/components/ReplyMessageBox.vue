@@ -35,7 +35,6 @@
 <script lang="ts" setup>
 import IconReplyLock from '~icons/uil/comment-lock';
 import IconSend from '~icons/uil/message';
-import IconReply from '~icons/uil/comment-heart';
 import ContentCounter from './ContentCounter.vue';
 import { logEvent } from '@firebase/analytics';
 // import { analytics } from '../firebase';
@@ -56,7 +55,7 @@ const shouldSend = computed(() => counter.value?.shouldSend(content.value) ?? fa
 const { mutate: submitReply, isLoading: isSending } = useMutation(() => {
   return pb.collection('message_replies').create({
     content: content.value,
-    sender: authState.user.id,
+    sender: authState.user.details,
     message: message.value.id
   })
 }, {

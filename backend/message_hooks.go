@@ -205,7 +205,7 @@ func onAddMessageReply(dao *daos.Dao, e *core.RecordCreateEvent) error {
 		passivePrintError(dao.SaveRecord(msg))
 	}
 
-	return createTransactionFromUser(dao, e.Record.GetString("sender"), sendPrice, fmt.Sprintf("Reply message %s", e.Record.Id))
+	return createTransactionFromUser(dao, user.Id, sendPrice, fmt.Sprintf("Reply message %s", e.Record.Id))
 }
 
 func onRemoveMessageReply(dao *daos.Dao, e *core.RecordDeleteEvent) error {
