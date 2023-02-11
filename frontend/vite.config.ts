@@ -6,7 +6,7 @@ import { FileSystemIconLoader } from 'unplugin-icons/loaders'
 import checker from 'vite-plugin-checker'
 import { isoImport } from 'vite-plugin-iso-import'
 import markdown, { Mode } from 'vite-plugin-markdown'
-import vitePluginFaviconsInject from 'vite-plugin-favicon-inject'
+import vitePluginFaviconsInject from 'vite-plugin-favicons-inject'
 
 // https://vitejs.dev/config/
 export default defineConfig({
