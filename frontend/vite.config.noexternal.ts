@@ -1,5 +1,5 @@
 import { defineConfig } from 'vite';
-import config from './vite.config';
+import config from './vite.config.server';
 
 export default Object.assign(config, {
     ssr: {

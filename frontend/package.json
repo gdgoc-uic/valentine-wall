@@ -6,7 +6,7 @@
     "build": "npm run build:client && npm run build:server",
     "build:noExternal": "npm run build:client && npm run build:server:noExternal",
     "build:client": "vite build --outDir dist/client --ssrManifest",
-    "build:server": "vite build --outDir dist/server --ssr src/main-server.js",
+    "build:server": "vite build --config vite.config.server.ts --outDir dist/server --ssr src/main-server.js",
     "build:server:noExternal": "vite build --config vite.config.noexternal.ts --outDir dist/server --ssr src/main-server.js",
     "generate": "vite build --ssrManifest --outDir dist/static && npm run build:server && node prerender",
     "serve": "node server",
