@@ -6,7 +6,7 @@ import { FileSystemIconLoader } from 'unplugin-icons/loaders'
 import checker from 'vite-plugin-checker'
 import { isoImport } from 'vite-plugin-iso-import'
 import markdown, { Mode } from 'vite-plugin-markdown'
-// import { ViteFaviconsPlugin } from 'vite-plugin-favicon2'
+import vitePluginFaviconsInject from 'vite-plugin-favicon-inject'
 
 // https://vitejs.dev/config/
 export default defineConfig({
@@ -28,10 +28,8 @@ export default defineConfig({
     markdown({
       mode: [Mode.HTML, Mode.VUE]
     }),
-    // ...(process.env.NODE_ENV == 'production' ? [
-    //   ViteFaviconsPlugin({
-    //     logo: "src/assets/images/icon.png"
-    //   })
-    // ] : [])
+    ...(process.env.NODE_ENV == 'production' ? [
+      vitePluginFaviconsInject("./src/assets/images/icon.png")
+    ] : [])
   ]
 })
