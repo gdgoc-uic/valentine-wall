@@ -51,17 +51,26 @@ const props = defineProps({
 
 const messageList = ref<any[]>([]);
 
-function applyChanges(newMessages: any[]) {
-  if (props.replace) {
-    messageList.value = processResults(newMessages);
-    return;
-  } else if (props.limit && (messageList.value.length + newMessages.length) > props.limit) {
+function applyChanges(newMsgs: any[]) {
+  let newMessages = newMsgs;
+  if (props.limit && (messageList.value.length + newMessages.length), props.limit) {
     // limit list to (limit - nm.len)
-    messageList.value = messageList.value.splice(0, props.limit - newMessages.length);
+    if (messageList.value.length === 0 && newMessages.length > props.limit) {
+      newMessages = newMessages.slice(0, props.limit);
+    } else {
+      messageList.value = messageList.value.slice(0, props.limit);
+    }
+  }
+
+  const processed = processResults(newMessages);
+
+  if (props.replace) {
+    messageList.value = processed;
+    return;
   } else if (props.prepend) {
-    messageList.value.unshift(...processResults(newMessages));
+    messageList.value.unshift(...processed);
   } else {
-    messageList.value.push(...processResults(newMessages));
+    messageList.value.push(...processed);
   }
 }
 
