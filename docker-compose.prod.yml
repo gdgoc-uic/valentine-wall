@@ -1,12 +1,4 @@
 services:
-  database:
-    networks:
-      - caddy
-    restart: always
-
-  postal_office:
-    restart: always
-
   www:
     container_name: www
     image: lucaslorentz/caddy-docker-proxy:ci-alpine
@@ -25,14 +17,14 @@ services:
   backend:
     networks:
       - caddy
-    environment:
-      - DATABASE_URL=postgres://${POSTGRES_USER}:${POSTGRES_PASSWORD}@database:5432/${DATABASE_PREFIX}_${ENV}
-      - NEW_RELIC_APP_NAME=${NEW_RELIC_APP_NAME}
-      - NEW_RELIC_APP_LICENSE=${NEW_RELIC_APP_LICENSE}
     labels:
       caddy: ${BASE_DOMAIN}
-      caddy.handle_path: /api/*
-      caddy.handle_path.0_reverse_proxy: "{{upstreams 4000}}"
+      caddy.0_redir: "/pb /pb/_/"
+      caddy.1_redir: "/pb/_ /pb/_/"
+      caddy.2_handle_path: /pb/*
+      caddy.2_handle_path.0_rewrite: "/pb/* /{path}"
+      caddy.2_handle_path.1_reverse_proxy: "{{upstreams 8090}}"
+
     restart: always
 
   frontend:

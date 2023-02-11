@@ -2,43 +2,13 @@ package main
 
 import (
 	"bytes"
-	"text/template"
-	"time"
+	"html/template"
+	"log"
+	"net/mail"
 
-	poClient "github.com/nedpals/valentine-wall/postal_office/client"
-	poTypes "github.com/nedpals/valentine-wall/postal_office/types"
+	"github.com/pocketbase/pocketbase/models/settings"
+	"github.com/pocketbase/pocketbase/tools/mailer"
 )
-
-type MailSenderContext struct {
-	Email       string
-	RecipientID string
-	MessageID   string
-	FrontendURL string
-}
-
-func newSendJob(cl *poClient.Client, ms EmailSender, toRecipient string, uids ...string) (string, error) {
-	gotMsgPayload, err := ms.Message(toRecipient)
-	if err != nil {
-		return "", err
-	}
-
-	uid := ""
-	if len(uids) != 0 {
-		uid = uids[0]
-	}
-
-	return cl.NewJob(&poTypes.NewJobArgs{
-		Type:       poTypes.JobSend,
-		TimeToSend: ms.TimeToSend(),
-		Payload:    gotMsgPayload,
-		UniqueID:   uid,
-	})
-}
-
-type EmailSender interface {
-	Message(toRecipientEmail string) (*poTypes.MailMessage, error)
-	TimeToSend() time.Duration
-}
 
 type TemplatedMailSender struct {
 	subjectTemplate            *template.Template
@@ -46,20 +16,10 @@ type TemplatedMailSender struct {
 	template                   *template.Template
 	emailName                  string
 	subject                    string
-	timeToSend                 time.Duration
-	data                       interface{}
+	data                       any
 }
 
-func newTemplatedMailSender(tmpl *template.Template, emailName, subject string, timeToSend time.Duration) *TemplatedMailSender {
-	return &TemplatedMailSender{
-		template:   tmpl,
-		emailName:  emailName,
-		subject:    subject,
-		timeToSend: timeToSend,
-	}
-}
-
-func (t *TemplatedMailSender) Message(toRecipientEmail string) (*poTypes.MailMessage, error) {
+func (t *TemplatedMailSender) Message(meta settings.MetaConfig, toRecipientEmail string) (*mailer.Message, error) {
 	if !t.hasSubjectTemplateCompiled {
 		var err error
 		t.subjectTemplate, err = template.New("subject").Parse(t.subject)
@@ -77,16 +37,15 @@ func (t *TemplatedMailSender) Message(toRecipientEmail string) (*poTypes.MailMes
 		return nil, err
 	}
 
-	return &poTypes.MailMessage{
-		Name:    t.emailName,
-		ToEmail: toRecipientEmail,
+	return &mailer.Message{
+		From: mail.Address{
+			Address: meta.SenderAddress,
+			Name:    meta.SenderName,
+		},
+		To:      mail.Address{Address: toRecipientEmail},
 		Subject: subjectBuf.String(),
-		Content: contentBuf.String(),
+		HTML:    contentBuf.String(),
 	}, nil
-}
-
-func (t *TemplatedMailSender) TimeToSend() time.Duration {
-	return t.timeToSend
 }
 
 func (t *TemplatedMailSender) With(data interface{}) *TemplatedMailSender {
@@ -94,9 +53,35 @@ func (t *TemplatedMailSender) With(data interface{}) *TemplatedMailSender {
 		template:                   t.template,
 		emailName:                  t.emailName,
 		subject:                    t.subject,
-		timeToSend:                 t.timeToSend,
 		subjectTemplate:            t.subjectTemplate,
 		hasSubjectTemplateCompiled: t.hasSubjectTemplateCompiled,
 		data:                       data,
+	}
+}
+
+func newTemplatedMailSender(tmpl *template.Template, emailName, subject string) *TemplatedMailSender {
+	return &TemplatedMailSender{
+		template:  tmpl,
+		emailName: emailName,
+		subject:   subject,
+	}
+}
+
+type emailTemplatesList struct {
+	reply   *TemplatedMailSender
+	message *TemplatedMailSender
+	welcome *TemplatedMailSender
+}
+
+var emailTemplates emailTemplatesList
+
+func init() {
+	log.Println("loading email templates...")
+	rawEmailTemplates := template.Must(template.ParseGlob("./templates/mail/*.txt.tpl"))
+	log.Printf("%d email templates have been loaded\n", len(rawEmailTemplates.Templates()))
+	emailTemplates = emailTemplatesList{
+		reply:   newTemplatedMailSender(rawEmailTemplates.Lookup("reply.txt.tpl"), "Mr. Kupido", "Your message has received a reply!"),
+		message: newTemplatedMailSender(rawEmailTemplates.Lookup("message.txt.tpl"), "Mr. Kupido", "You received a new message!"),
+		welcome: newTemplatedMailSender(rawEmailTemplates.Lookup("welcome.txt.tpl"), "UIC Valentine Wall", "Welcome to UIC Valentine Wall 2023!"),
 	}
 }

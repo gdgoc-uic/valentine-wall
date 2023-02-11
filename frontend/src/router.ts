@@ -1,5 +1,4 @@
 import { createRouter as createVueRouter, createWebHistory, createMemoryHistory, RouteLocationNormalizedLoaded, RouteRecordRaw } from 'vue-router';
-import { expandAPIEndpoint } from './client';
 
 const pageSuffix = 'UIC Valentine Wall';
 const pageSeparator = ' | ';
@@ -68,7 +67,8 @@ const routes: RouteRecordRaw[] = [
       metaTags: (route: RouteLocationNormalizedLoaded) => [
         {
           name: 'og:image',
-          content: expandAPIEndpoint(`/messages/${route.params.recipientId}/${route.params.messageId}?image`)
+          // content: expandAPIEndpoint(`/messages/${route.params.recipientId}/${route.params.messageId}?image`)
+          content: ''
         },
         {
           name: 'og:image:width',
@@ -128,24 +128,6 @@ const routes: RouteRecordRaw[] = [
         }
       },
       {
-        name: 'settings-cheques-section',
-        path: 'transactions',
-        component: () => import('./pages/settings/Cheques.vue'),
-        meta: {
-          pageTitle: 'Cheques | Settings',
-          label: 'Cheques'
-        }
-      },
-      {
-        name: 'settings-invitations-section',
-        path: 'invitations',
-        component: () => import('./pages/settings/Invitations.vue'),
-        meta: {
-          pageTitle: 'Invitations | Settings',
-          label: 'Invitations'
-        }
-      },
-      {
         name: 'settings-delete-account-section',
         path: 'delete-account',
         component: () => import('./pages/settings/DeleteAccount.vue'),
@@ -155,14 +137,6 @@ const routes: RouteRecordRaw[] = [
         }
       }
     ]
-  },
-  {
-    name: 'invitation-page',
-    path: '/invite/:invitationCode',
-    component: () => import('./pages/Invitation.vue'),
-    meta: {
-      disableAppHeader: true
-    }
   }
 ];
 

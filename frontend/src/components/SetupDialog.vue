@@ -1,8 +1,8 @@
 <template>
   <modal 
-    :open="$store.state.isSetupModalOpen" 
-    @update:open="commit('SET_SETUP_MODAL_OPEN', $event)"
-    modal-box-class="max-w-[70rem] min-h-[80%]">
+    :open="store.state.isSetupModalOpen" 
+    @update:open="store.state.isSetupModalOpen = $event"
+    modal-box-class="max-w-[70rem] min-h-[80%] h-full">
     <div class="flex flex-col items-center h-full">
       <ul class="steps steps-horizontal text-lg">
         <li @click="step = 0" :class="{ 'step-primary': step >= 0 }" class="step">Welcome</li>
@@ -13,7 +13,7 @@
         <div class="flex flex-col h-full w-full">
           <div v-show="step == 0" class="h-full w-full flex flex-col">
             <div class="flex flex-col md:flex-row flex-1">
-              <div class="flex flex-col text-center lg:text-right justify-center space-y-4 md:w-2/3">
+              <div class="flex flex-col text-center lg:text-right justify-center space-y-4 pr-24 md:w-2/3">
                 <h2 class="text-3xl md:text-7xl font-bold">Welcome to UIC Valentine Wall!</h2>
                 <p class="text-3xl">Please click "next" to get started</p>
               </div>
@@ -26,7 +26,7 @@
           <basic-information-step
             v-show="step == 1"
             @success="onInfoFormSuccess"
-            @error="onInfoFormError"
+            @error="catchAndNotifyError"
             @proceed="onHandleMove" />
           <terms-and-conditions-step
             v-show="step == 2"
@@ -37,87 +37,90 @@
   </modal>
 </template>
 
-<script lang="ts">
-import { APIResponseError } from '../client';
-import { catchAndNotifyError } from '../notify';
+<script lang="ts" setup>
+import { catchAndNotifyError, notify } from '../notify';
 import Modal from './Modal.vue';
 import BasicInformationStep from './SetupDialog/BasicInformationStep.vue';
 import TermsAndConditionsStep from './SetupDialog/TermsAndConditionsStep.vue';
 import IconSetupWelcome from '~icons/home-icons/setup_welcome';
+import { pb } from '../client';
+import { reactive, ref, watch } from 'vue';
+import { useAuth, useStore } from '../store_new';
+import { useRouter } from 'vue-router';
 
-export default {
-  components: { 
-    Modal, 
-    BasicInformationStep,
-    TermsAndConditionsStep,
-    IconSetupWelcome
-  },
-  data() {
-    return {
-      submitDetails: {
-        associated_id: null as unknown as string,
-        department: null as unknown as string,
-        sex: null as unknown as string,
-        terms_agreed: false,
-      },
-      step: 0
-    };
-  },
-  watch: {
-    step(newVal, oldVal) {
-      if (newVal == null || newVal < 0) {
-        this.step = 0;
-      } else if (newVal > 2) {
-        this.step = 2;
-      }
-    }
-  },
-  methods: {
-    onHandleMove() {
-      this.step++;
-    },
-    onInfoFormError(e: unknown) {
-      catchAndNotifyError(this, e);
-    },
-    onInfoFormSuccess(details: any) {
-      if (details === null) {
-        this.step--;
-      }
+const router = useRouter();
+const store = useStore();
+const { state, methods: {logout} } = useAuth();
 
-      this.submitDetails.associated_id = details.associated_id;
-      this.submitDetails.department = details.department;
-      this.submitDetails.sex = details.sex;
-    },
-    onTCStatus(status: boolean | null) {
-      switch (status) {
-        case true:
-        case false:
-          this.submitDetails.terms_agreed = status;
-          this.submitSetupForm();
-          break;
-        case null:
-          this.step--;
-          break;
-      }
-    },
-    async submitSetupForm() {
-      try {
-        try {
-          const { data: setupJson } = await this.$client.postJson('/user/setup', this.submitDetails);
-          this.$notify({ type: 'success', text: setupJson['message'] });
-          await this.$store.dispatch('getUserInfo');
-          this.$store.commit('SET_SETUP_MODAL_OPEN', false);
-        } catch (e) {
-          if (e instanceof APIResponseError && e.rawResponse.status == 403 && e.message == 'Access to the service is denied.') {
-            this.$router.replace({ name: 'home-page' });
-            await this.$store.dispatch('logout');
-          }
-          throw e;
-        }
-      } catch(e) {
-        catchAndNotifyError(this, e);
-      }
+const submitDetails = reactive<{
+  student_id: string | null
+  college_department: string | null
+  sex: string | null
+  terms_agreed: boolean
+}>({
+  student_id: null,
+  college_department: null,
+  sex: null,
+  terms_agreed: false
+});
+
+const step = ref(0);
+
+watch(step, (newVal, oldVal) => {
+  if (newVal == null || newVal < 0) {
+    step.value = 0;
+  } else if (newVal > 2) {
+    step.value = 2;
+  }
+});
+
+function onHandleMove() {
+  step.value++;
+}
+
+function onInfoFormSuccess(details: any) {
+  if (details === null) {
+    step.value--;
+  }
+
+  submitDetails.student_id = details.student_id;
+  submitDetails.college_department = details.college_department;
+  submitDetails.sex = details.sex;
+}
+
+function onTCStatus(status: boolean | null) {
+  switch (status) {
+    case true:
+    case false:
+      submitDetails.terms_agreed = status;
+      submitSetupForm();
+      break;
+    case null:
+      step.value--;
+      break;
+  }
+}
+
+async function submitSetupForm() {
+  try {
+    const { terms_agreed, ...newSubmitDetails } = submitDetails;
+    if (!terms_agreed) {
+      store.state.isSetupModalOpen = false;
+      router.replace({ name: 'home-page' });
+      logout();
+      throw new Error('Access to the service is denied.');
     }
+
+    await pb.collection('user_details').create({
+      ...newSubmitDetails,
+      user: state.user!.id
+    });
+
+    notify({ type: 'success', text: 'Profile saved successfully.' });
+    store.state.isSetupModalOpen = false;
+    router.go(0);
+  } catch(e) {
+    catchAndNotifyError(e);
   }
 }
 </script>

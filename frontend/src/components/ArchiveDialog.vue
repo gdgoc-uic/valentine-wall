@@ -1,4 +1,5 @@
 <template>
+  <!-- TODO: add modal to settings -->
   <slot :openDialog="openDialog"></slot>
   
   <portal to="body">
@@ -24,7 +25,7 @@
 
 <script lang="ts">
 import { EventSourcePolyfill } from 'event-source-polyfill';
-import { expandAPIEndpoint } from '../client';
+import { pb } from '../client';
 import Loading from './Loading.vue';
 import Modal from './Modal.vue';
 import Portal from './Portal.vue'
@@ -69,8 +70,10 @@ export default {
       anchor.click();
     },
     initSse() {
-      this.sse = new EventSourcePolyfill(expandAPIEndpoint('/user/messages/archive'), {
-        headers: this.$store.getters.headers
+      this.sse = new EventSourcePolyfill(pb.buildUrl('/user_messages/archive'), {
+        headers: {
+          'Authorization': pb.authStore.token
+        }
       });
 
       this.sse.onmessage = (event) => {
@@ -92,7 +95,7 @@ export default {
             this.$emit('error', new Error(data['message'] ?? 'unknown error'));
             return;
           case 'done':
-            this.endpoint = expandAPIEndpoint(data['endpoint'] + '?__auth_token=' + this.$store.state.user.accessToken);
+            this.endpoint = pb.buildUrl(data['endpoint']);
             this.sse!.close();
             return;
         }

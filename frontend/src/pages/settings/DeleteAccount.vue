@@ -17,62 +17,49 @@
         <input
           @input="recipientId = $event.target.value"
           pattern="[0-9]{6,12}"
-          :placeholder="$store.state.user.associatedId"
+          :placeholder="user!.expand.details?.student_id"
           class="w-full input input-bordered"
           name="recipient_id" type="text">
-        <button :disabled="!shouldDelete" class="btn btn-error bg-red-500 border-red-600 hover:bg-red-600 hover:border-red-700">Delete</button>
+        <button :disabled="!shouldDelete" 
+          class="btn btn-error bg-red-500 border-red-600 hover:bg-red-600 hover:border-red-700">Delete</button>
       </div>
     </div>
   </form>
 </template>
 
-<script lang="ts">
-import { catchAndNotifyError, notify } from '../../notify';
-export default {
-  data() {
-    return {
-      recipientId: '',
-      shouldDelete: false
-    }
-  },
-  watch: {
-    recipientId(newV: string) {
-      if (newV === this.$store.state.user.associatedId) {
-        this.shouldDelete = true;
-      } else {
-        this.shouldDelete = false;
-      }
-    }
-  },
-  methods: {
-    async proceedDelete(e: SubmitEvent) {
-      if (this.shouldDelete) {
-        this.shouldDelete = false;
-      } else {
-        return;
-      }
+<script lang="ts" setup>
+import { useMutation } from '@tanstack/vue-query';
+import { ref, computed } from 'vue';
+import { useRouter } from 'vue-router';
+import { pb } from '../../client';
+import { notify } from '../../notify';
+import { useAuth } from '../../store_new';
 
-      try {
-        if (!e.target || !(e.target instanceof HTMLFormElement)) return;
-        const formData = new FormData(e.target);
-        const { data: json } = await this.$client.postJson('/user/delete', {
-          input_sid: formData.get('recipient_id'),
-          input_uid: this.$store.state.user.id
-        });
+const { state: { user }, methods: { logout } } = useAuth();
+const router = useRouter();
+const recipientId = ref('');
+const shouldDelete = computed(() => {
+  return recipientId.value === user!.expand.details?.associatedId;
+});
 
-        notify(this, { type: 'success', text: json['message'] });
-        this.$router.replace({ name: 'home-page' });
-        await this.$store.dispatch('logout');
-      } catch(e) {
-        catchAndNotifyError(this, e);
-      } finally {
-        this.shouldDelete = true;
-      }
-    }
+const { mutateAsync: deleteAccount } = useMutation(() => {
+  return pb.collection('users').delete(user!.id);
+}, {
+  onSuccess(data) {
+    notify({ type: 'success', text: 'Your account was deleted succesfully.' });
+  },
+  onSettled() {
+    recipientId.value = '';
   }
+})
+
+function proceedDelete(e: SubmitEvent) {
+  if (!e.target || !(e.target instanceof HTMLFormElement)) return;
+
+  deleteAccount()
+    .then(() => {
+      router.replace({ name: 'home-page' });
+      return logout();
+    });
 }
 </script>
-
-<style>
-
-</style>

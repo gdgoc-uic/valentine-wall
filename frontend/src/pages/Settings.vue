@@ -12,7 +12,7 @@
                     v-slot="{ href, route, navigate, isExactActive }"
                     custom>
                     <li :class="{ 'bordered': isExactActive }">
-                        <a @click="navigate" :href="href">{{ sectionRoute.meta.label }}</a>
+                        <a @click="navigate" :href="href">{{ sectionRoute.meta?.label }}</a>
                     </li>
                 </router-link>
             </ul>
@@ -29,16 +29,17 @@
   </main>
 </template>
 
-<script lang="ts">
-import { RouteRecordRaw } from 'vue-router';
-export default {
-    computed: {
-        settingSectionRoutes(): RouteRecordRaw[] {
-            const routes = this.$router.getRoutes();
-            const currentRouteData = routes.find(r => r.name === this.$route.matched[0].name);
-            if (!currentRouteData) return [];
-            return currentRouteData.children;
-        }
-    }
-}
+<script lang="ts" setup>
+import { computed } from 'vue';
+import { useRoute, useRouter } from 'vue-router';
+
+const router = useRouter();
+const route = useRoute();
+
+const settingSectionRoutes = computed(() => {
+    const routes = router.getRoutes();
+    const currentRouteData = routes.find(r => r.name === route.matched[0].name);
+    if (!currentRouteData) return [];
+    return currentRouteData.children;
+});
 </script>

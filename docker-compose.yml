@@ -1,34 +1,7 @@
 services:
-  database:
-    container_name: database
-    image: postgres
-    restart: always
-    environment:
-      POSTGRES_USER: ${POSTGRES_USER:-root}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-root}
-      POSTGRES_DB: ${DATABASE_PREFIX}_${ENV}
-    ports:
-      - '4023:5432'
-    volumes:
-      - ./backend/_data/pgdata:/var/lib/postgresql/data/
-
   headless_chrome:
     container_name: headless_chrome
     image: browserless/chrome
-    networks:
-      - backend
-
-  postal_office:
-    container_name: postal_office
-    build:
-      context: .
-      dockerfile: ./postal_office/Dockerfile
-    volumes:
-      - ./postal_office/_data:/app/_data
-    environment:
-      - MAILGUN_DOMAIN
-      - MAILGUN_API_KEY
-      - MAX_JOBS
     networks:
       - backend
 
@@ -38,6 +11,8 @@ services:
       context: .
       dockerfile: ./backend/Dockerfile
     volumes:
+      - ./pb_data:/app/pb_data
+      - ./pb_public:/app/pb_public
       - ./backend/_data:/app/_data
       - ./backend/renderer_assets:/app/renderer_assets
       - ./backend/migrations:/app/migrations
@@ -55,13 +30,11 @@ services:
       - TWITTER_CLIENT_ID
       - TWITTER_CLIENT_SECRET
       - TWITTER_CALLBACK_URL
-      - POSTAL_OFFICE_ADDRESS=postal_office:3350
       - CHROME_DEVTOOLS_URL=ws://headless_chrome:3000
       - READ_ONLY
     networks:
       - backend
     depends_on:
-      - postal_office
       - headless_chrome
 
   frontend:

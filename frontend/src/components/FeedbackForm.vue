@@ -33,7 +33,7 @@
 
 <script lang="ts">
 import { expandReportApiEndpoint, headers } from '../report-api';
-import { catchAndNotifyError } from '../notify';
+import { catchAndNotifyError, notify } from '../notify';
 import Modal from './Modal.vue';
 import Portal from './Portal.vue';
 
@@ -88,7 +88,7 @@ export default {
           throw new Error('Unable to submit your feedback.');
         }
 
-        this.$notify({ type: 'success', text: 'Feedback has been submitted successfully.' });
+        notify({ type: 'success', text: 'Feedback has been submitted successfully.' });
         this.isSuccess = true;
 
         setTimeout(() => {
@@ -96,7 +96,7 @@ export default {
           this.$emit('success');
         }, 3000);
       } catch (e) {
-        catchAndNotifyError(this, e);
+        catchAndNotifyError(e);
         this.$emit('error', e);
       } finally {
         this.isProcessing = false;

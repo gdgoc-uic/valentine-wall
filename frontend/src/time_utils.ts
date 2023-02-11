@@ -11,10 +11,10 @@ export function toNow(dt: Date): string {
   return dayjs(dt).toNow(true);
 }
 
-export function fromNow(dt: Date): string {
+export function fromNow(dt: Date | string): string {
   return dayjs(dt).fromNow();
 }
 
-export function prettifyDateTime(dt: Date): string {
-  return formatDateTime(dt, 'MMMM D, YYYY h:mm A');
+export function prettifyDateTime(dt: Date | string): string {
+  return formatDateTime(typeof dt === 'string' ? new Date(dt) : dt, 'MMMM D, YYYY h:mm A');
 }

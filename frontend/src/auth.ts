@@ -1,6 +1,4 @@
-import { Store } from "vuex";
-import { expandAPIEndpoint } from "./client";
-import { State } from "./store";
+import { backendUrl, pb } from "./client";
 
 export function popupCenter({ url, title, w, h }: { url: string, title: string, w: number, h: number }): Window | null {
     // Fixes dual-screen position                             Most browsers      Firefox
@@ -27,41 +25,38 @@ export function popupCenter({ url, title, w, h }: { url: string, title: string, 
     return newWindow;
 };
 
-interface ConnectCallbacks {
-    onSuccess?: () => void,
-    onError?: (e: unknown) => void,
-    onFinally?: () => void
-}
+export async function thirdPartyLogin(provider: string, table = 'users') {
+  const authMethods = await pb.collection(table).listAuthMethods();
+  const chosenProvider = authMethods.authProviders.find(p => p.name === provider);
+  if (!chosenProvider) return;
 
-export function connectToTwitter(store: Store<State>, cbs?: ConnectCallbacks) {
-    const connectUrl = expandAPIEndpoint('/user/connect_twitter');
-    const loginWindow = popupCenter({ url: connectUrl, title: 'twitter_login_window', w: 800, h: 500 });
-    if (!loginWindow) {
-        cbs?.onError?.(new Error('Failed to open window.'));
-        cbs?.onFinally?.();
-        return;
+  const redirectUrl = pb.buildUrl('/user_auth/callback');
+  const connectUrl = `${chosenProvider.authUrl}${redirectUrl}&hd=uic.edu.ph`;
+  const loginWindow = popupCenter({ url: connectUrl, title: provider + '_login_window', w: 800, h: 500 });
+  if (!loginWindow) {
+    throw new Error('Failed to open window.');
+  }
+
+  const expectedOrigin = (new URL(backendUrl)).origin;
+
+  const handleFn = function (this: Window, e: MessageEvent) {
+    if (e.origin === expectedOrigin && typeof e.data === 'object' && 'state' in e.data) {
+      const data = e.data;
+      if (chosenProvider.state !== data['state']) {
+        throw new Error();
+      }
+
+      pb.collection(table).authWithOAuth2(
+        chosenProvider.name,
+        data['code'],
+        chosenProvider.codeVerifier,
+        redirectUrl,
+      ).then(() => {
+        window.removeEventListener('message', handleFn);
+        loginWindow.close();
+      });
     }
+  }
 
-    const handleFn = function (this: Window, e: MessageEvent) {
-        if (e.origin === import.meta.env.VITE_BACKEND_URL && typeof e.data === 'object' && 'message' in e.data) {
-            const data = e.data;
-            if (data['message'] !== 'twitter connect success') {
-                cbs?.onError?.(new Error());
-                cbs?.onFinally?.();
-                return 
-            }
-            store.commit('SET_USER_CONNECTIONS', data['user_connections']);
-            cbs?.onSuccess?.();
-            cbs?.onFinally?.();
-            window.removeEventListener('message', handleFn);
-            loginWindow.close();
-        }
-    }
-
-    window.addEventListener('message', handleFn);
-}
-
-export async function connectToEmail(store: Store<State>) {
-    const { data: json } = await store.getters.apiClient.post('/user/connect_email');
-    store.commit('SET_USER_CONNECTIONS', json['user_connections']);
+  window.addEventListener('message', handleFn);
 }

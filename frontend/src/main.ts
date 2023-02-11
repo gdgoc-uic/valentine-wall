@@ -3,17 +3,34 @@ import { createHead } from '@vueuse/head'
 
 import App from './App.vue'
 import { createRouter } from './router'
-import { createStore, storeKey } from './store'
-import { installClient } from './client'
+import { authStore as authStoreKey, createAuthStore, createStore, storeKey } from './store_new'
+import { VueQueryPlugin, VueQueryPluginOptions } from '@tanstack/vue-query'
+import { catchAndNotifyError } from './notify'
 
 export function createApp() {
     const app = createSSRApp(App);
     const head = createHead();
     const router = createRouter();
     const store = createStore();
-    app.use(head);
-    app.use(router);
-    app.use(store, storeKey);
-    app.use(installClient(store.getters.apiClient));
-    return { app, router, head, store };
+    const authStore = createAuthStore();
+
+    app
+        .use(head)
+        .use(router)
+        .use(VueQueryPlugin, {
+            queryClientConfig: {
+                defaultOptions: {
+                    queries: {
+                        enabled: !import.meta.env.SSR,
+                        onError: catchAndNotifyError,
+                    },
+                    mutations: {
+                        onError: catchAndNotifyError
+                    }
+                }
+            }
+        } as VueQueryPluginOptions)
+        .provide(storeKey, store)
+        .provide(authStoreKey, authStore);
+    return { app, router, head, store, authStore };
 }

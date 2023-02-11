@@ -39,7 +39,7 @@
   </portal>
 </template>
 
-<script lang="ts">
+<script lang="ts" setup>
 import IconLink from '~icons/uil/link';
 import IconFacebook from '~icons/uil/facebook-f';
 import IconTwitter from '~icons/uil/twitter';
@@ -51,170 +51,152 @@ import IconCopy from '~icons/uil/copy';
 import Modal from './Modal.vue';
 import Portal from './Portal.vue';
 import { popupCenter } from '../auth';
+import { computed, ref } from 'vue';
 
-export default {
-  emits: ['success', 'error'],
-  props: {
-    title: {
-      type: String
-    },
-    text: {
-      type: String
-    },
-    imageUrl: {
-      type: String
-    },
-    imageFileName: {
-      type: String,
-      default: 'image.png'
-    },
-    permalink: {
-      type: String,
-      required: true
-    },
-    hashtags: {
-      type: Array,
-      default: []
-    },
+const emit = defineEmits(['success', 'error']);
+const props = defineProps({
+  title: {
+    type: String
   },
-  components: { 
-    Modal,
-    IconLink,
-    IconFacebook,
-    IconTwitter,
-    IconTelegram,
-    IconMessenger,
-    IconImageDownload,
-    IconCopy,
-    Portal
+  text: {
+    type: String
   },
-  computed: {
-    buttonList() {
-      return [
-        ...(this.imageUrl ? [{
-          type: 'link',
-          label: 'Download Image',
-          attrs: {
-            href: this.imageUrl,
-            target: '_blank',
-            download: this.imageFileName
-          },
-          icon: IconImageDownload
-        }] : []),
-        {
-          type: 'button',
-          label: 'Copy URL',
-          attrs: {
-            onClick: this.copyURL
-          },
-          icon: IconCopy
-        },
-        {
-          type: 'button',
-          label: 'Facebook',
-          attrs: {
-            onClick: () => this.shareTo('facebook')
-          },
-          icon: IconFacebook
-        },
-        {
-          type: 'button',
-          label: 'Twitter',
-          attrs: {
-            onClick: () => this.shareTo('twitter')
-          },
-          icon: IconTwitter
-        },
-        {
-          type: 'button',
-          label: 'Telegram',
-          attrs: {
-            onClick: () => this.shareTo('telegram')
-          },
-          icon: IconTelegram
-        }
-      ];
-    }
+  imageUrl: {
+    type: String
   },
-  data() {
-    return {
-      hasLinkCopied: false,
-      open: false
-    }
+  imageFileName: {
+    type: String,
+    default: 'image.png'
   },
-  methods: {
-    openDialog() {
-      if (import.meta.env.SSR) return;
+  permalink: {
+    type: String,
+    required: true
+  },
+  hashtags: {
+    type: Array,
+    default: []
+  },
+});
 
-      if (!!navigator.share) {
-        navigator.share({
-          title: this.title,
-          url: this.permalink
-        })
-        .then(() => {
-          this.$emit('success');
-        })
-        .catch(err => {
-          this.$emit('error', err);
-        });
-      } else {
-        this.open = true;
-      }
+const buttonList = computed(() => [
+  ...(props.imageUrl ? [{
+    type: 'link',
+    label: 'Download Image',
+    attrs: {
+      href: props.imageUrl,
+      target: '_blank',
+      download: props.imageFileName
     },
-    shareTo(provider: string) {
-      let android = navigator.userAgent.match(/Android/i);
-      let ios = navigator.userAgent.match(/iPhone|iPad|iPod/i);
-      const isDesktop = !(ios || android);
-
-      let url: string;
-      let windowTitle: string;
-      
-      switch (provider) {
-        case 'facebook':
-          url = `https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(this.permalink)}&quote=${encodeURIComponent(this.text ?? '')}`;
-          windowTitle = 'Share to Facebook';
-          break;
-        case 'twitter':
-          url = `https://twitter.com/intent/tweet?url=${encodeURIComponent(this.permalink)}&text=${this.text ?? ''}&hashtags=${this.hashtags.join('')}`;
-          windowTitle = 'Share to Twitter';
-          break;
-        case 'telegram':
-          if (isDesktop) {
-            url = `https://telegram.me/share/msg?url=${this.permalink}&text=${this.text ?? ''}`;
-          } else {
-            url = `tg://msg?text=${((this.text + ' ') ?? '') + this.permalink}`;
-          }
-          windowTitle = 'Share to Telegram';
-          break;
-        default:
-          this.$emit('error', new Error(`unknown provider '${provider}'`));
-          return;
-      }
-
-      const shareWindow = popupCenter({
-        url: url!,
-        title: windowTitle!,
-        w: 800,
-        h: 500
-      });
-
-      const vm = this;
-      const onClose = function() {
-        vm.$emit('success', provider);
-        shareWindow?.removeEventListener('close', onClose);
-      };
-
-      shareWindow?.addEventListener('close', onClose);
+    icon: IconImageDownload
+  }] : []),
+  {
+    type: 'button',
+    label: 'Copy URL',
+    attrs: {
+      onClick: copyURL
     },
-    copyURL() {
-      const permalinkTextbox = this.$refs.permalinkTextBox as HTMLInputElement;
-      this.hasLinkCopied = true;
-      navigator.clipboard.writeText(permalinkTextbox.value);
-      this.$emit('success', 'clipboard');
-      setTimeout(() => {
-        this.hasLinkCopied = false;
-      }, 1500);
-    }
+    icon: IconCopy
+  },
+  {
+    type: 'button',
+    label: 'Facebook',
+    attrs: {
+      onClick: () => shareTo('facebook')
+    },
+    icon: IconFacebook
+  },
+  {
+    type: 'button',
+    label: 'Twitter',
+    attrs: {
+      onClick: () => shareTo('twitter')
+    },
+    icon: IconTwitter
+  },
+  {
+    type: 'button',
+    label: 'Telegram',
+    attrs: {
+      onClick: () => shareTo('telegram')
+    },
+    icon: IconTelegram
   }
+]);
+
+const permalinkTextBox = ref<HTMLInputElement | null>(null);
+const hasLinkCopied = ref(false);
+const open = ref(false);
+
+function openDialog() {
+  if (import.meta.env.SSR) return;
+
+  if (!!navigator.share) {
+    navigator.share({
+      title: props.title,
+      url: props.permalink
+    })
+    .then(() => {
+      emit('success');
+    })
+    .catch(err => {
+      emit('error', err);
+    });
+  } else {
+    open.value = true;
+  }
+}
+
+function shareTo(provider: string) {
+  let android = navigator.userAgent.match(/Android/i);
+  let ios = navigator.userAgent.match(/iPhone|iPad|iPod/i);
+  const isDesktop = !(ios || android);
+
+  let url: string;
+  let windowTitle: string;
+  
+  switch (provider) {
+    case 'facebook':
+      url = `https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(props.permalink)}&quote=${encodeURIComponent(props.text ?? '')}`;
+      windowTitle = 'Share to Facebook';
+      break;
+    case 'twitter':
+      url = `https://twitter.com/intent/tweet?url=${encodeURIComponent(props.permalink)}&text=${props.text ?? ''}&hashtags=${props.hashtags.join('')}`;
+      windowTitle = 'Share to Twitter';
+      break;
+    case 'telegram':
+      if (isDesktop) {
+        url = `https://telegram.me/share/msg?url=${props.permalink}&text=${props.text ?? ''}`;
+      } else {
+        url = `tg://msg?text=${((props.text + ' ') ?? '') + props.permalink}`;
+      }
+      windowTitle = 'Share to Telegram';
+      break;
+    default:
+      emit('error', new Error(`unknown provider '${provider}'`));
+      return;
+  }
+
+  const shareWindow = popupCenter({
+    url: url!,
+    title: windowTitle!,
+    w: 800,
+    h: 500
+  });
+
+  const onClose = function() {
+    emit('success', provider);
+    shareWindow?.removeEventListener('close', onClose);
+  };
+
+  shareWindow?.addEventListener('close', onClose);
+}
+
+function copyURL() {
+  hasLinkCopied.value = true;
+  navigator.clipboard.writeText(permalinkTextBox.value!.value);
+  emit('success', 'clipboard');
+  setTimeout(() => {
+    hasLinkCopied.value = false;
+  }, 1500);
 }
 </script>

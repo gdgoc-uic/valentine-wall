@@ -41,10 +41,10 @@
       </search-form>
       <client-only>
         <div class="flex-none hidden md:ml-auto md:flex">
-          <div v-if="$store.getters.isLoggedIn" class="dropdown dropdown-end dropdown-hover -mb-2">
+          <div v-if="authState.isLoggedIn" class="dropdown dropdown-end dropdown-hover -mb-2">
             <div tabindex="0" class="rounded-r-none mb-2 shadow-md btn normal-case text-black bg-white border-0 hover:bg-gray-100">
               <span class="overflow-hidden text-ellipsis">
-                {{ $store.getters.username }}
+                {{ authState.user.username }}
               </span>
               <icon-dropdown />
             </div>
@@ -61,20 +61,20 @@
           <!-- TODO: add 'add coins' modal -->
           <button 
             :class="[!shouldSendButtonHide ? 'rounded-none' : 'rounded-l-none']" 
-            v-if="$store.getters.isLoggedIn && $store.state.user.wallet.balance" 
-            class="btn shadow-md btn normal-case text-black bg-white border-0 hover:bg-gray-100">
+            v-if="authState.isLoggedIn" 
+            class="btn shadow-md normal-case text-black bg-white border-0 hover:bg-gray-100">
             <icon-coin class="mr-2" />
-            <span>ღ{{ $store.state.user.wallet.balance }}</span>
+            <span>ღ{{ authState.user!.expand.wallet?.balance ?? 'unknown' }}</span>
           </button>
           <button
-            v-if="!shouldSendButtonHide && $store.getters.isLoggedIn"
-            @click="$store.commit('SET_SEND_MESSAGE_MODAL_OPEN', true)"
+            v-if="!shouldSendButtonHide && authState.isLoggedIn"
+            @click="store.state.isSendMessageModalOpen = true"
             class="shadow-md btn border-none rounded-l-none bg-rose-500 hover:bg-rose-600 lg:px-8 space-x-2">
             <icon-send />
             <span class="hidden lg:block">Send a Message</span>
             <span class="lg:hidden">Send</span>
           </button>
-          <login-button v-if="!isHome && !$store.getters.isLoggedIn" />
+          <login-button v-if="!isHome && !authState.isLoggedIn" />
         </div>
       </client-only>
     </header>
@@ -101,10 +101,10 @@
               {{ link.label }}
             </router-link>
           </div>
-          <div v-if="$store.getters.isLoggedIn" class="bg-white bg-opacity-60 p-4 rounded-xl mt-auto">
+          <div v-if="authState.isLoggedIn" class="bg-white bg-opacity-60 p-4 rounded-xl mt-auto">
             <p>Signing in as</p>
             <h3 class="text-2xl text-ellipsis overflow-hidden font-bold">
-              {{ $store.getters.username }}
+              {{ authState.user.username }}
             </h3>
             <ul class="space-y-4 py-4">
               <li class="text-xl"
@@ -118,14 +118,14 @@
               </li>
             </ul>
             <button 
-              v-if="$store.getters.isLoggedIn && $store.state.user.wallet.balance" 
-              class="btn shadow-md btn normal-case text-black bg-white border-0 hover:bg-gray-100 w-full mb-2">
+              v-if="authState.isLoggedIn" 
+              class="btn shadow-md normal-case text-black bg-white border-0 hover:bg-gray-100 w-full mb-2">
               <icon-coin class="mr-2" />
-              <span>ღ{{ $store.state.user.wallet.balance }}</span>
+              <span>ღ{{ authState.user!.expand.wallet?.balance ?? 'unknown' }}</span>
             </button>
             <button
               v-if="!shouldSendButtonHide"
-              @click="$store.commit('SET_SEND_MESSAGE_MODAL_OPEN', true); menuOpen = false"
+              @click="store.state.isSendMessageModalOpen = true; menuOpen = false"
               class="shadow-md btn border-none w-full bg-rose-500 hover:bg-rose-600 px-8 space-x-2">
               <icon-send />
               <span>Send a Message</span>
@@ -138,7 +138,7 @@
   </div>
 </template>
 
-<script lang="ts">
+<script lang="ts" setup>
 import IconMenu from '~icons/uil/align-center-alt';
 import IconDropdown from '~icons/uil/angle-down';
 import IconSend from '~icons/uil/message';
@@ -149,82 +149,65 @@ import { catchAndNotifyError } from '../notify';
 import ClientOnly from './ClientOnly.vue';
 import LoginButton from './LoginButton.vue';
 import SearchForm from './SearchForm.vue';
+import { useRoute, useRouter } from 'vue-router';
+import { ref, computed } from 'vue';
+import { useAuth, useStore } from '../store_new';
 
-export default {
-  props: {
-    isHome: {
-      type: Boolean,
-      default: false
-    }
-  },
-  components: {
-    IconMenu,
-    IconDropdown,
-    IconSend,
-    IconSearch,
-    IconClose,
-    IconCoin,
-    SearchForm,
-    ClientOnly,
-    LoginButton
-  },
-  mounted() {
-    this.mounted = true;
-  },
-  data() {
-    return {
-      mounted: false,
-      menuOpen: false
-    }
-  },
-  computed: {
-    shouldSendButtonHide(): boolean {
-      return this.isHome || this.$route.path.startsWith('/settings') || this.$route.path.startsWith('/about');
-    },
-    navbarLinks(): any[] {
-      return [
-        {
-          label: 'Rankings',
-          to: { name: 'rankings-page' }
-        },
-        {
-          label: 'About',
-          to: { name: 'about-page' }
-        }
-      ];
-    },
-    accountLinks(): any[] {
-      return [
-        {
-          liClass: 'text-black',
-          tag: 'router-link',
-          props: {
-            to: { name: 'settings-page' }
-          },
-          children: 'Settings'
-        },
-        {
-          liClass: 'text-red-500',
-          tag: 'a',
-          props: {
-            class: 'cursor-pointer',
-            onClick: this.logout
-          },
-          children: 'Logout' 
-        }
-      ];
-    }
-  },
-  methods: {
-    async logout(e: Event) {
-      e.preventDefault();
-      try {
-        this.$router.replace({ name: 'home-page' });
-        await this.$store.dispatch('logout');
-      } catch(e) {
-        catchAndNotifyError(this, e);
-      }
-    }
+const props = defineProps({
+  isHome: {
+    type: Boolean,
+    default: false
   }
-};
+});
+
+const router = useRouter();
+const route = useRoute();
+const { state: authState, methods: {logout} } = useAuth();
+const store = useStore();
+
+const menuOpen = ref(false);
+const navbarLinks = [
+  {
+    label: 'Rankings',
+    to: { name: 'rankings-page' }
+  },
+  {
+    label: 'About',
+    to: { name: 'about-page' }
+  }
+];
+
+const accountLinks = [
+  {
+    liClass: 'text-black',
+    tag: 'router-link',
+    props: {
+      to: { name: 'settings-page' }
+    },
+    children: 'Settings'
+  },
+  {
+    liClass: 'text-red-500',
+    tag: 'a',
+    props: {
+      class: 'cursor-pointer',
+      onClick: function(e: Event) {
+        e.preventDefault();
+        try {
+          router.replace({ name: 'home-page' });
+          logout();
+        } catch(e) {
+          catchAndNotifyError(e);
+        }
+      }
+    },
+    children: 'Logout' 
+  }
+];
+
+const shouldSendButtonHide = computed(() => {
+  return props.isHome || 
+    route.path.startsWith('/settings') || 
+    route.path.startsWith('/about');
+});
 </script>
