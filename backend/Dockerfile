@@ -1,12 +1,12 @@
-FROM golang:1.17.6 AS builder
+FROM golang:1.19 AS builder
 
 WORKDIR /app
 
 COPY ./go.mod .
 COPY ./go.sum .
 COPY ./backend .
-COPY ./postal_office/types ./postal_office/types
-COPY ./postal_office/client ./postal_office/client
+COPY ./backend/migrations ./backend/migrations
+COPY ./backend/models ./backend/models
 
 # Download deps and build
 RUN go mod download
@@ -24,5 +24,5 @@ RUN update-ca-certificates
 
 COPY --from=builder /app/backend-server .
 
-EXPOSE 4000
-ENTRYPOINT ["./backend-server"]
+EXPOSE 8090
+ENTRYPOINT ["./backend-server", "serve", "--http=0.0.0.0:8090", "--dir=/app/pb_data"]

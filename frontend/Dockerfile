@@ -31,10 +31,10 @@ ENV VITE_REPORT_API_CATEGORY_ID_KEY=${report_api_category_id_key}
 ENV VITE_READ_ONLY=${read_only}
 
 COPY . .
-RUN npm install
+RUN yarn install
 
 ENV NODE_ENV=${env}
-RUN npm run build
+RUN yarn build
 
 EXPOSE 3000
-ENTRYPOINT ["npm", "run", "serve"]
+ENTRYPOINT ["yarn", "serve"]

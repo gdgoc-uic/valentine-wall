@@ -3,13 +3,9 @@ services:
     ports:
       - '5000:3000'
 
-  postal_office:
-    ports:
-      - '3350:3350'
-
   backend:
     ports:
-      - '4000:4000'
+      - '8090:8090'
 
   frontend:
     ports:
