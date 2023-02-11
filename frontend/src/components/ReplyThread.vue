@@ -65,7 +65,6 @@ import ReplyMessageBox from './ReplyMessageBox.vue';
 import { inject, Ref, ref, onMounted, onUnmounted } from 'vue';
 import { useAuth } from '../store_new';
 import { Record as PbRecord, UnsubscribeFunc } from 'pocketbase';
-import { useRouter } from 'vue-router';
 import { useMutation, useQuery } from '@tanstack/vue-query';
 import { pb } from '../client';
 import { fromNow } from '../time_utils';
@@ -81,6 +80,7 @@ function handleHasReplied(hasReplied: boolean) {
 
 const repliesQuery = useQuery(['replies', message.value.id], () => {
   return pb.collection('message_replies').getFullList(undefined, {
+    filter: `message="${message.value.id}"`,
     sort: '-created',
     expand: 'sender'
   });
