@@ -15,15 +15,9 @@
         </div>
       </fieldset>
 
-      <div class="mt-8 self-end indicator">
-        <div v-if="totalGiftPrice > 0" class="indicator-item badge badge-primary">
-          ღ{{ totalGiftPrice.toFixed(2) }}
-        </div> 
-        <button
-          class="px-12 btn bg-rose-500 hover:bg-rose-600 border-none"
-          type="submit"
-          :disabled="!shouldSend">Send</button>
-      </div>
+      <button
+        class="px-12 btn bg-rose-500 hover:bg-rose-600 border-none"
+        type="submit">Save</button>
     </form>
   </modal>
 
@@ -55,25 +49,25 @@
         v-model="content"
         maxlength="240"></textarea>
     </div>
-    <div class="flex justify-between items-center mt-4">
-      <div class="space-x-2">
-        <button @click.prevent="isGiftModalOpen = true" class="btn space-x-2 bg-white hover:bg-rose-200 border-rose-300 hover:border-rose-600 text-gray-800">
+    <div class="flex flex-col md:flex-row space-y-2 md:space-y-0 justify-between items-center mt-4">
+      <div class="w-full md:w-auto flex space-x-2 items-stretch md:items-start">
+        <button @click.prevent="isGiftModalOpen = true" class="flex-1 md:flex-auto btn btn-sm md:btn-md space-x-2 bg-white hover:bg-rose-200 border-rose-300 hover:border-rose-600 text-gray-800">
           <icon-plus class="text-rose-500" />          
 
           <span>Virtual Gift</span>
         </button>
 
-        <button @click.prevent="isRulesModalOpen = true" class="btn space-x-2 bg-white hover:bg-rose-200 border-rose-300 hover:border-rose-600 text-gray-800">
+        <button @click.prevent="isRulesModalOpen = true" class="flex-1 md:flex-auto btn btn-sm md:btn-md space-x-2 bg-white hover:bg-rose-200 border-rose-300 hover:border-rose-600 text-gray-800">
           <icon-rules class="text-rose-500" />          
 
           <span>Rules</span>
         </button>
       </div>
 
-      <div class="space-x-4 flex items-center">
+      <div class="w-full md:w-auto space-x-4 flex items-center justify-end">
         <content-counter ref="counter" :content="content" :newline-count="13" />
         <div class="indicator">
-          <div v-if="shouldSend" class="indicator-item badge badge-primary">ღ150.0</div> 
+          <div v-if="shouldSend" class="indicator-item badge badge-primary">ღ{{ (SEND_PRICE + totalGiftPrice).toFixed(2) }}</div> 
           <button
             class="self-end px-12 btn bg-rose-500 hover:bg-rose-600 border-none"
             type="submit"
@@ -98,6 +92,7 @@ import GiftIcon from './GiftIcon.vue';
 import ContentCounter from './ContentCounter.vue';
 import { VueComponent as RulesContent } from '../assets/texts/rules.md';
 
+const SEND_PRICE = 150;
 const emit = defineEmits(['success']);
 
 const props = defineProps({
@@ -122,7 +117,6 @@ const recipientId = computed({
     return props.existingRecipient ?? inputtedRecipient.value;
   },
   set(newValue) {
-    console.log(newValue);
     inputtedRecipient.value = newValue;
   }
 });
@@ -130,6 +124,7 @@ const totalGiftPrice = computed(() => store.state.giftList.filter(g => gifts.val
 
 function saveVirtualGifts(e: SubmitEvent) {
   e.preventDefault();
+  gifts.value.splice(0, gifts.value.length);
 
   if (!shouldSend || !e.target || !(e.target instanceof HTMLFormElement)) return;
 
@@ -145,6 +140,7 @@ function saveVirtualGifts(e: SubmitEvent) {
   });
 
   e.target.reset();
+  isGiftModalOpen.value = false;
 }
 
 async function submitForm(e: SubmitEvent) {
@@ -161,6 +157,9 @@ async function submitForm(e: SubmitEvent) {
   }, {
     onSuccess(record) {
       (e.target! as HTMLFormElement).reset();
+      gifts.value.splice(0, gifts.value.length);
+      content.value = '';
+      recipientId.value = '';
       emit('success', record.recipient, record.id);
     }
   });
@@ -190,7 +189,7 @@ const { mutateAsync: sendMessage } = useMutation((message: {
 }
 
 .gift-list-checkboxes .gift-item {
-  @apply p-2 w-1/5;
+  @apply p-2 w-1/3 md:w-1/5;
 }
 
 .gift-list-checkboxes .gift-item .gift-item-btn-wrapper {
