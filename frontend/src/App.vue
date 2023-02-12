@@ -62,11 +62,13 @@
     </portal>
 
     <navbar v-if="!$route.meta.disableAppHeader" :is-home="$route.name === 'home-page'" class="sticky top-0 z-50" />
-    <router-view v-slot="{ Component }">
-      <suspense>
-        <component :is="Component" class="relative" />
-      </suspense>
-    </router-view>
+    <main class="min-h-[80vh]">
+      <router-view v-slot="{ Component }">
+        <suspense>
+          <component :is="Component" class="relative" />
+        </suspense>
+      </router-view>
+    </main>
 
     <app-footer />
   </template>
