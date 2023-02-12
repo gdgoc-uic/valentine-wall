@@ -16,7 +16,7 @@
       </fieldset>
 
       <button
-        class="px-12 btn bg-rose-500 hover:bg-rose-600 border-none"
+        class="px-12 mt-8 btn bg-rose-500 hover:bg-rose-600 border-none"
         type="submit">Save</button>
     </form>
   </modal>
@@ -189,7 +189,7 @@ const { mutateAsync: sendMessage } = useMutation((message: {
 }
 
 .gift-list-checkboxes .gift-item {
-  @apply p-2 w-1/3 md:w-1/5;
+  @apply p-2 w-1/3 md:w-1/4 lg:w-1/5;
 }
 
 .gift-list-checkboxes .gift-item .gift-item-btn-wrapper {
