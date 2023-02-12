@@ -39,7 +39,7 @@ const { state: { user }, methods: { logout } } = useAuth();
 const router = useRouter();
 const recipientId = ref('');
 const shouldDelete = computed(() => {
-  return recipientId.value === user!.expand.details?.associatedId;
+  return recipientId.value === user!.expand.details?.student_id;
 });
 
 const { mutateAsync: deleteAccount } = useMutation(() => {
