@@ -138,8 +138,8 @@ const routes: RouteRecordRaw[] = [
         path: 'delete-account',
         component: () => import('./pages/settings/DeleteAccount.vue'),
         meta: {
-          pageTitle: 'Delete Account | Settings',
-          label: 'Delete Account'
+          pageTitle: 'Archive / Delete Account | Settings',
+          label: 'Archive / Delete Account'
         }
       }
     ]
