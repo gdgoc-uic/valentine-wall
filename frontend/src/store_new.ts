@@ -185,16 +185,20 @@ export function createAuthStore(): Store<AuthState, AuthMethods> {
   }
 
   async function reward(amount: number, reason: string, walletId?: string) {
+    if (amount <= 0) {
+      return;
+    }
+
     try {
-      if (!state.user || !state.user.expand.wallet) {
-        throw new Error('Unable to add money to your wallet.');
-      } else if (!walletId) {
-        throw new Error('Unable to add money to your wallet.');
+      if (!walletId) {
+        if (!state.user || !state.user.expand.wallet) {
+          throw new Error('Unable to add money to your wallet.');
+        } 
       }
 
       await pb.collection('virtual_transactions').create({
         wallet: walletId ?? state.user.expand.wallet.id,
-        reason: `Rewarded for: ${reason}`,
+        description: `Rewarded for: ${reason}`,
         amount,
       }, {
         magicword: 'V3L3NT1L3'
