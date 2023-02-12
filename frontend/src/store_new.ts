@@ -1,5 +1,3 @@
-import { useQuery } from '@tanstack/vue-query';
-import { ClientResponseError } from 'pocketbase';
 import { computed, inject, InjectionKey, reactive, readonly } from 'vue';
 import { thirdPartyLogin } from './auth';
 import { pb } from './client';
