@@ -62,6 +62,7 @@ func init() {
 type ImageRenderer struct {
 	// for chrome-based image renderer
 	ChromeCtx  context.Context
+	Funcs      template.FuncMap
 	Template   *template.Template
 	CacheStore *cache.Cache
 }

@@ -8,6 +8,7 @@ import (
 	"log"
 	"net/http"
 	"path/filepath"
+	"strings"
 	"sync"
 	"time"
 
@@ -36,23 +37,25 @@ func internalError(data any) *apis.ApiError {
 var htmlTemplates = &htmlTemplate.Template{}
 var imageRenderer = &ImageRenderer{
 	CacheStore: cache.New(time.Duration(10*time.Minute), time.Duration(5*time.Second)),
+	Funcs: htmlTemplate.FuncMap{
+		"split": func(s string) []string {
+			return strings.Split(s, "\n")
+		},
+	},
 }
 
 func setupRoutes(app *pocketbase.PocketBase) hook.Handler[*core.ServeEvent] {
 	return func(e *core.ServeEvent) error {
 		var err error
-		if htmlTemplates, err = htmlTemplate.ParseGlob("./templates/html/*.html.tpl"); err != nil {
+		if htmlTemplates, err = htmlTemplate.New("").Funcs(imageRenderer.Funcs).ParseGlob("./templates/html/*.html.tpl"); err != nil {
 			log.Panicln(err)
 		} else {
 			log.Printf("%d html templates have been loaded\n", len(htmlTemplates.Templates()))
 		}
 
-		// chrome/browser-based image rendering specific code
-		if len(chromeDevtoolsURL) != 0 {
-			// load template
-			log.Println("loading image template...")
-			imageRenderer.Template = htmlTemplates.Lookup("message_image.html.tpl")
-		}
+		// load template
+		log.Println("loading image template...")
+		imageRenderer.Template = htmlTemplates.Lookup("message_image.html.tpl")
 
 		tac, err := getTermsAndConditions()
 		if err != nil {

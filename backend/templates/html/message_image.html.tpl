@@ -16,20 +16,6 @@
             url('{{ .BackendURL }}/renderer_assets/fonts/lato/lato-v22-latin-regular.svg#Lato') format('svg'); /* Legacy iOS */
       }
 
-      /* nanum-pen-script-regular - latin */
-      @font-face {
-        font-family: 'Nanum Pen Script';
-        font-style: normal;
-        font-weight: 400;
-        src: url('{{ .BackendURL }}/renderer_assets/fonts/nanum-pen-script/nanum-pen-script-v15-latin-regular.eot'); /* IE9 Compat Modes */
-        src: 
-            url('{{ .BackendURL }}/renderer_assets/fonts/nanum-pen-script/nanum-pen-script-v15-latin-regular.eot?#iefix') format('embedded-opentype'), /* IE6-IE8 */
-            url('{{ .BackendURL }}/renderer_assets/fonts/nanum-pen-script/nanum-pen-script-v15-latin-regular.woff2') format('woff2'), /* Super Modern Browsers */
-            url('{{ .BackendURL }}/renderer_assets/fonts/nanum-pen-script/nanum-pen-script-v15-latin-regular.woff') format('woff'), /* Modern Browsers */
-            url('{{ .BackendURL }}/renderer_assets/fonts/nanum-pen-script/nanum-pen-script-v15-latin-regular.ttf') format('truetype'), /* Safari, Android, iOS */
-            url('{{ .BackendURL }}/renderer_assets/fonts/nanum-pen-script/nanum-pen-script-v15-latin-regular.svg#NanumPenScript') format('svg'); /* Legacy iOS */
-      }
-
       * {
         box-sizing: border-box;
       }
@@ -50,12 +36,12 @@
         overflow: hidden;
       }
       .image-wrapper .content-wrapper {
-        background: linear-gradient(to bottom,rgb(254, 243, 199) 3.35rem,#00b0d7 1px); background-size: 100% 3.5rem;
+        background: rgb(254, 243, 199);
         height: 100%;
         border-radius: 2rem;
         padding-left:3rem;
         padding-right: 3rem;
-        padding-top: 4rem;
+        padding-top: 3rem;
         padding-bottom: 1.5rem;
         display: flex;
         flex-direction: column;
@@ -64,15 +50,18 @@
       }
 
       .image-wrapper .content-wrapper .content {
-        font-family: 'Nanum Pen Script', 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-        line-height: 0.9;
-        text-align: left;
+        font-family: 'Lato', 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        text-align: center;
+        justify-self: center;
+        align-self: center;
         text-overflow: ellipsis;
         overflow: hidden;
         width: 100%;
+        font-weight: bold;
         font-size: 3.5rem;
-        line-height: 1;
-        height: 100%;
+        line-height: 1.1;
+        margin-top: auto;
+        margin-bottom: auto;
       }
       .image-wrapper .content-wrapper .timestamp {
         font-family: 'Lato', 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
@@ -126,7 +115,11 @@
   <body>
     <div id="image-preview" class="image-wrapper">
       <div class="content-wrapper">
-        <p class="content">{{ .RawMessage.GetString "content" }}</p>
+        <div class="content">
+          {{ range $i, $content := (split (.RawMessage.GetString "content")) }}
+            <p>{{ $content }}</p>
+          {{ end }}
+        </div>
         <p class="timestamp">Posted on {{ .RawMessage.Created }}</p>
       </div>
       <div class="gifts">
