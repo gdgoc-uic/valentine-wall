@@ -90,6 +90,7 @@ import { useAuth, useStore } from "./store_new";
 import { onMounted, onUnmounted, toRefs } from "vue";
 import { pb } from "./client";
 import { User } from "./types";
+import fallbackImage from './assets/images/fallback.png';
 
 const route = useRoute();
 const { state, methods: { onReceiveUser } } = useAuth();
@@ -114,9 +115,15 @@ useHead({
       metaTags = route.meta.metaTags;
     }
 
+    if (metaTags.findIndex(m => m.name === 'og:image') === -1) {
+      metaTags.push({ name: 'og:image', content: fallbackImage });
+    }
+
     return [
       { charset: 'UTF-8' },
       { name: 'viewport', content: 'width=device-width, initial-scale=1.0' },
+      { name: 'og:image:width', content: '1200' },
+      { name: 'og:image:height', content: '630'},
       ...metaTags
     ];
   }),
