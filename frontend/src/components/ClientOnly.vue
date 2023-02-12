@@ -3,13 +3,19 @@ import {
   defineComponent,
   onMounted,
   ref,
+  createCommentVNode,
+  h
 } from "@vue/runtime-core";
 
 export default defineComponent({
   setup(_, { slots }) {
     const show = ref(false);
     onMounted(() => { show.value = true; });
-    return () => (show.value && slots.default ? slots.default() : null)
+
+    const defaultVnode = h(() => slots.default?.()) ?? createCommentVNode('Client only rendering with empty default slot')
+    const placeholderVNode = h(() => slots.placeholder?.()) ?? createCommentVNode(`Client only rendering component placeholder`)
+
+    return () => show.value ? defaultVnode : placeholderVNode
   }
 });
 </script>
