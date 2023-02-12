@@ -20,13 +20,15 @@ func expandMessage(dao *daos.Dao, record *models.Record) error {
 		return nil
 	}
 
-	// fetch recipient
-	if recipient, err := dao.FindFirstRecordByData("user_details", "student_id", record.GetString("recipient")); err == nil {
-		dao.ExpandRecord(recipient, []string{"college_departments"}, func(relCollection *models.Collection, relIds []string) ([]*models.Record, error) {
-			return dao.FindRecordsByIds(relCollection.Name, relIds)
-		})
+	// fetch recipient except everyone
+	if record.GetString("recipient") != "everyone" {
+		if recipient, err := dao.FindFirstRecordByData("user_details", "student_id", record.GetString("recipient")); err == nil {
+			dao.ExpandRecord(recipient, []string{"college_departments"}, func(relCollection *models.Collection, relIds []string) ([]*models.Record, error) {
+				return dao.FindRecordsByIds(relCollection.Name, relIds)
+			})
 
-		record.MergeExpand(map[string]any{"recipient": recipient})
+			record.MergeExpand(map[string]any{"recipient": recipient})
+		}
 	}
 
 	return nil
@@ -44,6 +46,10 @@ func expandMessageReply(dao *daos.Dao, record *models.Record) error {
 }
 
 func updateRanking(dao *daos.Dao, recipientId string, coinsToAdd float64) error {
+	if recipientId == "everyone" {
+		return nil
+	}
+
 	ranking, err := dao.FindFirstRecordByData("rankings", "recipient", recipientId)
 	if err != nil {
 		collection, err := dao.FindCollectionByNameOrId("rankings")
@@ -129,8 +135,7 @@ func onAddMessage(dao *daos.Dao, e *core.RecordCreateEvent) error {
 
 	studentId := e.Record.GetString("recipient")
 	if err := updateRanking(dao, studentId, totalAmount+sendPrice); err != nil {
-		// TODO: add error
-		// return err
+		passivePrintError(err)
 		return nil
 	}
 
@@ -142,14 +147,14 @@ func onAddMessage(dao *daos.Dao, e *core.RecordCreateEvent) error {
 		if err := createTransaction(dao,
 			wallet.Id, -totalAmount,
 			fmt.Sprintf("Sent virtual gifts for %s", studentId)); err != nil {
-			// TODO: return err
+			passivePrintError(err)
 		}
 	}
 
 	if isRecipientAccessible && remittableAmount != 0 {
 		if err := createTransactionFromUser(dao, recipient.Id,
 			remittableAmount, fmt.Sprintf("Gift message from message %s", e.Record.Id)); err != nil {
-			// TODO: return err
+			passivePrintError(err)
 		}
 	}
 

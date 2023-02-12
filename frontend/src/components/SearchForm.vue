@@ -8,7 +8,7 @@
 import { defineComponent } from "@vue/runtime-core";
 import { notify } from "../notify";
 
-const idRegex = /^[0-9]{6,12}$/;
+const idRegex = /^[0-9]{6,12}|everyone$/;
 
 export default defineComponent({
   methods: {
@@ -31,10 +31,15 @@ export default defineComponent({
         }
 
         if (!import.meta.env.SSR) {
-          this.$router.push({
-            name: "message-wall-page",
-            params: { recipientId: recipientId },
-          });
+          if (recipientId === 'everyone') {
+            this.$router.push('/wall/everyone');
+          } else {
+            this.$router.push({
+              name: "message-wall-page",
+              params: { recipientId: recipientId },
+            });
+          }
+
           e.target.reset();
         }
       }

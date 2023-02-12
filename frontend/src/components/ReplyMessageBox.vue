@@ -1,6 +1,6 @@
 <template>
   <div 
-    v-if="!authState.isLoggedIn || authState.user!.expand.details.student_id != message.recipient" 
+    v-if="!authState.isLoggedIn || (message.recipient != 'everyone' && authState.user!.expand.details.student_id != message.recipient)" 
     class="flex flex-col md:flex-row items-center">
     <icon-reply-lock class="text-gray-500 text-6xl mb-4 md:mb-0" />
     <div class="flex flex-col text-center items-center md:text-left md:items-start md:ml-4">

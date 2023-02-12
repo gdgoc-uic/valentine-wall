@@ -40,6 +40,12 @@ const routes: RouteRecordRaw[] = [
     }
   },
   {
+    path: '/wall/everyone',
+    redirect: {
+      name: 'recent-wall-page',
+    }
+  },
+  {
     name: 'message-wall-page',
     path: '/wall/:recipientId',
     component: () => import('./pages/Wall.vue'),

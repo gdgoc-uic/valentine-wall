@@ -31,13 +31,23 @@
       <label class="label">
         <span class="label-text">Recipient</span>
       </label>
-      <input
-        class="input input-bordered" 
-        type="text"
-        name="recipient_id"
-        v-model="recipientId"
-        pattern="[0-9]{6,12}" 
-        placeholder="6 to 12-digit Student ID (e.g. 200xxxxxxxxx)">
+      <div class="flex space-x-2">
+        <input
+          class="input input-bordered flex-1" 
+          type="text"
+          name="recipient_id"
+          v-model="recipientId"
+          pattern="[0-9]{6,12}|everyone" 
+          placeholder="6 to 12-digit Student ID (e.g. 200xxxxxxxxx) or 'everyone'">
+
+        <Tooltip v-if="!existingRecipient">
+          <button @click.prevent="recipientId = 'everyone'" class="btn">Everyone</button>
+
+          <template #popper>
+            <p>Click this if you don't know the person or want to send a message to all</p>
+          </template>
+        </Tooltip>
+      </div>
     </div>
     <div class="form-control">
       <label class="label">
@@ -51,9 +61,8 @@
     </div>
     <div class="flex flex-col md:flex-row space-y-2 md:space-y-0 justify-between items-center mt-4">
       <div class="w-full md:w-auto flex space-x-2 items-stretch md:items-start">
-        <button @click.prevent="isGiftModalOpen = true" class="flex-1 md:flex-auto btn btn-sm md:btn-md space-x-2 bg-white hover:bg-rose-200 border-rose-300 hover:border-rose-600 text-gray-800">
+        <button :disabled="recipientId === 'everyone'" @click.prevent="isGiftModalOpen = true" class="flex-1 md:flex-auto btn btn-sm md:btn-md space-x-2 bg-white hover:bg-rose-200 border-rose-300 hover:border-rose-600 text-gray-800">
           <icon-plus class="text-rose-500" />          
-
           <span>Virtual Gift</span>
         </button>
 
@@ -91,6 +100,7 @@ import IconPlus from '~icons/uil/plus';
 import GiftIcon from './GiftIcon.vue';
 import ContentCounter from './ContentCounter.vue';
 import { VueComponent as RulesContent } from '../assets/texts/rules.md';
+import { Tooltip } from 'floating-vue';
 
 const SEND_PRICE = 150;
 const emit = defineEmits(['success']);
