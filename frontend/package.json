@@ -21,7 +21,7 @@
     "daisyui": "^2.49.0",
     "dayjs": "^1.10.7",
     "event-source-polyfill": "^1.0.25",
-    "firebase": "^9.6.3",
+    "firebase": "^9.17.1",
     "floating-vue": "^2.0.0-beta.20",
     "masonry-layout": "^4.2.2",
     "morgan": "^1.10.0",
