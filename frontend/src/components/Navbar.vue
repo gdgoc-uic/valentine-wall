@@ -1,6 +1,6 @@
 <template>
   <div>
-    <div class="hidden lg:block bg-[#f3b3ae] px-10 py-1">
+    <div class="hidden lg:block bg-[#EF9B95] px-10 py-1">
       <div :class="[isHome ? 'mx-auto' : 'ml-auto mr-8']" class="flex flex-none space-x-8">
         <router-link
           :key="'links_' + i"
@@ -59,13 +59,14 @@
             </ul>
           </div>
           <!-- TODO: add 'add coins' modal -->
-          <button 
-            :class="[!shouldSendButtonHide ? 'rounded-none' : 'rounded-l-none']" 
+          <router-link 
             v-if="authState.isLoggedIn" 
+            :class="[!shouldSendButtonHide ? 'rounded-none' : 'rounded-l-none']" 
+            :to="{ name: 'settings-transactions-section' }"
             class="btn shadow-md normal-case text-black bg-white border-0 hover:bg-gray-100">
             <icon-coin class="mr-2" />
             <span>ღ{{ authState.user!.expand.wallet?.balance ?? 'unknown' }}</span>
-          </button>
+          </router-link>
           <button
             v-if="!shouldSendButtonHide && authState.isLoggedIn"
             @click="store.state.isSendMessageModalOpen = true"
@@ -117,12 +118,13 @@
                 </component>
               </li>
             </ul>
-            <button 
+            <router-link 
               v-if="authState.isLoggedIn" 
+              :to="{ name: 'settings-transactions-section' }"
               class="btn shadow-md normal-case text-black bg-white border-0 hover:bg-gray-100 w-full mb-2">
               <icon-coin class="mr-2" />
               <span>ღ{{ authState.user!.expand.wallet?.balance ?? 'unknown' }}</span>
-            </button>
+            </router-link>
             <button
               v-if="!shouldSendButtonHide"
               @click="store.state.isSendMessageModalOpen = true; menuOpen = false"
@@ -166,7 +168,15 @@ const { state: authState, methods: {logout} } = useAuth();
 const store = useStore();
 
 const menuOpen = ref(false);
-const navbarLinks = [
+const navbarLinks = computed(() => [
+  ...(authState.isLoggedIn ? [{
+    label: 'Your Wall',
+    to: { name: 'message-wall-page', params: { recipientId: authState.user.expand.details.student_id } }
+  }] : []),
+  {
+    label: 'Recent',
+    to: { name: 'recent-wall-page' }
+  },
   {
     label: 'Rankings',
     to: { name: 'rankings-page' }
@@ -175,7 +185,7 @@ const navbarLinks = [
     label: 'About',
     to: { name: 'about-page' }
   }
-];
+]);
 
 const accountLinks = [
   {
