@@ -111,7 +111,8 @@ func onBeforeAddMessage(dao *daos.Dao, e *core.RecordCreateEvent) error {
 	}
 
 	totalAmount, _ := computeGiftCost(e.Record)
-	return checkSufficientFunds(dao, e.Record.GetString("user"), sendPrice+totalAmount)
+	user := e.Record.Expand()["user"].(*models.Record)
+	return checkSufficientFunds(dao, user.GetString("user"), sendPrice+totalAmount)
 }
 
 func onAddMessage(dao *daos.Dao, e *core.RecordCreateEvent) error {
@@ -160,7 +161,7 @@ func onAddMessage(dao *daos.Dao, e *core.RecordCreateEvent) error {
 
 	// update last active at
 	user.Set("last_active", types.DateTime{})
-	dao.SaveRecord(user) //TODO: error
+	passivePrintError(dao.SaveRecord(user))
 
 	return nil
 }
@@ -219,5 +220,10 @@ func onBeforeAddMessageReply(dao *daos.Dao, e *core.RecordCreateEvent) error {
 		return err.ToApiError()
 	}
 
-	return checkSufficientFunds(dao, e.Record.GetString("sender"), sendPrice)
+	if err := expandMessageReply(dao, e.Record); err != nil {
+		return err
+	}
+
+	sender := e.Record.Expand()["sender"].(*models.Record)
+	return checkSufficientFunds(dao, sender.GetString("user"), sendPrice)
 }
