@@ -16,8 +16,9 @@
             </div>
 
             <template #popper>
-              <div class="text-center">
+              <div class="text-center flex flex-col">
                 <span class="font-bold">{{  m.name  }}</span>
+                <span>{{ m.org }}</span>
                 <p class="text-center">{{ m.roles.join(', ') }}</p>
               </div>
             </template>
