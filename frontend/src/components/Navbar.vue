@@ -1,4 +1,37 @@
 <template>
+  <modal v-model:open="isCoinsModalOpen" with-closing-button title="Your coins">
+    <div class="flex flex-col space-y-4">
+      <div class="bg-gray-200 text-3xl flex items-center justify-center p-3 rounded-md">
+        <icon-coin class="mr-2" />
+        <span>ღ{{ authState.user?.expand.wallet?.balance.toFixed(2) ?? 'unknown' }}</span>
+      </div>
+
+      <div>
+        <h3 class="font-bold mb-2">How to earn coins?</h3>
+        <div class="flex flex-col space-y-2">
+          <div :key="'how_to_earn_' + hi" 
+            v-for="(ht, hi) in howToEarn" 
+            class="flex flex-row bg-gray-200 p-3 rounded-md">
+            <div class="w-3/4">
+              <p class="font-bold text-rose-500">{{ ht.description }}</p>
+            </div>
+
+            <div class="w-1/4 text-xl flex items-center">
+              <icon-coin class="mr-2" />
+              <span>ღ{{ ht.amount }}</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="flex justify-end">
+        <router-link class="btn btn-primary" :to="{ name: 'settings-transactions-section' }">
+          Transactions
+        </router-link>
+      </div>
+    </div>
+  </modal>
+
   <div>
     <div class="hidden lg:block bg-[#EF9B95] px-10 py-1">
       <div :class="[isHome ? 'mx-auto' : 'ml-auto mr-8']" class="flex flex-none space-x-8">
@@ -58,15 +91,15 @@
               </li>
             </ul>
           </div>
-          <!-- TODO: add 'add coins' modal -->
-          <router-link 
+          
+          <button
             v-if="authState.isLoggedIn" 
+            @click="isCoinsModalOpen = true"
             :class="[!shouldSendButtonHide ? 'rounded-none' : 'rounded-l-none']" 
-            :to="{ name: 'settings-transactions-section' }"
             class="btn shadow-md normal-case text-black bg-white border-0 hover:bg-gray-100">
             <icon-coin class="mr-2" />
-            <span>ღ{{ authState.user!.expand.wallet?.balance ?? 'unknown' }}</span>
-          </router-link>
+            <span>ღ{{ authState.user!.expand.wallet?.balance.toFixed(2) ?? 'unknown' }}</span>
+          </button>
           <button
             v-if="!shouldSendButtonHide && authState.isLoggedIn"
             @click="store.state.isSendMessageModalOpen = true"
@@ -118,13 +151,13 @@
                 </component>
               </li>
             </ul>
-            <router-link 
+            <button
               v-if="authState.isLoggedIn" 
-              :to="{ name: 'settings-transactions-section' }"
+              @click="isCoinsModalOpen = true"
               class="btn shadow-md normal-case text-black bg-white border-0 hover:bg-gray-100 w-full mb-2">
               <icon-coin class="mr-2" />
-              <span>ღ{{ authState.user!.expand.wallet?.balance ?? 'unknown' }}</span>
-            </router-link>
+              <span>ღ{{ authState.user!.expand.wallet?.balance.toFixed(2) ?? 'unknown' }}</span>
+            </button>
             <button
               v-if="!shouldSendButtonHide"
               @click="store.state.isSendMessageModalOpen = true; menuOpen = false"
@@ -151,6 +184,7 @@ import { catchAndNotifyError } from '../notify';
 import ClientOnly from './ClientOnly.vue';
 import LoginButton from './LoginButton.vue';
 import SearchForm from './SearchForm.vue';
+import Modal from './Modal.vue';
 import { useRoute, useRouter } from 'vue-router';
 import { ref, computed } from 'vue';
 import { useAuth, useStore } from '../store_new';
@@ -166,6 +200,25 @@ const router = useRouter();
 const route = useRoute();
 const { state: authState, methods: {logout} } = useAuth();
 const store = useStore();
+const isCoinsModalOpen = ref(false);
+const howToEarn = computed(() => [
+  {
+    description: 'Earn from idle time (per second)',
+    amount: 0.05
+  },
+  {
+    description: 'Share posts',
+    amount: 300,
+  },
+  {
+    description: 'Receive money virtual gift',
+    amount: store.state.giftList.find(g => g.uid === 'money')?.price ?? 1000,
+  },
+  {
+    description: 'Ask the admins?',
+    amount: '???'
+  }
+]);
 
 const menuOpen = ref(false);
 const navbarLinks = computed(() => [
