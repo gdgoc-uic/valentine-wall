@@ -62,7 +62,7 @@ const shouldDelete = computed(() => {
 });
 
 const { mutateAsync: deleteAccount } = useMutation(() => {
-  return pb.collection('users').delete(user!.id);
+  return pb.collection('user_details').delete(user!.details);
 }, {
   onSuccess(data) {
     notify({ type: 'success', text: 'Your account was deleted succesfully.' });
