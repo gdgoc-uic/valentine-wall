@@ -115,21 +115,27 @@ onMounted(() => {
       return;
     }
 
-    if (data.action === 'create') {
-      replies.value.unshift(data.record);
-    } else if (data.action === 'update') {
-      replies.value = replies.value.map(r => {
-        if (r.id === data.record.id) {
-          return {
-            ...data.record,
-            expand: r.expand
-          } as PbRecord;
-        } else {
-          return r;
+    if (data.action === 'delete') {
+      replies.value = replies.value.filter(r => r.id !== data.record.id);
+    } else {
+      pb.collection(data.record.collectionName).getOne(data.record.id, {
+        expand: 'sender'
+      }).then(record => {
+        if (data.action === 'create') {
+          replies.value.unshift(record);
+        } else if (data.action === 'update') {
+          replies.value = replies.value.map(r => {
+            if (r.id === record.id) {
+              return {
+                ...record,
+                expand: r.expand
+              } as PbRecord;
+            } else {
+              return r;
+            }
+          });
         }
       });
-    } else if (data.action === 'delete') {
-      replies.value = replies.value.filter(r => r.id !== data.record.id);
     }
   });
 });
