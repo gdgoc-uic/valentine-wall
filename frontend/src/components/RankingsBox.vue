@@ -81,7 +81,8 @@ const rankingsQuery = useQuery(
   ['rankings_summary', rankingsSex],
   () => pb.collection('rankings').getList(1, 3, { 
     filter: `sex = "${rankingsSex.value}"`,
-    expand: 'college_department'
+    expand: 'college_department',
+    sort: '-total_coins'
   }),
   {
     refetchOnWindowFocus: () => false,

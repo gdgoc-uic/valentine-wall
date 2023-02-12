@@ -83,7 +83,7 @@ const rankingsSex = ref('male');
 const { fetchNextPage, hasNextPage, ...query } = useInfiniteQuery(
   ['rankings', rankingsSex], 
   ({ pageParam = 1 }) => pb.collection('rankings')
-          .getList(pageParam, 10, { filter: `sex="${rankingsSex.value}"`, expand: 'college_department' }), {
+          .getList(pageParam, 10, { filter: `sex="${rankingsSex.value}"`, expand: 'college_department', sort: '-total_coins' }), {
     getNextPageParam: (result) => result.page + 1 <= result.totalPages ? result.page + 1 : undefined
   });
 
