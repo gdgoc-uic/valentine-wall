@@ -4,6 +4,7 @@ import (
 	"fmt"
 
 	"github.com/pocketbase/dbx"
+	"github.com/pocketbase/pocketbase"
 	"github.com/pocketbase/pocketbase/apis"
 	"github.com/pocketbase/pocketbase/core"
 	"github.com/pocketbase/pocketbase/daos"
@@ -121,7 +122,8 @@ func onBeforeAddMessage(dao *daos.Dao, e *core.RecordCreateEvent) error {
 	return checkSufficientFunds(dao, user.GetString("user"), sendPrice+totalAmount)
 }
 
-func onAddMessage(dao *daos.Dao, e *core.RecordCreateEvent) error {
+func onAddMessage(app *pocketbase.PocketBase, e *core.RecordCreateEvent) error {
+	dao := app.Dao()
 	expandMessage(dao, e.Record)
 
 	user := e.Record.Expand()["user"].(*models.Record)
@@ -160,10 +162,12 @@ func onAddMessage(dao *daos.Dao, e *core.RecordCreateEvent) error {
 
 	// send email
 	if isRecipientAccessible {
-		emailTemplates.message.With(map[string]any{
-			"Name":       recipient.GetString("name"),
+		if msg, err := emailTemplates.message.With(map[string]any{
+			"Email":      recipient.GetString("email"),
 			"MessageURL": fmt.Sprintf("%s/wall/%s/%s", frontendUrl, studentId, e.Record.Id),
-		})
+		}).Message(app.Settings().Meta, recipient.GetString("email")); err == nil {
+			passivePrintError(app.NewMailClient().Send(msg))
+		}
 	}
 
 	// update last active at
@@ -190,7 +194,8 @@ func onRemoveMessage(dao *daos.Dao, e *core.RecordDeleteEvent) error {
 	return nil
 }
 
-func onAddMessageReply(dao *daos.Dao, e *core.RecordCreateEvent) error {
+func onAddMessageReply(app *pocketbase.PocketBase, e *core.RecordCreateEvent) error {
+	dao := app.Dao()
 	expandMessageReply(dao, e.Record)
 	user := e.Record.Expand()["sender"].(*models.Record)
 
@@ -204,6 +209,17 @@ func onAddMessageReply(dao *daos.Dao, e *core.RecordCreateEvent) error {
 	if msgOk {
 		msg.Set("replies_count", msg.GetInt("replies_count")+1)
 		passivePrintError(dao.SaveRecord(msg))
+		expandMessage(dao, msg)
+		recipient, isRecipientAccessible := e.Record.Expand()["recipient"].(*models.Record)
+		if isRecipientAccessible {
+			if msg, err := emailTemplates.reply.With(map[string]any{
+				"Email":       recipient.GetString("email"),
+				"RecipientID": msg.GetString("recipient"),
+				"MessageURL":  fmt.Sprintf("%s/wall/%s/%s", frontendUrl, msg.GetString("recipient"), e.Record.Id),
+			}).Message(app.Settings().Meta, recipient.GetString("email")); err == nil {
+				passivePrintError(app.NewMailClient().Send(msg))
+			}
+		}
 	}
 
 	return createTransactionFromUser(dao, user.GetString("user"), -sendPrice, fmt.Sprintf("Reply message %s", e.Record.Id))

@@ -21,14 +21,34 @@ func onAddUser(dao *daos.Dao, e *core.ModelEvent) error {
 	return dao.SaveRecord(record)
 }
 
-func onAddUserDetails(dao *daos.Dao, e *core.RecordCreateEvent) error {
+func onAddUserDetails(app *pocketbase.PocketBase, e *core.RecordCreateEvent) error {
+	dao := app.Dao()
 	user, err := dao.FindRecordById("users", e.Record.GetString("user"))
 	if err != nil {
 		return err
 	}
 
 	user.Set("details", e.Record.Id)
-	return dao.SaveRecord(user)
+	passivePrintError(dao.SaveRecord(user))
+
+	// TODO: build message count
+	// messageCount, giftMessagesCount := 0, 0
+
+	// if res, err := dao.FindRecordsByExpr("messages", dbx.HashExp{"recipient": e.Record.GetString("student_id")}); err == nil {
+	// 	for _, row := range res {
+
+	// 	}
+	// }
+
+	// TODO: add message count
+	email := e.Record.Email()
+	if msg, err := emailTemplates.welcome.With(map[string]any{
+		"Email": email,
+	}).Message(app.Settings().Meta, email); err == nil {
+		passivePrintError(app.NewMailClient().Send(msg))
+	}
+
+	return nil
 }
 
 func onUserVerified(app *pocketbase.PocketBase, e *core.RecordConfirmVerificationEvent) error {

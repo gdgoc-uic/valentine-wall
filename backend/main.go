@@ -49,11 +49,11 @@ func main() {
 	app.OnRecordAfterCreateRequest().Add(func(e *core.RecordCreateEvent) error {
 		switch e.Record.Collection().Name {
 		case "user_details":
-			return onAddUserDetails(app.Dao(), e)
+			return onAddUserDetails(app, e)
 		case "messages":
-			return onAddMessage(app.Dao(), e)
+			return onAddMessage(app, e)
 		case "message_replies":
-			return onAddMessageReply(app.Dao(), e)
+			return onAddMessageReply(app, e)
 		}
 
 		return nil
