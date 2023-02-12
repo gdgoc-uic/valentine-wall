@@ -39,7 +39,7 @@ var imageRenderer = &ImageRenderer{
 	CacheStore: cache.New(time.Duration(10*time.Minute), time.Duration(5*time.Second)),
 	Funcs: htmlTemplate.FuncMap{
 		"split": func(s string) []string {
-			return strings.Split(s, "\n")
+			return strings.Split(strings.ReplaceAll(s, "\r\n", "\n"), "\n")
 		},
 	},
 }
