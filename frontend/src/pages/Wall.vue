@@ -165,7 +165,7 @@ const { hasNextPage, fetchNextPage, ...query } = useInfiniteQuery(
 
     const resp = await pb.collection('messages').getList(pageParam, 10, { 
       sort: '-created',
-      filter: `(recipient = "${recipient.value}" ${hasGiftsFilter})`
+      filter: recipient.value ? `(recipient = "${recipient.value}" ${hasGiftsFilter})` : ''
     });
 
     if (resp.items.length === 0) {
@@ -179,7 +179,7 @@ const { hasNextPage, fetchNextPage, ...query } = useInfiniteQuery(
     retry: 1,
     refetchOnWindowFocus: () => false,
     getNextPageParam: (result) => 
-      result.page + 1 <= result.totalPages ? result.page + 1 : undefined
+      result.page + 1 <= result.totalPages ? result.page + 1 : undefined,
   }
 );
 
@@ -190,7 +190,7 @@ const currentMessages = computed(() => {
     return [];
   }
 
-  rawCurrentMessages.splice(0, rawCurrentMessages.length - 1);
+  rawCurrentMessages.splice(0, rawCurrentMessages.length);
   rawCurrentMessages.push(...query.data.value.pages.map(p => p.items).flat());
   return rawCurrentMessages;
 });
@@ -204,15 +204,17 @@ onMounted(() => {
     }
 
     pb.collection('messages').subscribe('*', (data) => {
-      if (data.action === 'create' && data.record.recipient === recipient.value) {
-        if (data.record.gifts.length === 0) {
-          stats.messages_count++;
-        } else {
-          stats.gift_messages_count++;
-        }
-       
-        if (hasGift.value === true && data.record.gifts.length === 0) {
-          return;
+      if (data.action === 'create' && (!recipient.value || data.record.recipient === recipient.value)) {
+        if (recipient.value) {
+          if (data.record.gifts.length === 0) {
+            stats.messages_count++;
+          } else {
+            stats.gift_messages_count++;
+          }
+         
+          if (hasGift.value === true && data.record.gifts.length === 0) {
+            return;
+          }
         }
         
         rawCurrentMessages.unshift(data.record);
