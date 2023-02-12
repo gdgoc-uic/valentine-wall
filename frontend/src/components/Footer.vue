@@ -26,6 +26,21 @@
       </div>
     </div>
 
+    <div class="w-full p-4 md:hidden">
+      <div class=" rounded-lg p-8 bg-rose-200 text-center space-y-4">
+        <p class="text-2xl"><b>Let's not make your Valentine's ruined by bugs.</b> </p>
+        
+        <feedback-form v-slot="{ openDialog }">
+          <div class="tooltip" data-tip="Problems, suggestions? Post it here!">
+            <button @click="openDialog" class="btn btn-primary space-x-2">
+              <icon-comment-add />
+              <span>Add your Feedback</span>
+            </button>
+          </div>
+        </feedback-form>
+      </div>
+    </div>
+
     <div class="mx-auto max-w-md w-full flex flex-col items-center space-y-4 pt-8">
       <img src="../assets/images/gdscuic.png" class="w-48" alt="Google Developer Student Clubs - University of the Immaculate Conception Chapter">
       <p>Copyright &copy; 2022, 2023 <br /> A project of Google Developer Student Clubs - University of the Immaculate Conception Chapter.</p>
@@ -40,8 +55,10 @@
 </template>
 
 <script lang="ts" setup>
+import FeedbackForm from "./FeedbackForm.vue";
 import { Tooltip } from 'floating-vue';
 import { VueComponent as AboutText } from '../assets/texts/about.md';
+import IconCommentAdd from "~icons/uil/comment-add";;
 import { roles, org, members as rawMembers } from '../assets/about.json'
 const members = rawMembers.map(m => ({
   name: m.name,

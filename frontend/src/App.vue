@@ -1,17 +1,20 @@
 <template>
   <div class="background"></div>
 
-  <feedback-form v-slot="{ openDialog }">
-    <div class="fixed right-[5%] bottom-[5%] tooltip" style="z-index: 999" data-tip="Problems, suggestions? Post it here!">
-      <button @click="openDialog" class="btn md:btn-lg btn-primary space-x-2 hidden md:flex">
-        <icon-comment-add />
-        <span>Feedback</span>
-      </button>
-      <button @click="openDialog" class="btn btn-lg btn-circle btn-primary md:hidden">
-        <icon-comment-add />
-      </button>
+  <div style="z-index: 999" class="fixed inset-x-0 bottom-0 py-4 bg-rose-200 text-center hidden md:block">
+    <div class="max-w-7xl mx-auto w-full flex flex-col md:flex-row space-y-2 md:space-y-0 md:space-x-4 items-center justify-center">
+      <p class="text-lg"><b>Let's not make your Valentine's ruined by bugs.</b> </p>
+      
+      <feedback-form v-slot="{ openDialog }">
+        <div class="tooltip" data-tip="Problems, suggestions? Post it here!">
+          <button @click="openDialog" class="btn btn-sm btn-primary space-x-2">
+            <icon-comment-add />
+            <span>Add your Feedback</span>
+          </button>                                                                                                                                                                                   
+        </div>
+      </feedback-form>
     </div>
-  </feedback-form>
+  </div>
 
   <!-- Notifications -->
   <client-only>
