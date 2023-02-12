@@ -61,7 +61,7 @@
 
               <report-dialog 
                 :link="permalink"
-                :email="authState.user.email">
+                :email="authState.user?.email ?? ''">
                 <template #default="{ openDialog }">
                   <button 
                     @click="openDialog" 
