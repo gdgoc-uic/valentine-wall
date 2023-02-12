@@ -15,9 +15,10 @@ type Gifts []Gift
 type Gift struct {
 	models.BaseModel
 
-	UID   string  `db:"uid" json:"uid"`
-	Label string  `db:"label" json:"label"`
-	Price float32 `db:"price" json:"price"`
+	UID          string  `db:"uid" json:"uid"`
+	Label        string  `db:"label" json:"label"`
+	Price        float32 `db:"price" json:"price"`
+	IsRemittable bool    `db:"is_remittable" json:"is_remittable"`
 }
 
 func (gift *Gift) TableName() string {

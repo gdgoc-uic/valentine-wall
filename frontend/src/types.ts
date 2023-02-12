@@ -15,6 +15,7 @@ export interface Gift {
   uid: string
   label: string
   price: number
+  is_remittable: boolean
 }
 
 // NOTE: snake_case because JSON response is in snake_case
