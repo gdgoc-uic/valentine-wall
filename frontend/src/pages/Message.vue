@@ -169,16 +169,23 @@ const { mutateAsync: deleteMessage } = useMutation(
 
 const hasGifts = computed(() => message.value?.gifts.length !== 0);
 const recipient = computed(() => route.params.recipientId ?? ''); 
-const messageId = computed(() => route.params.messageId ?? '');
+const messageId = computed(() => {
+  const msgId = route.params.messageId;
+  if (Array.isArray(msgId)) {
+    return msgId[0];
+  }
+  return msgId;
+});
 
 const query = useQuery(
   ['message', recipient, messageId],
-  () => pb.collection('messages').getFirstListItem(
-    `id = "${messageId.value}" && recipient = "${recipient.value}"`,
-    {
-      expand: 'gifts,message_replies(message)'
-    }
-  )
+  () => pb.collection('messages').getOne(messageId.value, {
+    expand: 'gifts,message_replies(message)'
+  }),
+  {
+    refetchOnWindowFocus: false,
+    retry: 0
+  }
 );
 
 const message = query.data;
