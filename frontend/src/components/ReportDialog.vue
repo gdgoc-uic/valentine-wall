@@ -20,7 +20,7 @@ const props = defineProps({
 
 function openDialog() {
   const encodedEmail = encodeURIComponent(props.email);
-  const encodedId = encodeURIComponent(authState.user.id);
+  const encodedId = encodeURIComponent(authState.user?.id ?? '');
   const encodedLink = encodeURIComponent(props.link);
 
   popupCenter({
