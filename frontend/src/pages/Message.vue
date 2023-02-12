@@ -17,9 +17,9 @@
                 <p class="text-3xl font-bold">{{ displayedGiftLabels }}</p>
               </div>
               <p v-else class="text-gray-500 text-xl mb-2">For {{ getDisplayName(message!.recipient) }}</p>
-              <div class="mb-8" :class="{ 'mt-8 bg-amber-100 rounded-lg text-center': hasGifts, 'px-8 py-16': revealContent && hasGifts, 'mt-2': !hasGifts }">
+              <div class="mb-8 mt-8 bg-amber-100 rounded-lg text-center" :class="{ 'px-8 py-16': revealContent || !hasGifts }">
                 <button v-if="hasGifts && !revealContent" class="w-full p-4 hover:bg-amber-200 rounded-lg" @click="revealContent = true">Reveal note</button>
-                <p v-if="revealContent" class="font-bold text-4xl">{{ message!.content }}</p>
+                <p v-if="!hasGifts || revealContent" class="font-bold text-4xl">{{ message!.content }}</p>
               </div>
               <p class="text-gray-500" :class="{ 'text-center': hasGifts }">
                 Posted {{ fromNow(message!.created_at) }} ({{ prettifyDateTime(message!.created_at) }})
@@ -94,7 +94,6 @@
 </template>
 
 <script lang="ts" setup>
-import IconReply from '~icons/uil/comment-heart';
 import IconConfused from '~icons/uil/confused';
 import IconTrash from '~icons/uil/trash-alt';
 import IconShare from '~icons/uil/share-alt';
@@ -170,7 +169,7 @@ const { mutateAsync: deleteMessage } = useMutation(
   }
 );
 
-const hasGifts = computed(() => message.value?.expand.gifts?.length !== 0);
+const hasGifts = computed(() => message.value?.gifts.length !== 0);
 const recipient = computed(() => route.params.recipientId ?? ''); 
 const messageId = computed(() => route.params.messageId ?? '');
 
