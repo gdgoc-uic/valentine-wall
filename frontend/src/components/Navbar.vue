@@ -180,10 +180,6 @@ const navbarLinks = computed(() => [
   {
     label: 'Rankings',
     to: { name: 'rankings-page' }
-  },
-  {
-    label: 'About',
-    to: { name: 'about-page' }
   }
 ]);
 

@@ -2,7 +2,9 @@
   <footer class="text-center mt-24 pt-18 pb-24 flex flex-col items-center space-y-3 max-w-2xl mx-auto">    
     <div class="px-8 w-full">
       <img src="../assets/images/icon-big.png" class="w-1/3 text-center mx-auto mb-8" alt="Icon">
-      <about-text class="text-center mb-8" />
+      <div class="mb-8">
+        <about-text class="text-center" />
+      </div>
       <div class="flex flex-row justify-center flex-wrap">
         <div class="p-2 flex flex-col items-center w-1/5 md:w-1/6" :key="'member_' + i" v-for="(m, i) in members">
           <tooltip>
