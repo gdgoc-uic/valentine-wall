@@ -1,8 +1,8 @@
 <template>
   <main class="flex">
-    <div class="bg-white max-w-7xl shadow-lg w-full flex flex-col mx-auto self-start mt-4 p-6 lg:p-12 rounded-lg">
+    <div class="bg-white max-w-7xl shadow-lg w-full flex flex-col mx-auto self-start mt-4 px-0 md:px-6 py-6 lg:p-12 rounded-lg">
       <div class="flex flex-col md:flex-row justify-between items-center mb-8">
-        <h1 class="text-center text-3xl font-bold">Valentine Ranking Board</h1>
+        <h1 class="text-center text-3xl font-bold mb-4 md:mb-0">Valentine Ranking Board</h1>
 
         <div class="tabs tabs-boxed">
           <button 
@@ -18,16 +18,16 @@
           <table class="table w-full">
             <thead>
               <tr>
-                <th class="w-1/4 text-lg normal-case text-red-400">
+                <th class="w-1/6 text-lg normal-case text-red-400">
                   <span class="hidden lg:block">Ranking</span>
                 </th>
-                <th class="w-2/4 text-lg normal-case text-red-400">
+                <th class="w-3/6 text-lg normal-case text-red-400">
                   <span class="block lg:hidden">Dept.</span>
                   <span class="hidden lg:block">Department</span>
                 </th>
-                <th class="w-1/4 text-lg text-center normal-case space-x-2 text-red-400">
+                <th class="w-2/6 text-lg text-center normal-case space-x-2 text-red-400">
                   <div class="space-x-2 flex justify-center items-center">
-                    <span>Accumulated Coins</span>
+                    <span class="hidden md:block">Accumulated Coins</span>
                     <icon-coin />
                   </div>
                 </th>
@@ -36,12 +36,14 @@
             <tbody>
               <template :key="`rankings_`+page" v-for="(ranking, page) in rankings?.pages">
                 <tr :key="r.recipient_id" v-for="(r, i) in ranking.items" :class="{'border-b-2': i < ranking.items.length - 1}">
-                  <td class="text-xl font-bold text-gray-700">#{{ i + 1 }}</td>
-                  <td class="text-xl font-semibold text-gray-500">{{ (r.expand.college_department as unknown as CollegeDepartment).label ?? 'Unknown' }}</td>
-                  <td class="text-xl text-gray-500 text-center">
+                  <td class="w-1/6 md:text-xl font-bold text-gray-700">#{{ i + 1 }}</td>
+                  <td class="w-3/6 md:text-xl font-semibold text-gray-500">
+                    {{ (r.expand.college_department as unknown as CollegeDepartment).label ?? 'Unknown' }}
+                  </td>
+                  <td class="w-2/6 md:text-xl text-gray-500 text-center">
                     <div>
                       <span class="text-rose-500 font-bold">{{ r.total_coins }}</span>
-                      <span class="text-2xl">ღ</span>
+                      <span class="md:text-2xl">ღ</span>
                     </div>
                   </td>
                 </tr>
