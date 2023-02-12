@@ -2,7 +2,6 @@ package main
 
 import (
 	"fmt"
-	"net/http"
 
 	"github.com/pocketbase/dbx"
 	"github.com/pocketbase/pocketbase/apis"
@@ -107,7 +106,12 @@ func onBeforeAddMessage(dao *daos.Dao, e *core.RecordCreateEvent) error {
 		return err.ToApiError()
 	}
 
-	return nil
+	if err := expandMessage(dao, e.Record); err != nil {
+		return err
+	}
+
+	totalAmount, _ := computeGiftCost(e.Record)
+	return checkSufficientFunds(dao, e.Record.GetString("user"), sendPrice+totalAmount)
 }
 
 func onAddMessage(dao *daos.Dao, e *core.RecordCreateEvent) error {
@@ -118,14 +122,8 @@ func onAddMessage(dao *daos.Dao, e *core.RecordCreateEvent) error {
 	totalAmount, remittableAmount := computeGiftCost(e.Record)
 
 	wallet, err := getWalletByUserId(dao, user.GetString("user"))
-
 	if err != nil {
 		return err
-	} else if wallet.GetFloat("amount") < remittableAmount {
-		return (&ResponseError{
-			StatusCode: http.StatusBadRequest,
-			Message:    "You have insufficient funds to send virtual remittable gifts to recipient.",
-		}).ToApiError()
 	}
 
 	studentId := e.Record.GetString("recipient")
@@ -218,4 +216,8 @@ func onRemoveMessageReply(dao *daos.Dao, e *core.RecordDeleteEvent) error {
 	}
 
 	return nil
+}
+
+func onBeforeAddMessageReply(dao *daos.Dao, e *core.RecordCreateEvent) error {
+	return checkSufficientFunds(dao, e.Record.GetString("sender"), sendPrice)
 }

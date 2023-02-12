@@ -1,9 +1,24 @@
 package main
 
 import (
+	"github.com/pocketbase/pocketbase/apis"
 	"github.com/pocketbase/pocketbase/daos"
 	"github.com/pocketbase/pocketbase/models"
 )
+
+func checkSufficientFunds(dao *daos.Dao, userId string, amountToDeduct float64) error {
+	wallet, err := dao.FindFirstRecordByData("virtual_wallets", "user", userId)
+	if err != nil {
+		return apis.NewUnauthorizedError("Cannot proceed because of missing wallet. Please contact the admins.", err)
+	}
+
+	balance := wallet.GetFloat("balance")
+	if amountToDeduct > balance {
+		return apis.NewUnauthorizedError("You have insufficient funds.", nil)
+	}
+
+	return nil
+}
 
 func createTransaction(dao *daos.Dao, wallet string, amount float64, description string) error {
 	collection, err := dao.FindCollectionByNameOrId("virtual_transactions")

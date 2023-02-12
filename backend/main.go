@@ -39,6 +39,8 @@ func main() {
 		switch e.Record.Collection().Name {
 		case "messages":
 			return onBeforeAddMessage(app.Dao(), e)
+		case "message_repies":
+			return onBeforeAddMessageReply(app.Dao(), e)
 		}
 
 		return nil
