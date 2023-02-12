@@ -152,7 +152,7 @@ func onAddMessage(dao *daos.Dao, e *core.RecordCreateEvent) error {
 	}
 
 	if isRecipientAccessible && remittableAmount != 0 {
-		if err := createTransactionFromUser(dao, recipient.Id,
+		if err := createTransactionFromUser(dao, recipient.GetString("user"),
 			remittableAmount, fmt.Sprintf("Gift message from message %s", e.Record.Id)); err != nil {
 			passivePrintError(err)
 		}
@@ -206,7 +206,7 @@ func onAddMessageReply(dao *daos.Dao, e *core.RecordCreateEvent) error {
 		passivePrintError(dao.SaveRecord(msg))
 	}
 
-	return createTransactionFromUser(dao, user.Id, -sendPrice, fmt.Sprintf("Reply message %s", e.Record.Id))
+	return createTransactionFromUser(dao, user.GetString("user"), -sendPrice, fmt.Sprintf("Reply message %s", e.Record.Id))
 }
 
 func onRemoveMessageReply(dao *daos.Dao, e *core.RecordDeleteEvent) error {
