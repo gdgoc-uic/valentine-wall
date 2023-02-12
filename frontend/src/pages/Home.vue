@@ -46,12 +46,12 @@
           <div class="bg-white p-12 space-y-8 rounded-2xl shadow-md h-full">
             <div>
               <h2 class="text-3xl font-bold mb-4">Search Messages</h2>
-              <p class="w-2/3 text-xl text-gray-500">Search your messages or even other's messages for free through the school ID.</p>
+              <p class="w-2/3 text-xl text-gray-500">Find your messages or even other's messages.</p>
             </div>
             <search-form>
               <div class="form-control space-y-4">
                 <div class="flex space-x-2 items-stretch">
-                  <input type="text" class="flex-1 input input-lg input-bordered" name="recipient_id" placeholder="6 to 12-digit Student ID (e.g. 200xxxxxxxxx)">
+                  <input type="text" class="flex-1 input input-lg input-bordered" name="recipient_id" placeholder="Type 'everyone' or 6 to 12-digit Student ID">
                   <button class="btn bg-rose-600 hover:bg-rose-700 border-0 px-16 h-16">Search</button>
                 </div>
               </div>
