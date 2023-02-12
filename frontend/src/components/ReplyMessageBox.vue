@@ -37,7 +37,7 @@ import IconReplyLock from '~icons/uil/comment-lock';
 import IconSend from '~icons/uil/message';
 import ContentCounter from './ContentCounter.vue';
 import { logEvent } from '@firebase/analytics';
-// import { analytics } from '../firebase';
+import { analytics } from '../firebase';
 import { notify } from '../notify';
 import { ref, computed, Ref, inject } from 'vue';
 import { useAuth } from '../store_new';
@@ -62,7 +62,7 @@ const { mutate: submitReply, isLoading: isSending } = useMutation(() => {
   onSuccess() {
     notify({ type: 'success', text: 'Reply was sent successfully.' });
     emit('update:hasReplied', true);
-    // logEvent(analytics!, 'reply-message', { id: this.message.id });
+    logEvent(analytics!, 'reply-message', { id: message.value.id });
   },
 })
 </script>

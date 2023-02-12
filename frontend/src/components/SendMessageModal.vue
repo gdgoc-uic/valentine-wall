@@ -37,8 +37,10 @@ import Modal from './Modal.vue';
 import IconClose from '~icons/uil/multiply';
 import { VueComponent as RulesContent } from '../assets/texts/rules.md';
 import { useRoute, useRouter } from 'vue-router';
+import { analytics } from '../firebase';
+import { logEvent } from '@firebase/analytics';
 const emit = defineEmits(['update:open']);
-const props = defineProps({
+defineProps({
   open: {
     type: Boolean
   }
@@ -48,9 +50,8 @@ const router = useRouter();
 const route = useRoute();
 
 function handleSendSuccess(recipientId: string, messageId: string) {
-  // logEvent(analytics!, 'post-message');
+  logEvent(analytics!, 'post-message');
   emit('update:open', false);
-  // this.$router.push(json['route']);
   router.push({
     name: 'message-page',
     params: { recipientId, messageId }
