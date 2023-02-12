@@ -162,7 +162,7 @@ const { mutateAsync: deleteMessage } = useMutation(
   {
     onSuccess() {
       notify({ type: 'success', text: 'Message was deleted successfully.' });
-      router.replace({ name: 'home-page' });
+      router.replace({ name: 'message-wall-page', params: { recipientId: recipient.value } });
     }
   }
 );
