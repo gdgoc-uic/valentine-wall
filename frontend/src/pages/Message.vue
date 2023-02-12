@@ -157,9 +157,8 @@ function getDisplayName(recipientId: string): string {
   }
 }
 
-// TODO(backend): add safe guards when deleting message
 const { mutateAsync: deleteMessage } = useMutation(
-  () => pb.collection('messages').delete(messageId.value.toString()),
+  () => pb.collection('messages').delete(message.value!.id),
   {
     onSuccess() {
       notify({ type: 'success', text: 'Message was deleted successfully.' });
