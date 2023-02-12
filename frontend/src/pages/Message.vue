@@ -22,7 +22,7 @@
                 <p v-if="!hasGifts || revealContent" class="font-bold text-4xl">{{ message!.content }}</p>
               </div>
               <p class="text-gray-500" :class="{ 'text-center': hasGifts }">
-                Posted {{ fromNow(message!.created_at) }} ({{ prettifyDateTime(message!.created_at) }})
+                Posted {{ fromNow(message!.created) }} ({{ prettifyDateTime(message!.created) }})
               </p>
             </div>
 
