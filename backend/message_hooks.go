@@ -171,30 +171,25 @@ func onRemoveMessage(dao *daos.Dao, e *core.RecordDeleteEvent) error {
 	// deduct total_cost
 	ranking, err := dao.FindFirstRecordByData("rankings", "recipient_id", e.Record.GetString("recipient"))
 	if err != nil {
-		// TODO: add error
+		passivePrintError(err)
 		return nil
 	}
 
 	totalAmount, _ := computeGiftCost(e.Record)
 	ranking.Set("total_coins", ranking.GetFloat("total_coins")-totalAmount)
-	dao.SaveRecord(ranking) // TODO: add error
+	passivePrintError(dao.SaveRecord(ranking))
 
 	return nil
 }
 
 func onAddMessageReply(dao *daos.Dao, e *core.RecordCreateEvent) error {
-	// check profanity content
-	if err := checkProfanity(e.Record.GetString("content")); err != nil {
-		return err.ToApiError()
-	}
-
 	expandMessageReply(dao, e.Record)
 	user := e.Record.Expand()["sender"].(*models.Record)
 
 	// update last active at
 	if user != nil {
 		user.Set("last_active", types.DateTime{})
-		dao.SaveRecord(user) //TODO: error
+		passivePrintError(dao.SaveRecord(user))
 	}
 
 	msg, msgOk := e.Record.Expand()["message"].(*models.Record)
@@ -203,7 +198,7 @@ func onAddMessageReply(dao *daos.Dao, e *core.RecordCreateEvent) error {
 		passivePrintError(dao.SaveRecord(msg))
 	}
 
-	return createTransactionFromUser(dao, user.Id, sendPrice, fmt.Sprintf("Reply message %s", e.Record.Id))
+	return createTransactionFromUser(dao, user.Id, -sendPrice, fmt.Sprintf("Reply message %s", e.Record.Id))
 }
 
 func onRemoveMessageReply(dao *daos.Dao, e *core.RecordDeleteEvent) error {
@@ -219,5 +214,10 @@ func onRemoveMessageReply(dao *daos.Dao, e *core.RecordDeleteEvent) error {
 }
 
 func onBeforeAddMessageReply(dao *daos.Dao, e *core.RecordCreateEvent) error {
+	// check profanity content
+	if err := checkProfanity(e.Record.GetString("content")); err != nil {
+		return err.ToApiError()
+	}
+
 	return checkSufficientFunds(dao, e.Record.GetString("sender"), sendPrice)
 }
