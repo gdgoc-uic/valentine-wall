@@ -60,10 +60,8 @@
               </delete-dialog>
 
               <report-dialog 
-                :key="reportDialogKey"
-                @success="reportDialogKey++"
-                :email="authState.isLoggedIn ? authState.user!.email : undefined" 
-                :message-id="message!.id">
+                :link="permalink"
+                :email="authState.user.email">
                 <template #default="{ openDialog }">
                   <button 
                     @click="openDialog" 
@@ -125,7 +123,6 @@ const { state: authState } = useAuth();
 const router = useRouter();
 const route = useRoute();
 const revealContent = ref(false);
-const reportDialogKey = ref(1);
 
 function isClientError(err: unknown): err is ClientResponseError {
   return err instanceof ClientResponseError;
