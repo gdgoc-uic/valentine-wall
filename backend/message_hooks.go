@@ -154,10 +154,12 @@ func onAddMessage(dao *daos.Dao, e *core.RecordCreateEvent) error {
 	}
 
 	// send email
-	emailTemplates.message.With(map[string]any{
-		"Name":       recipient.GetString("name"),
-		"MessageURL": "https://test",
-	})
+	if isRecipientAccessible {
+		emailTemplates.message.With(map[string]any{
+			"Name":       recipient.GetString("name"),
+			"MessageURL": fmt.Sprintf("%s/wall/%s/%s", frontendUrl, studentId, e.Record.Id),
+		})
+	}
 
 	// update last active at
 	user.Set("last_active", types.DateTime{})
