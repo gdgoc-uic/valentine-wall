@@ -63,6 +63,7 @@ const { mutate: submitReply, isLoading: isSending } = useMutation(() => {
     notify({ type: 'success', text: 'Reply was sent successfully.' });
     emit('update:hasReplied', true);
     logEvent(analytics!, 'reply-message', { id: message.value.id });
+    content.value = '';
   },
 })
 </script>
