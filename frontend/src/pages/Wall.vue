@@ -6,16 +6,16 @@
           <p class="text-2xl mb-2 text-gray-500">Messages for </p>
           <div class="indicator">
             <div v-if="totalCount != 0" class="indicator-item badge">{{ totalCount }}</div>
-            <h2 class="text-5xl lg:text-6xl font-bold text-rose-600">{{ recipient }}</h2>
+            <h2 class="text-4xl md:text-5xl lg:text-6xl font-bold text-rose-600">{{ recipient }}</h2>
           </div>
         </div>
-        <h2 v-else class="text-5xl lg:text-6xl font-bold text-rose-600">Recent Wall</h2>
+        <h2 v-else class="text-4xl lg:text-6xl font-bold text-rose-600">Recent Wall</h2>
       </div>
     </div>
     <client-only>
       <div 
         v-if="authState.isLoggedIn && recipient" 
-        class="max-w-3xl bg-white p-8 mb-8 mx-auto w-full space-y-2 rounded-2xl shadow-md h-full">
+        class="max-w-3xl bg-white p-6 md:p-8 mb-4 md:mb-8 mx-auto w-full space-y-2 rounded-2xl shadow-md h-full">
         <h2 class="text-3xl font-bold text-center">Send a message</h2>
 
         <send-message-form :existing-recipient="recipient" />
