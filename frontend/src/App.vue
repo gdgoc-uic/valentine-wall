@@ -70,7 +70,7 @@
 </template>
 
 <script lang="ts" setup>
-import { computed, watch } from "@vue/runtime-core";
+import { computed } from "@vue/runtime-core";
 import { HeadAttrs, useHead } from "@vueuse/head";
 
 import BasicAlert from "./components/BasicAlert.vue";
@@ -91,7 +91,9 @@ import { onMounted, onUnmounted, toRefs } from "vue";
 import { pb } from "./client";
 import { User } from "./types";
 import fallbackImage from './assets/images/fallback.png';
+import { useQueryClient } from "@tanstack/vue-query";
 
+const queryClient = useQueryClient();
 const route = useRoute();
 const { state, methods: { onReceiveUser } } = useAuth();
 const { isLoggedIn, isAuthLoading, user } = toRefs(state);
@@ -136,7 +138,10 @@ if (!import.meta.env.SSR) {
     pb.authStore.onChange((_, user) => {
       store.methods.checkFirstTimeVisitor();
 
-      onReceiveUser(user as User | null, store.state);
+      onReceiveUser(user as User | null, store.state)
+        .then(() => {
+          return queryClient.refetchQueries();
+        });
     }, true);
   });
 
