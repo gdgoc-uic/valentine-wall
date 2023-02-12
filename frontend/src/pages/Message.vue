@@ -119,7 +119,7 @@ import { ClientResponseError } from 'pocketbase';
 import { useAuth } from '../store_new';
 import { Gift } from '../types';
 
-const { state: authState } = useAuth();
+const { state: authState, methods } = useAuth();
 const router = useRouter();
 const route = useRoute();
 const revealContent = ref(false);
@@ -132,6 +132,8 @@ function onShareSuccess(provider: string) {
   // share success
   if (provider === 'clipboard') {
     logEvent(analytics!, 'share', { method: 'copy-url', item_id: message.value!.id });
+  } else if (authState.isLoggedIn) {
+    methods.reward(300, 'Social share');
   }
 }
 

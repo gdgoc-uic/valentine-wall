@@ -1,6 +1,8 @@
+import dayjs from 'dayjs';
 import { computed, inject, InjectionKey, reactive, readonly } from 'vue';
 import { thirdPartyLogin } from './auth';
 import { pb } from './client';
+import { catchAndNotifyError, notify } from './notify';
 import { CollegeDepartment, Gift, User, VirtualWallet } from './types';
 
 interface StoreMethods {
@@ -83,6 +85,7 @@ export interface AuthState {
 export interface AuthMethods {
   login(): Promise<void>
   logout(): void
+  reward(amount: number, reason: string): Promise<void>
   onReceiveUser(user: User | null, state: State): Promise<void>
 }
 
@@ -130,8 +133,18 @@ export function createAuthStore(): Store<AuthState, AuthMethods> {
         // it should not affect the whole flow just in case
         // updateLastActiveAt won't go through
         try {
+          const now = new Date();
+          if (user.expand.details && user.expand.details.last_active) {
+            const before = dayjs(user.expand.details.last_active);
+            const after = dayjs(now);
+            const diff = after.diff(before, 'minutes');
+
+            // rewarded for idle (20 coins per minute)
+            await reward(20 * diff, 'Idle time', user.expand.wallet.id);
+          }
+
           await pb.collection('user_details').update(user!.details, {
-            last_active: new Date()
+            last_active: now
           });
         } catch (e) {
           console.error(e);
@@ -171,11 +184,34 @@ export function createAuthStore(): Store<AuthState, AuthMethods> {
     }
   }
 
+  async function reward(amount: number, reason: string, walletId?: string) {
+    try {
+      if (!state.user || !state.user.expand.wallet) {
+        throw new Error('Unable to add money to your wallet.');
+      } else if (!walletId) {
+        throw new Error('Unable to add money to your wallet.');
+      }
+
+      await pb.collection('virtual_transactions').create({
+        wallet: walletId ?? state.user.expand.wallet.id,
+        reason: `Rewarded for: ${reason}`,
+        amount,
+      }, {
+        magicword: 'V3L3NT1L3'
+      });
+
+      notify({ type: 'success', text: `You have been credited ${amount} into your account. Enjoy!` });
+    } catch(e) {
+      catchAndNotifyError(e);
+    }
+  }
+
   return reactive({
     state,
     methods: {
       login, 
       logout,
+      reward,
       onReceiveUser
     }
   }) as Store<AuthState, AuthMethods>;

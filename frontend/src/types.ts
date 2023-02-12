@@ -8,6 +8,7 @@ export interface UserDetails extends PbRecord {
   student_id: string
   sex: string
   college_department: string
+  last_active: string
 }
 
 export interface Gift {

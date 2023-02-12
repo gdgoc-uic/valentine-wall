@@ -129,21 +129,7 @@ const open = ref(false);
 
 function openDialog() {
   if (import.meta.env.SSR) return;
-
-  if (!!navigator.share) {
-    navigator.share({
-      title: props.title,
-      url: props.permalink
-    })
-    .then(() => {
-      emit('success');
-    })
-    .catch(err => {
-      emit('error', err);
-    });
-  } else {
-    open.value = true;
-  }
+  open.value = true;
 }
 
 function shareTo(provider: string) {
