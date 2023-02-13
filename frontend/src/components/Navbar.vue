@@ -116,6 +116,7 @@
     <div 
       @click.self="menuOpen = false" 
       :class="[menuOpen ? 'block' : 'hidden']" 
+      style="z-index: 99999;"
       class="lg:hidden bg-[#FFEFEF] bg-opacity-50 h-screen fixed inset-x-0 bottom-0">
       <div class="bg-[#FFEFEF] flex h-full lg:hidden p-8 flex-col w-[85vw] drop-shadow-xl">
         <button
