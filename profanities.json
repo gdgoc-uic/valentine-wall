@@ -33,6 +33,9 @@
     "pakyu"
   ],
   "FalsePositives": [
+    "coonce",
+    "coonces",
+    "cocoon",
     "kuyawa"
   ],
   "FalseNegatives": [
