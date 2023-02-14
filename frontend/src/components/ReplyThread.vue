@@ -1,7 +1,7 @@
 <template>
   <div class="space-y-2">
     <div class="p-6 lg:p-8 bg-white rounded-xl shadow-lg">
-      <div v-if="message.recipient === 'everyone' || authState.user!.expand.details?.student_id == message!.recipient"
+      <div v-if="authState.isLoggedIn && (message.recipient === 'everyone' || authState.user!.expand.details?.student_id == message!.recipient)"
         class="flex space-x-2 items-center text-2xl">
         <icon-reply class="text-pink-500 mb-4" />
         <h2 class="font-bold mb-4">Your reply</h2>
@@ -22,7 +22,7 @@
                   <span class="text-gray-500">{{ fromNow(reply.created) }}</span>
                 </div>
                 <p class="text-lg">{{ reply.content }}</p>
-                <div class="space-x-1 text-sm flex mt-6 items-center" v-if="reply.liked && reply.sender === authState.user.details">
+                <div class="space-x-1 text-sm flex mt-6 items-center" v-if="reply.liked && (authState.isLoggedIn && reply.sender === authState.user.details)">
                   <icon-heart class="text-rose-500" />
 
                   <span class="text-gray-700">
