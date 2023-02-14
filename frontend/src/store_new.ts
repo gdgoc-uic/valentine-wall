@@ -139,8 +139,11 @@ export function createAuthStore(): Store<AuthState, AuthMethods> {
             const after = dayjs(now);
             const diff = after.diff(before, 'second');
 
-            // rewarded for idle (0.05 coins per second)
-            await reward(0.05 * diff, 'Idle time', user.expand.wallet.id);
+            // rewarded for idle (0.05 coins per second / rounded)
+            const idleReward = Math.round(0.05 * diff);
+            if (idleReward > 0) {
+              await reward(0.05 * diff, 'Idle time', user.expand.wallet.id);
+            }
           }
 
           await pb.collection('user_details').update(user!.details, {
