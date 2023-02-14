@@ -74,12 +74,7 @@
             </div>
           </div>
           
-          <reply-thread v-if="
-            authState.isLoggedIn && (
-              message!.recipient == 'everyone' ||
-              message!.recipient == authState.user!.expand.details.student_id || 
-              (message!.user == authState.user.id && message!.replies_count > 0)
-            )" />
+          <reply-thread />
         </template>
 
         <template #error="{ error }">

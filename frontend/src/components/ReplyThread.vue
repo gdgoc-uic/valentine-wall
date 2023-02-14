@@ -35,7 +35,7 @@
                 <button 
                   v-if="authState.user.expand.details.student_id === message.recipient"
                   :class="[reply.liked ? 'text-white bg-rose-500 hover:bg-rose-700 border-rose-500' : 'bg-white border-gray-200 text-rose-500 hover:border-rose-500 hover:bg-rose-500']"
-                  @click="like(reply)"
+                  @click="like(reply as PbRecord)"
                   class="btn-sm btn btn-circle shadow-md hover:text-white">
                   <icon-heart />
                 </button>
@@ -67,7 +67,7 @@ import IconReply from '~icons/uil/comment-heart';
 import ResponseHandler from './ResponseHandler2.vue';
 import ReplyMessageBox from './ReplyMessageBox.vue';
 
-import { inject, Ref, ref, onMounted, onUnmounted } from 'vue';
+import { inject, Ref, ref, computed, onMounted, onUnmounted } from 'vue';
 import { useAuth } from '../store_new';
 import { Record as PbRecord, UnsubscribeFunc } from 'pocketbase';
 import { useMutation, useQuery } from '@tanstack/vue-query';
@@ -77,9 +77,8 @@ import { fromNow } from '../time_utils';
 const message = inject<Ref<PbRecord>>('message')!;
 const { state: authState } = useAuth();
 
-function handleHasReplied(hasReplied: boolean) {
+function handleHasReplied() {
   message.value.replies_count++;
-
   repliesQuery.refetch();
 }
 
@@ -92,15 +91,20 @@ const repliesQuery = useQuery(['replies', message.value.id], () => {
 }, {
   onSuccess(data) {
     replies.value = data;
-  }
+  },
+  enabled: computed(() => (
+    message!.value.recipient == 'everyone' ||
+    (authState.isLoggedIn && (
+      message!.value.recipient == authState.user!.expand.details.student_id || 
+      message!.value.user == authState.user.id
+    ))
+  ))
 });
 
 const replies = ref<PbRecord[]>([]);
 
 const { mutate: like } = useMutation((r: PbRecord) => {
-  return pb.collection('message_replies').update(r.id, {
-    liked: !r.liked
-  });
+  return pb.collection('message_replies').update(r.id, { liked: !r.liked });
 });
 
 const { mutate: deleteReply } = useMutation((id: string) => {

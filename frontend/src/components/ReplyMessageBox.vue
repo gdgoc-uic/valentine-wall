@@ -5,7 +5,9 @@
     <icon-reply-lock class="text-gray-500 text-6xl mb-4 md:mb-0" />
     <div class="flex flex-col text-center items-center md:text-left md:items-start md:ml-4">
       <h3 class="text-2xl font-bold">Reply feature is locked.</h3>
-      <p class="text-gray-500 text-xl">Recipient can only reply to this message.</p>
+      <p class="text-gray-500 text-xl">
+        {{ message.recipient !== 'everyone' ? 'Recipient can only reply to this message.' : 'You must login to reply to this message.' }}
+      </p>
     </div>
   </div>
 
