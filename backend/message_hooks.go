@@ -181,7 +181,7 @@ func onRemoveMessage(dao *daos.Dao, e *core.RecordDeleteEvent) error {
 	expandMessage(dao, e.Record)
 
 	// deduct total_cost
-	ranking, err := dao.FindFirstRecordByData("rankings", "recipient_id", e.Record.GetString("recipient"))
+	ranking, err := dao.FindFirstRecordByData("rankings", "recipient", e.Record.GetString("recipient"))
 	if err != nil {
 		passivePrintError(err)
 		return nil
