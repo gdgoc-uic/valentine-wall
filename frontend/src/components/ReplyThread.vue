@@ -31,7 +31,7 @@
                 </div>
               </div>
 
-              <div class="flex flex-col space-y-4 items-start">
+              <div v-if="authState.isLoggedIn" class="flex flex-col space-y-4 items-start">
                 <button 
                   v-if="authState.user.expand.details.student_id === message.recipient"
                   :class="[reply.liked ? 'text-white bg-rose-500 hover:bg-rose-700 border-rose-500' : 'bg-white border-gray-200 text-rose-500 hover:border-rose-500 hover:bg-rose-500']"
