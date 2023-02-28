@@ -4,7 +4,7 @@
     <div class="bg-white rounded-lg shadow-lg p-8 flex flex-col items-center">
       <div class="prose text-center">
         <p>Since the website's launch, we have received <b>{{ messagesCount }}</b> messages that ranges from simple appreciations to Valorant invites to words of wisdom all of us can relate to!</p>
-        <p>We closed the website last March 1 and many of you weren't able to get a chance to read or view them all. Thus, we are giving everyone the chance to archive their messages until <b>March 10, 2023</b>.</p>
+        <p>We closed the website last March 1 and many of you weren't able to get a chance to read or view them all. Thus, we are giving everyone the chance to archive their messages until <b>March 14, 2023</b>.</p>
         <p v-if="!authState.isLoggedIn">To start archiving, please click the sign-in button below.</p>
         <p v-else>To start archiving, please click the "Archive" below.</p>
       </div>
