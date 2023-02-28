@@ -1,6 +1,6 @@
 <template>
   <div class="space-y-2">
-    <div class="p-6 lg:p-8 bg-white rounded-xl shadow-lg">
+    <div v-if="!isReadOnly()" class="p-6 lg:p-8 bg-white rounded-xl shadow-lg">
       <div v-if="authState.isLoggedIn && (message.recipient === 'everyone' || authState.user!.expand.details?.student_id == message!.recipient)"
         class="flex space-x-2 items-center text-2xl">
         <icon-reply class="text-pink-500 mb-4" />
@@ -31,7 +31,7 @@
                 </div>
               </div>
 
-              <div v-if="authState.isLoggedIn" class="flex flex-col space-y-4 items-start">
+              <div v-if="!isReadOnly() && authState.isLoggedIn" class="flex flex-col space-y-4 items-start">
                 <button 
                   v-if="authState.user.expand.details.student_id === message.recipient"
                   :class="[reply.liked ? 'text-white bg-rose-500 hover:bg-rose-700 border-rose-500' : 'bg-white border-gray-200 text-rose-500 hover:border-rose-500 hover:bg-rose-500']"
@@ -73,6 +73,7 @@ import { Record as PbRecord, UnsubscribeFunc } from 'pocketbase';
 import { useMutation, useQuery } from '@tanstack/vue-query';
 import { pb } from '../client';
 import { fromNow } from '../time_utils';
+import { isReadOnly } from '../utils';
 
 const message = inject<Ref<PbRecord>>('message')!;
 const { state: authState } = useAuth();

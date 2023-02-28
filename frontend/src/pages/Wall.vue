@@ -14,7 +14,7 @@
     </div>
     <client-only>
       <div 
-        v-if="authState.isLoggedIn && recipient" 
+        v-if="!isReadOnly() && authState.isLoggedIn && recipient" 
         class="max-w-3xl bg-white p-6 md:p-8 mb-4 md:mb-8 mx-auto w-full space-y-2 rounded-2xl shadow-md h-full">
         <h2 class="text-3xl font-bold text-center">Send a message</h2>
 
@@ -40,7 +40,7 @@
       </div>
 
       <section 
-        v-if="!authState.isLoggedIn && recipient" 
+        v-if="!isReadOnly() && !authState.isLoggedIn && recipient" 
         class="max-w-7xl space-y-8 lg:space-y-0 mx-auto mt-3 p-8 w-full border bg-[#ffeded] border-rose-500 rounded-xl shadow-lg flex flex-col lg:flex-row text-center lg:text-left items-center justify-between">
         <div class="flex flex-col">
           <h3 class="text-2xl lg:text-3xl mb-1 text-rose-400 font-semibold">Are you {{ recipient }}?</h3>
@@ -90,6 +90,7 @@ import { pb } from '../client';
 import { useInfiniteQuery } from '@tanstack/vue-query';
 import { ClientResponseError, Record as PbRecord, UnsubscribeFunc } from 'pocketbase';
 import { useAuth } from '../store_new';
+import { isReadOnly } from '../utils';
 
 function isEmptyError(error: unknown) {
   if (error instanceof ClientResponseError && error.status === 404) {

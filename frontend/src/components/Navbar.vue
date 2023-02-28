@@ -74,7 +74,7 @@
       </search-form>
       <client-only>
         <div class="flex-none hidden md:ml-auto md:flex">
-          <div v-if="authState.isLoggedIn" class="dropdown dropdown-end dropdown-hover -mb-2">
+          <div v-if="!isReadOnly() && authState.isLoggedIn" class="dropdown dropdown-end dropdown-hover -mb-2">
             <div tabindex="0" class="rounded-r-none mb-2 shadow-md btn normal-case text-black bg-white border-0 hover:bg-gray-100">
               <span class="overflow-hidden text-ellipsis">
                 {{ authState.user.username }}
@@ -93,7 +93,7 @@
           </div>
           
           <button
-            v-if="authState.isLoggedIn" 
+            v-if="!isReadOnly() && authState.isLoggedIn" 
             @click="isCoinsModalOpen = true"
             :class="[!shouldSendButtonHide ? 'rounded-none' : 'rounded-l-none']" 
             class="btn shadow-md normal-case text-black bg-white border-0 hover:bg-gray-100">
@@ -101,7 +101,7 @@
             <span>ღ{{ authState.user!.expand.wallet?.balance.toFixed(2) ?? 'unknown' }}</span>
           </button>
           <button
-            v-if="!shouldSendButtonHide && authState.isLoggedIn"
+            v-if="!isReadOnly() && !shouldSendButtonHide && authState.isLoggedIn"
             @click="store.state.isSendMessageModalOpen = true"
             class="shadow-md btn border-none rounded-l-none bg-rose-500 hover:bg-rose-600 lg:px-8 space-x-2">
             <icon-send />
@@ -136,7 +136,7 @@
               {{ link.label }}
             </router-link>
           </div>
-          <div v-if="authState.isLoggedIn" class="bg-white bg-opacity-60 p-4 rounded-xl mt-auto">
+          <div v-if="!isReadOnly() && authState.isLoggedIn" class="bg-white bg-opacity-60 p-4 rounded-xl mt-auto">
             <p>Signing in as</p>
             <h3 class="text-2xl text-ellipsis overflow-hidden font-bold">
               {{ authState.user.username }}
@@ -153,7 +153,7 @@
               </li>
             </ul>
             <button
-              v-if="authState.isLoggedIn" 
+              v-if="!isReadOnly() && authState.isLoggedIn" 
               @click="isCoinsModalOpen = true"
               class="btn shadow-md normal-case text-black bg-white border-0 hover:bg-gray-100 w-full mb-2">
               <icon-coin class="mr-2" />
@@ -189,6 +189,7 @@ import Modal from './Modal.vue';
 import { useRoute, useRouter } from 'vue-router';
 import { ref, computed } from 'vue';
 import { useAuth, useStore } from '../store_new';
+import { isReadOnly } from '../utils';
 
 const props = defineProps({
   isHome: {
@@ -223,7 +224,7 @@ const howToEarn = computed(() => [
 
 const menuOpen = ref(false);
 const navbarLinks = computed(() => [
-  ...(authState.isLoggedIn ? [{
+  ...(!isReadOnly() && authState.isLoggedIn ? [{
     label: 'Your Wall',
     to: { name: 'message-wall-page', params: { recipientId: authState.user.expand.details.student_id } }
   }] : []),

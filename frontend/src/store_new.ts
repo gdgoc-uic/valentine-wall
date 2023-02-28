@@ -4,6 +4,7 @@ import { thirdPartyLogin } from './auth';
 import { pb } from './client';
 import { catchAndNotifyError, notify } from './notify';
 import { CollegeDepartment, Gift, User, VirtualWallet } from './types';
+import { isReadOnly } from './utils';
 
 interface StoreMethods {
   loadGiftsAndDepartments(): Promise<void>
@@ -46,7 +47,7 @@ export const createStore = (): Store<State, StoreMethods> => {
   });
 
   const checkFirstTimeVisitor = () => {
-    if (import.meta.env.VITE_READ_ONLY === "true") return;
+    if (isReadOnly()) return;
     if (!localStorage.getItem(firstTimeKey)) {
       state.isWelcomeModalOpen = true;
     }
@@ -125,7 +126,7 @@ export function createAuthStore(): Store<AuthState, AuthMethods> {
       user.expand.wallet = user.expand['virtual_wallets(user)'] as VirtualWallet;
       delete user.expand['virtual_wallets(user)'];
 
-      if (import.meta.env.VITE_READ_ONLY !== 'true') {  
+      if (!isReadOnly()) {  
         if (!user.details) {
           mainStore.isSetupModalOpen = true;
         }
@@ -173,7 +174,7 @@ export function createAuthStore(): Store<AuthState, AuthMethods> {
 
   function logout() {
     try {
-      if (import.meta.env.VITE_READ_ONLY !== 'true') {
+      if (!isReadOnly()) {
         // await getters.apiClient.post('/user/logout_callback');
       }
 

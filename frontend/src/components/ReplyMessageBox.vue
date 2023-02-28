@@ -1,11 +1,11 @@
 <template>
   <div 
-    v-if="!authState.isLoggedIn || (message.recipient != 'everyone' && authState.user!.expand.details.student_id != message.recipient)" 
+    v-if="isReadOnly() || !authState.isLoggedIn || (message.recipient != 'everyone' && authState.user!.expand.details.student_id != message.recipient)" 
     class="flex flex-col md:flex-row items-center">
     <icon-reply-lock class="text-gray-500 text-6xl mb-4 md:mb-0" />
     <div class="flex flex-col text-center items-center md:text-left md:items-start md:ml-4">
       <h3 class="text-2xl font-bold">Reply feature is locked.</h3>
-      <p class="text-gray-500 text-xl">
+      <p v-if="!isReadOnly()" class="text-gray-500 text-xl">
         {{ message.recipient !== 'everyone' ? 'Recipient can only reply to this message.' : 'You must login to reply to this message.' }}
       </p>
     </div>
@@ -46,6 +46,7 @@ import { useAuth } from '../store_new';
 import { useMutation } from '@tanstack/vue-query';
 import { pb } from '../client';
 import { Record as PbRecord } from 'pocketbase';
+import { isReadOnly } from '../utils';
 
 const emit = defineEmits(['update:hasReplied']);
 const message = inject<Ref<PbRecord>>('message')!;

@@ -3,16 +3,23 @@
 
   <div style="z-index: 999" class="fixed inset-x-0 bottom-0 py-4 bg-rose-200 text-center hidden md:block">
     <div class="max-w-7xl mx-auto w-full flex flex-col md:flex-row space-y-2 md:space-y-0 md:space-x-4 items-center justify-center">
-      <p class="text-lg"><b>Let's not make your Valentine's ruined by bugs.</b> </p>
+      <p class="text-lg"><b>
+        {{ isReadOnly() ? `Valentine Wall has been archived since March 1.` : `Let's not make your Valentine's ruined by bugs.` }}
+      </b></p>
       
-      <feedback-form v-slot="{ openDialog }">
+      <feedback-form v-if="!isReadOnly()" v-slot="{ openDialog }">
         <div class="tooltip" data-tip="Problems, suggestions? Post it here!">
           <button @click="openDialog" class="btn btn-sm btn-primary space-x-2">
             <icon-comment-add />
             <span>Add your Feedback</span>
-          </button>                                                                                                                                                                                   
+          </button>
         </div>
       </feedback-form>
+
+      <button v-else @click="$router.push({ name: 'home-page' })" class="btn btn-sm btn-primary space-x-2">
+        <icon-comment-add />
+        <span>Get your messages now!</span>
+      </button>
     </div>
   </div>
 
@@ -45,7 +52,7 @@
 
   <!-- ID Modal -->
   <portal>
-    <setup-dialog v-if="!user?.expand.details?.student_id && isLoggedIn" />
+    <setup-dialog v-if="!isReadOnly() && !user?.expand.details?.student_id && isLoggedIn" />
     <submit-message-modal
       :key="$route.fullPath" 
       :open="store.state.isSendMessageModalOpen" 
@@ -97,6 +104,7 @@ import { pb } from "./client";
 import { User } from "./types";
 import fallbackImage from './assets/images/fallback.png';
 import { useQueryClient } from "@tanstack/vue-query";
+import { isReadOnly } from "./utils";
 
 const queryClient = useQueryClient();
 const route = useRoute();

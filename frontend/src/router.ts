@@ -1,5 +1,6 @@
 import { createRouter as createVueRouter, createWebHistory, createMemoryHistory, RouteLocationNormalizedLoaded, RouteRecordRaw } from 'vue-router';
 import { pb } from './client';
+import { isReadOnly } from './utils';
 
 const pageSuffix = 'UIC Valentine Wall';
 const pageSeparator = ' | ';
@@ -14,31 +15,7 @@ export function getPageTitle(route: RouteLocationNormalizedLoaded): string {
   return `${pageTitle}${pageSeparator}${pageSuffix}`;
 }
 
-const readOnlyRoutes: RouteRecordRaw[] = [
-  {
-    name: 'home-page',
-    path: '/',
-    component: () => import('./pages/Home_ReadOnly.vue'),
-    meta: {
-      disableAppHeader: true
-    }
-  },
-];
-
-const routes: RouteRecordRaw[] = [
-  {
-    name: 'home-page',
-    path: '/',
-    component: () => import('./pages/Home.vue')
-  },
-  {
-    name: 'recent-wall-page',
-    path: '/wall',
-    component: () => import('./pages/Wall.vue'),
-    meta: {
-      pageTitle: 'Recent Messages'
-    }
-  },
+const messageRoutes: RouteRecordRaw[] = [
   {
     path: '/wall/everyone',
     redirect: {
@@ -86,7 +63,42 @@ const routes: RouteRecordRaw[] = [
         }
       ]
     }
+  }
+];
+
+const readOnlyRoutes: RouteRecordRaw[] = [
+  {
+    name: 'home-page',
+    path: '/',
+    component: () => import('./pages/Home_ReadOnly.vue'),
+    meta: {
+      disableAppHeader: true
+    }
   },
+  ...messageRoutes,
+  {
+    path: '/:pathMatch(.*)*',
+    redirect: {
+      name: 'home-page'
+    }
+  }
+];
+
+const routes: RouteRecordRaw[] = [
+  {
+    name: 'home-page',
+    path: '/',
+    component: () => import('./pages/Home.vue')
+  },
+  {
+    name: 'recent-wall-page',
+    path: '/wall',
+    component: () => import('./pages/Wall.vue'),
+    meta: {
+      pageTitle: 'Recent Messages'
+    }
+  },
+  ...messageRoutes,
   {
     name: 'rankings-page',
     path: '/rankings',
@@ -152,6 +164,6 @@ export function createRouter() {
       // always scroll to top
       return { top: 0 }
     },
-    routes: import.meta.env.VITE_READ_ONLY === 'true' ? readOnlyRoutes : routes
+    routes: isReadOnly() ? readOnlyRoutes : routes
   });
 }
