@@ -126,7 +126,7 @@ export function createAuthStore(): Store<AuthState, AuthMethods> {
       user.expand.wallet = user.expand['virtual_wallets(user)'] as VirtualWallet;
       delete user.expand['virtual_wallets(user)'];
 
-      if (!isReadOnly()) {  
+      if (true) {
         if (!user.details) {
           mainStore.isSetupModalOpen = true;
         }
