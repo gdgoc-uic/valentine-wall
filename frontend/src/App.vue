@@ -52,7 +52,7 @@
 
   <!-- ID Modal -->
   <portal>
-    <setup-dialog v-if="!isReadOnly() && !user?.expand.details?.student_id && isLoggedIn" />
+    <setup-dialog v-if="!user?.expand.details?.student_id && isLoggedIn" />
     <submit-message-modal
       :key="$route.fullPath" 
       :open="store.state.isSendMessageModalOpen" 
