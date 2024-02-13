@@ -18,18 +18,11 @@ services:
       - ./backend/migrations:/app/migrations
       - ./backend/templates:/app/templates
       - ./${PROFANITY_JSON_FILE_NAME}:/app/${PROFANITY_JSON_FILE_NAME}
-      - ./${GOOGLE_APPLICATION_CREDENTIALS_FILE}:/app/${GOOGLE_APPLICATION_CREDENTIALS_FILE}
     environment:
       - ENV
       - BASE_URL=${BACKEND_URL}
       - FRONTEND_URL
-      - GOOGLE_APPLICATION_CREDENTIALS=./${GOOGLE_APPLICATION_CREDENTIALS_FILE}
       - PROFANITY_JSON_FILE_PATH=./${PROFANITY_JSON_FILE_NAME}
-      - DATABASE_PREFIX
-      - SESSION_COOKIE_NAME
-      - TWITTER_CLIENT_ID
-      - TWITTER_CLIENT_SECRET
-      - TWITTER_CALLBACK_URL
       - CHROME_DEVTOOLS_URL=ws://headless_chrome:5000
       - READ_ONLY
     networks:

@@ -1,2 +1,2 @@
 #!/bin/sh
-cd backend && (npx dotenv -e ../.env -e .env -- go run . $@)
+cd backend && (dotenv -e ../.env -e .env -- go run . $@)
