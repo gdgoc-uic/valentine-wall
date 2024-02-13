@@ -1,6 +1,8 @@
-FROM golang:1.19 AS builder
+FROM golang:1.19-bullseye AS builder
 
 WORKDIR /app
+
+ENV CGOENABLED=1
 
 COPY ./go.mod .
 COPY ./go.sum .
@@ -13,7 +15,7 @@ RUN go mod download
 RUN go build -o ./backend-server
 
 # FROM scratch
-FROM debian:buster-slim
+FROM debian:bullseye-slim
 
 WORKDIR /app
 
