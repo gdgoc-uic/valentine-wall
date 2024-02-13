@@ -4,9 +4,9 @@ import os
 setup_env_done = False
 default_values = {
     'ENV': 'production',
-    'BASE_DOMAIN': 'valentine-wall.gdscuic.org',
-    'FRONTEND_URL': 'https://valentine-wall.gdscuic.org',
-    'BACKEND_URL': 'https://valentine-wall.gdscuic.org/pb',
+    'BASE_DOMAIN': 'valentine.gdscuic.org',
+    'FRONTEND_URL': 'https://valentine.gdscuic.org',
+    'BACKEND_URL': 'https://valentine.gdscuic.org/pb',
 }
 
 try:
