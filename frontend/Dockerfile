@@ -31,10 +31,10 @@ ENV VITE_REPORT_API_CATEGORY_ID_KEY=${report_api_category_id_key}
 ENV VITE_READ_ONLY=${read_only}
 
 COPY . .
-RUN yarn install
+RUN npm install --force --legacy-peer-deps
 
 ENV NODE_ENV=${env}
-RUN yarn build
+RUN npm run build
 
 EXPOSE 3000
-ENTRYPOINT ["yarn", "serve"]
+ENTRYPOINT ["npm", "run", "serve"]
