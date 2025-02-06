@@ -98,8 +98,7 @@ import GiftIcon from '../components/GiftIcon.vue';
 import ReplyThread from '../components/ReplyThread.vue';
 import ShareDialog from '../components/ShareDialog.vue';
 
-import { logEvent } from '@firebase/analytics';
-import { analytics } from '../firebase';
+import { logEvent } from '../analytics';
 import { notify } from '../notify';
 import ResponseHandler from '../components/ResponseHandler2.vue';
 import IconReport from '~icons/uil/exclamation-circle';
@@ -126,7 +125,7 @@ function isClientError(err: unknown): err is ClientResponseError {
 function onShareSuccess(provider: string) {
   // share success
   if (provider === 'clipboard') {
-    logEvent(analytics!, 'share', { method: 'copy-url', item_id: message.value!.id });
+    logEvent('share', { method: 'copy-url', item_id: message.value!.id });
   } else if (authState.isLoggedIn) {
     methods.reward(300, 'Social share');
   }

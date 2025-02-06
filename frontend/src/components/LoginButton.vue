@@ -8,9 +8,8 @@
 </template>
 
 <script lang="ts" setup>
-import { logEvent } from '@firebase/analytics';
 import GoogleIcon from '~icons/logos/google-icon';
-import { analytics } from '../firebase';
+import { logEvent } from '../analytics';
 import { catchAndNotifyError } from '../notify';
 import { useAuth, useStore } from '../store_new';
 
@@ -22,9 +21,9 @@ async function googleLogin() {
     try {
         await login();
         if (mainStore.state.isSetupModalOpen) {
-            logEvent(analytics!, 'sign_up');
+            logEvent('sign_up');
         } else {
-            logEvent(analytics!, 'login');
+            logEvent('login');
         }
         emit('click');
     } catch (e) {

@@ -1,13 +1,12 @@
-import { logEvent } from "firebase/analytics";
 import { Component, h, Plugin } from "vue";
-import { analytics } from "./firebase";
 import { notify as _notify } from 'notiwind';
 import type { NotificationItem } from "notiwind/dist/notify";
+import { logEvent } from './analytics';
 
 export function notify<T>(args: NotificationItem<T>) {
   if (!import.meta.env.SSR){
     _notify(args);
-    logEvent(analytics!, 'server_notifications', args);
+    logEvent('server_notifications', args);
   }
 }
 

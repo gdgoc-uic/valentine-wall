@@ -10,10 +10,3 @@ export const app = initializeApp({
   appId: import.meta.env.VITE_FIREBASE_APP_ID,
   measurementId: import.meta.env.VITE_FIREBASE_MEASUREMENT_ID
 });
-
-export const analytics = import.meta.env.SSR ? undefined : getAnalytics(app);
-
-// disable analytics on dev
-if (!import.meta.env.PROD && !import.meta.env.SSR) {
-  setAnalyticsCollectionEnabled(analytics!, false);
-}
