@@ -44,12 +44,12 @@
 
     <div class="mx-auto max-w-md w-full flex flex-col items-center space-y-4 pt-8">
       <img src="../assets/images/gdscuic.png" class="w-48" alt="Google Developer Student Clubs - University of the Immaculate Conception Chapter">
-      <p>Copyright &copy; 2022, 2023 <br /> A project of Google Developer Student Clubs - University of the Immaculate Conception Chapter.</p>
+      <p>Copyright &copy; 2024, 2025 <br /> A project of Google Developer Groups on Campus - University of the Immaculate Conception Chapter.</p>
       
       <ul class="flex self-center space-x-3">
         <li><a class="text-rose-500 hover:underline" href="https://www.uic.edu.ph/">UIC Website</a></li>
         <li><a class="text-rose-500 hover:underline" href="https://www.uic.edu.ph/privacy-policy/">UIC Privacy Policy</a></li>
-        <li><a class="text-rose-500 hover:underline" href="https://facebook.com/dscuic">GDSC-UIC Facebook Page</a></li>
+        <li><a class="text-rose-500 hover:underline" href="https://facebook.com/dscuic">GDGOC Facebook Page</a></li>
       </ul>
     </div>
   </footer>
