@@ -43,7 +43,7 @@
     </div>
 
     <div class="mx-auto max-w-md w-full flex flex-col items-center space-y-4 pt-8">
-      <img src="../assets/images/gdscuic.png" class="w-48" alt="Google Developer Student Clubs - University of the Immaculate Conception Chapter">
+      <img src="../assets/images/gdguic.svg" class="w-96" alt="Google Developer Student Clubs - University of the Immaculate Conception Chapter">
       <p>Copyright &copy; 2024, 2025 <br /> A project of Google Developer Groups on Campus - University of the Immaculate Conception Chapter.</p>
       
       <ul class="flex self-center space-x-3">
