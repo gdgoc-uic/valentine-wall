@@ -54,3 +54,6 @@ services:
 networks:
   backend:
     driver: bridge
+  caddy:
+    external: true
+    name: caddy
