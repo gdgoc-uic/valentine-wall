@@ -7,11 +7,17 @@ import checker from 'vite-plugin-checker'
 import { isoImport } from 'vite-plugin-iso-import'
 import markdown, { Mode } from 'vite-plugin-markdown'
 import vitePluginFaviconsInject from 'vite-plugin-favicons-inject'
+import path from 'path'
 
 // https://vitejs.dev/config/
 export default defineConfig({
   server: {
     middlewareMode: true,
+  },
+  resolve: {
+    alias: {
+      '@': path.resolve(__dirname, './src'),
+    }
   },
   appType: 'custom',
   plugins: [
