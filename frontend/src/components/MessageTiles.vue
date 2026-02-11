@@ -8,8 +8,13 @@
           <div v-if="msg.gifts.length == 0" class="px-6 pt-6">
             <p>{{ msg.content }}</p>
           </div>
-          <div v-else class="flex w-full h-full items-center justify-center">
-            <icon-gift class="text-white text-9xl" />
+          <div v-else class="flex flex-col w-full h-full items-center justify-center space-y-2">
+            <div class="flex flex-row space-x-2 items-center justify-center flex-wrap">
+              <div :key="gift.uid" v-for="gift in msg.expand?.gifts" class="p-4 bg-white rounded-full shadow-md">
+                <gift-icon :uid="gift.uid" class="text-3xl" />
+              </div>
+            </div>
+            <p v-if="msg.expand?.gifts?.length" class="text-white text-sm font-semibold">{{ msg.expand.gifts.map(g => g.label).join(', ') }}</p>
           </div>
           <div class="message-meta-info">
             <p :class="[msg.gifts.length != 0 ? 'text-white' : 'text-gray-500']" class="text-sm">{{ toNow(msg.created) }} ago</p>
@@ -24,6 +29,7 @@
 import Masonry from './Masonry.vue';
 import IconReply from '~icons/uil/comment-heart';
 import IconGift from '~icons/uil/gift';
+import GiftIcon from './GiftIcon.vue';
 import { toNow } from '../time_utils';
 import { watch, ref } from 'vue';
 

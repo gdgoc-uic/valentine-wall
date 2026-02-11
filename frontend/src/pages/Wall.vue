@@ -166,7 +166,8 @@ const { hasNextPage, fetchNextPage, ...query } = useInfiniteQuery(
 
     const resp = await pb.collection('messages').getList(pageParam, 10, { 
       sort: '-created',
-      filter: recipient.value ? `(recipient = "${recipient.value}" ${hasGiftsFilter})` : 'gifts:length = 0'
+      filter: recipient.value ? `(recipient = "${recipient.value}" ${hasGiftsFilter})` : 'gifts:length = 0',
+      expand: 'gifts'
     });
 
     if (resp.items.length === 0) {

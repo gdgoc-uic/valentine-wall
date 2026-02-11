@@ -81,6 +81,7 @@ export interface AuthState {
   user: User
   isAuthLoading: boolean
   isLoggedIn: boolean
+  messageUnsubscribe: (() => void) | null
 }
 
 export interface AuthMethods {
@@ -99,6 +100,7 @@ export function createAuthStore(): Store<AuthState, AuthMethods> {
     user: null!,
     isAuthLoading: false,
     isLoggedIn: computed(() => !!state.user),
+    messageUnsubscribe: null,
   }) as AuthState;
 
   async function login() {
@@ -164,6 +166,25 @@ export function createAuthStore(): Store<AuthState, AuthMethods> {
           state.user.expand.wallet.balance = (data.record as VirtualWallet).balance;
         }
       });
+
+      // Subscribe to new messages for this user
+      const userStudentId = user.expand.details.student_id;
+      const messageUnsub = await pb.collection('messages').subscribe('*', (data) => {
+        if (data.action === 'create') {
+          const messageRecipient = data.record.recipient;
+          
+          // Notify user if they are the recipient (not "everyone" messages)
+          if (messageRecipient === userStudentId && messageRecipient !== 'everyone') {
+            notify({ 
+              type: 'success', 
+              text: `💌 You received a new message! Click to view.`,
+              duration: 8000
+            });
+          }
+        }
+      });
+      
+      state.messageUnsubscribe = messageUnsub;
     } catch (e) {
       console.error(e);
       logout();
@@ -176,6 +197,12 @@ export function createAuthStore(): Store<AuthState, AuthMethods> {
     try {
       if (!isReadOnly()) {
         // await getters.apiClient.post('/user/logout_callback');
+      }
+
+      // Unsubscribe from message notifications
+      if (state.messageUnsubscribe) {
+        state.messageUnsubscribe();
+        state.messageUnsubscribe = null;
       }
 
       state.user = null!;

@@ -13,6 +13,7 @@ This document provides an overview of all created documentation and guides you t
 | **[DEVELOPMENT_GUIDE.md](DEVELOPMENT_GUIDE.md)** | 40+ pages | Complete development reference | Making changes, learning codebase |
 | **[QUICK_REFERENCE.md](QUICK_REFERENCE.md)** | 10 pages | Daily commands & snippets | Daily development work |
 | **[ARCHITECTURE.md](ARCHITECTURE.md)** | 20 pages | System architecture & diagrams | Understanding system design |
+| **[MESSAGE_NOTIFICATION_SYSTEM.md](MESSAGE_NOTIFICATION_SYSTEM.md)** | 15 min | Real-time notification implementation | Understanding message notification feature |
 | **THIS FILE** | 5 min | Documentation navigation | Finding the right doc |
 
 ---
@@ -34,7 +35,8 @@ This document provides an overview of all created documentation and guides you t
 ### "I need to understand how it works"
 1. **[ARCHITECTURE.md](ARCHITECTURE.md)** - Visual diagrams first
 2. **[DEVELOPMENT_GUIDE.md](DEVELOPMENT_GUIDE.md)** - "Architecture & How Components Interact" section
-3. Explore code with understanding from docs
+3. **[MESSAGE_NOTIFICATION_SYSTEM.md](MESSAGE_NOTIFICATION_SYSTEM.md)** - For real-time notification details
+4. Explore code with understanding from docs
 
 ### "I'm stuck with an error"
 1. **[DEVELOPMENT_GUIDE.md](DEVELOPMENT_GUIDE.md)** - "Troubleshooting" section

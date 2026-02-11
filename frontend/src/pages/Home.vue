@@ -96,7 +96,8 @@ onMounted(() => {
   if (!import.meta.env.SSR) {
     pb.collection('messages').getList(1, 10, {
       filter: 'gifts = "[]"',
-      sort: '-created'
+      sort: '-created',
+      expand: 'gifts'
     }).then(records => {
       recentMessages.push(...records.items);
 
