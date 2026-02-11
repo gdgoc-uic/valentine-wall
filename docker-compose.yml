@@ -11,7 +11,7 @@ services:
       context: .
       dockerfile: ./backend/Dockerfile
     volumes:
-      - ./pb_data:/app/pb_data
+      - ./pb_data_fresh:/app/pb_data
       - ./pb_public:/app/pb_public
       - ./backend/_data:/app/_data
       - ./backend/renderer_assets:/app/renderer_assets

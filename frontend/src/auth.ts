@@ -31,7 +31,7 @@ export async function thirdPartyLogin(provider: string, table = 'users') {
   if (!chosenProvider) return;
 
   const redirectUrl = pb.buildUrl('/user_auth/callback');
-  const connectUrl = `${chosenProvider.authUrl}${redirectUrl}&hd=uic.edu.ph`;
+  const connectUrl = `${chosenProvider.authUrl}${redirectUrl}`;
   const loginWindow = popupCenter({ url: connectUrl, title: provider + '_login_window', w: 800, h: 500 });
   if (!loginWindow) {
     throw new Error('Failed to open window.');
