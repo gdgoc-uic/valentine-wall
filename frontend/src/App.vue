@@ -70,9 +70,9 @@
 
     <navbar v-if="!$route.meta.disableAppHeader" :is-home="$route.name === 'home-page'" class="sticky top-0 z-50" />
     <main class="min-h-[80vh]">
-      <router-view v-slot="{ Component }">
+      <router-view v-slot="{ Component, route: viewRoute }">
         <suspense>
-          <component :is="Component" class="relative" />
+          <component :is="Component" :key="viewRoute.path" class="relative" />
         </suspense>
       </router-view>
     </main>

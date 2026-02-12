@@ -118,7 +118,31 @@ describe('Bug Fix: Lemuel.jpg exists in public/about/', () => {
 })
 
 // =========================================================
-// Test 4: Error handling behavior
+// Test 4: App.vue router-view has :key for proper navigation
+// =========================================================
+
+describe('Bug Fix: App.vue navigation between routes', () => {
+  const source = readSource('../App.vue')
+
+  it('router-view destructures route from slot', () => {
+    // Must have v-slot with route destructuring for keying
+    expect(source).toMatch(/router-view\s+v-slot\s*=\s*"\{[^}]*route[^}]*\}"/)
+  })
+
+  it('component inside suspense has :key bound to route path', () => {
+    // The <component> must have :key="...route.path" or :key="viewRoute.path"
+    // so Vue destroys and recreates the component when the route changes
+    expect(source).toMatch(/:key\s*=\s*"[^"]*\.path"/)
+  })
+
+  it('uses suspense to wrap async page components', () => {
+    expect(source).toContain('<suspense>')
+    expect(source).toContain('</suspense>')
+  })
+})
+
+// =========================================================
+// Test 5: Error handling behavior
 // =========================================================
 
 describe('Bug Fix: Global vs component error handling', () => {
