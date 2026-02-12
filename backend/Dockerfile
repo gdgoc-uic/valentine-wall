@@ -6,9 +6,12 @@ ENV CGOENABLED=1
 
 COPY ./go.mod .
 COPY ./go.sum .
-COPY ./backend .
-COPY ./backend/migrations ./backend/migrations
-COPY ./backend/models ./backend/models
+COPY ./backend/*.go ./
+COPY ./backend/migrations ./migrations
+COPY ./backend/models ./models
+COPY ./backend/renderer_assets ./renderer_assets
+COPY ./backend/templates ./templates
+COPY ./backend/_data ./_data
 
 # Download deps and build
 RUN go mod download

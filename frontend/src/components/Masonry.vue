@@ -69,7 +69,9 @@ export default {
       }
     },
     destroy() {
-      setTimeout(this.masonry.destroy || function() {}, this.destroyDelay);
+      if (this.masonry && typeof this.masonry.destroy === 'function') {
+        setTimeout(() => this.masonry.destroy(), this.destroyDelay);
+      }
     }
   }
 }

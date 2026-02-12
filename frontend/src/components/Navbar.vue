@@ -1,5 +1,6 @@
 <template>
-  <modal v-model:open="isCoinsModalOpen" with-closing-button title="Your coins">
+  <div>
+    <modal v-model:open="isCoinsModalOpen" with-closing-button title="Your coins">
     <div class="flex flex-col space-y-4">
       <div class="bg-gray-200 text-3xl flex items-center justify-center p-3 rounded-md">
         <icon-coin class="mr-2" />
@@ -171,6 +172,7 @@
         </client-only>
       </div>
     </div>
+  </div>
   </div>
 </template>
 

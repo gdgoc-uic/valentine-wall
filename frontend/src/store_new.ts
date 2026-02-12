@@ -177,8 +177,7 @@ export function createAuthStore(): Store<AuthState, AuthMethods> {
           if (messageRecipient === userStudentId && messageRecipient !== 'everyone') {
             notify({ 
               type: 'success', 
-              text: `💌 You received a new message! Click to view.`,
-              duration: 8000
+              text: `💌 You received a new message! Click to view.`
             });
           }
         }

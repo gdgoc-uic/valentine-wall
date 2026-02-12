@@ -9,7 +9,7 @@
 
 <script lang="ts" setup>
 import { UseQueryReturnType } from '@tanstack/vue-query';
-import { PropType, provide } from 'vue';
+import { PropType, provide, computed } from 'vue';
 import Loading from './Loading.vue';
 
 defineEmits(['success', 'error']);
@@ -26,5 +26,6 @@ const props = defineProps({
     }
 });
 
-provide('isLoading', props.query.isLoading);
+const isLoading = computed(() => props.query.isLoading);
+provide('isLoading', isLoading);
 </script>

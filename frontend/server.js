@@ -28,6 +28,14 @@ async function createServer(
 
   const app = polka();
   if (!isProd) {
+    // Serve static files from public directory FIRST in dev mode
+    const sirv = require('sirv');
+    const publicAssets = sirv(resolve('public'), {
+      dev: true,
+      etag: true
+    });
+    app.use(publicAssets);
+
     vite = await createViteServer({
       root,
       logLevel: isTest ? 'error' : 'info',

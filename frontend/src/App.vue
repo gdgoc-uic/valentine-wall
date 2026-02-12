@@ -72,7 +72,15 @@
     <main class="min-h-[80vh]">
       <router-view v-slot="{ Component, route: viewRoute }">
         <suspense>
-          <component :is="Component" :key="viewRoute.path" class="relative" />
+          <template #default>
+            <component :is="Component" :key="viewRoute.path" class="relative" />
+          </template>
+          <template #fallback>
+            <div class="py-12 w-full h-full flex flex-col items-center justify-center">
+              <loading class="mx-auto" />
+              <p class="mt-4 font-bold text-gray-700">Loading...</p>
+            </div>
+          </template>
         </suspense>
       </router-view>
     </main>
