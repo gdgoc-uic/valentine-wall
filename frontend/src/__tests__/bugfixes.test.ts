@@ -124,20 +124,20 @@ describe('Bug Fix: Lemuel.jpg exists in public/about/', () => {
 describe('Bug Fix: App.vue navigation between routes', () => {
   const source = readSource('../App.vue')
 
-  it('router-view destructures route from slot', () => {
-    // Must have v-slot with route destructuring for keying
-    expect(source).toMatch(/router-view\s+v-slot\s*=\s*"\{[^}]*route[^}]*\}"/)
+  it('router-view uses scoped slot for Component', () => {
+    // Must have v-slot destructuring Component
+    expect(source).toMatch(/router-view\s+v-slot\s*=\s*"\{[^}]*Component[^}]*\}"/)
   })
 
-  it('component inside suspense has :key bound to route path', () => {
-    // The <component> must have :key="...route.path" or :key="viewRoute.path"
-    // so Vue destroys and recreates the component when the route changes
-    expect(source).toMatch(/:key\s*=\s*"[^"]*\.path"/)
+  it('component has :key bound to $route.fullPath for reliable reactivity', () => {
+    // Using $route.fullPath (not viewRoute.path from slot scope) ensures
+    // App.vue's render effect depends directly on the global route state.
+    // This forces re-render even if <RouterView>'s internal effect doesn't trigger.
+    expect(source).toContain(':key="$route.fullPath"')
   })
 
-  it('uses suspense to wrap async page components', () => {
-    expect(source).toContain('<suspense>')
-    expect(source).toContain('</suspense>')
+  it('does not use suspense wrapper (not needed for non-async setup components)', () => {
+    expect(source).not.toContain('<suspense>')
   })
 })
 

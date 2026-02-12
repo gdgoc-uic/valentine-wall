@@ -70,18 +70,8 @@
 
     <navbar v-if="!$route.meta.disableAppHeader" :is-home="$route.name === 'home-page'" class="sticky top-0 z-50" />
     <main class="min-h-[80vh]">
-      <router-view v-slot="{ Component, route: viewRoute }">
-        <suspense>
-          <template #default>
-            <component :is="Component" :key="viewRoute.path" class="relative" />
-          </template>
-          <template #fallback>
-            <div class="py-12 w-full h-full flex flex-col items-center justify-center">
-              <loading class="mx-auto" />
-              <p class="mt-4 font-bold text-gray-700">Loading...</p>
-            </div>
-          </template>
-        </suspense>
+      <router-view v-slot="{ Component }">
+        <component :is="Component" :key="$route.fullPath" class="relative" />
       </router-view>
     </main>
 

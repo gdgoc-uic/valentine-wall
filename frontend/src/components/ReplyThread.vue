@@ -1,7 +1,7 @@
 <template>
-  <div class="space-y-2">
+  <div v-if="message" class="space-y-2">
     <div v-if="!isReadOnly()" class="p-6 lg:p-8 bg-white rounded-xl shadow-lg">
-      <div v-if="authState.isLoggedIn && (message.recipient === 'everyone' || authState.user!.expand.details?.student_id == message!.recipient)"
+      <div v-if="authState.isLoggedIn && (message.recipient === 'everyone' || authState.user!.expand.details?.student_id == message.recipient)"
         class="flex space-x-2 items-center text-2xl">
         <icon-reply class="text-pink-500 mb-4" />
         <h2 class="font-bold mb-4">Your reply</h2>
@@ -79,27 +79,34 @@ const message = inject<Ref<PbRecord>>('message')!;
 const { state: authState } = useAuth();
 
 function handleHasReplied() {
+  if (!message?.value) return;
   message.value.replies_count++;
   repliesQuery.refetch();
 }
 
-const repliesQuery = useQuery(['replies', message.value.id], () => {
-  return pb.collection('message_replies').getFullList(undefined, {
-    filter: `message="${message.value.id}"`,
-    sort: '-created',
-    expand: 'sender'
-  });
-}, {
+const repliesQuery = useQuery(
+  computed(() => ['replies', message?.value?.id]),
+  () => {
+    if (!message?.value) return Promise.reject('No message');
+    return pb.collection('message_replies').getFullList(undefined, {
+      filter: `message="${message.value.id}"`,
+      sort: '-created',
+      expand: 'sender'
+    });
+  }, {
   onSuccess(data) {
     replies.value = data;
   },
-  enabled: computed(() => (
-    message!.value.recipient == 'everyone' ||
-    (authState.isLoggedIn && (
-      message!.value.recipient == authState.user!.expand.details.student_id || 
-      message!.value.user == authState.user.id
-    ))
-  ))
+  enabled: computed(() => {
+    if (!message?.value) return false;
+    return (
+      message.value.recipient == 'everyone' ||
+      (authState.isLoggedIn && (
+        message.value.recipient == authState.user!.expand.details?.student_id || 
+        message.value.user == authState.user.id
+      ))
+    );
+  })
 });
 
 const replies = ref<PbRecord[]>([]);
@@ -116,7 +123,7 @@ const unsubscribeFunc = ref<UnsubscribeFunc | null>(null);
 
 onMounted(() => {
   pb.collection('message_replies').subscribe('*', (data) => {
-    if (data.record.message !== message.value.id) {
+    if (!message?.value || data.record.message !== message.value.id) {
       return;
     }
 

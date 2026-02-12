@@ -179,6 +179,7 @@ const query = useQuery(
     expand: 'gifts,message_replies(message)'
   }),
   {
+    enabled: computed(() => !!messageId.value),
     refetchOnWindowFocus: false,
     retry: 0,
     onError: () => {}
