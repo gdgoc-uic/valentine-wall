@@ -180,7 +180,8 @@ const query = useQuery(
   }),
   {
     refetchOnWindowFocus: false,
-    retry: 0
+    retry: 0,
+    onError: () => {}
   }
 );
 

@@ -131,7 +131,7 @@ const route = useRoute();
 const { state: authState } = useAuth();
 const hasGift = ref<boolean | null>(false);
 
-if (route.params.receipientId && authState.isLoggedIn) {
+if (route.params.recipientId && authState.isLoggedIn) {
   hasGift.value = null;
 }
 
@@ -179,6 +179,7 @@ const { hasNextPage, fetchNextPage, ...query } = useInfiniteQuery(
   {
     keepPreviousData: true,
     retry: 1,
+    onError: () => {},
     refetchOnWindowFocus: () => false,
     getNextPageParam: (result) => 
       result.page + 1 <= result.totalPages ? result.page + 1 : undefined,
