@@ -87,7 +87,7 @@ async function createServer(
         .replace(`<!--preload-links-->`, preloadLinks)
         .replace(`<!--app-html-->`, appHtml);
 
-      send(res, 200, html, { 'Content-Type': 'text/html' });
+      send(res, 200, html, { 'Content-Type': 'text/html;charset=utf-8' });
     } catch (e) {
       vite && vite.ssrFixStacktrace(e);
       console.log(e.stack);

@@ -21,20 +21,23 @@
         <send-message-form :existing-recipient="isOwnWall ? undefined : recipient" />
       </div>
       
-      <div class="max-w-7xl mx-auto w-full bg-white rounded-xl shadow-lg flex justify-center">
+      <div class="max-w-7xl mx-auto w-full bg-white rounded-xl shadow-lg flex justify-center overflow-x-auto">
         <div 
           v-if="recipient && authState.isLoggedIn && authState.user!.expand.details.student_id === recipient" 
           class="tabs">
-          <button @click="hasGift = null" :class="{'tab-active': hasGift == null}" class="tab tab-lg px-12 space-x-2 tab-bordered">
+          <button @click="isSentView = false; hasGift = null" :class="{'tab-active': hasGift == null && !isSentView}" class="tab tab-md sm:tab-lg px-4 sm:px-12 space-x-2 tab-bordered">
             <span>All</span>
           </button>
-          <button @click="hasGift = false" :class="{'tab-active': hasGift == false}" class="tab tab-lg px-6 space-x-2 tab-bordered">
+          <button @click="isSentView = false; hasGift = false" :class="{'tab-active': hasGift == false && !isSentView}" class="tab tab-md sm:tab-lg px-3 sm:px-6 space-x-2 tab-bordered">
             <span>Messages</span>
-            <span class="badge">{{ stats.messages_count }}</span>
+            <span class="badge badge-sm sm:badge-md">{{ stats.messages_count }}</span>
           </button>
-          <button @click="hasGift = true" :class="{'tab-active': hasGift == true}" class="tab tab-lg px-10 space-x-2 tab-bordered">
+          <button @click="isSentView = false; hasGift = true" :class="{'tab-active': hasGift == true && !isSentView}" class="tab tab-md sm:tab-lg px-3 sm:px-10 space-x-2 tab-bordered">
             <span>Gifts</span>
-            <span class="badge">{{ stats.gift_messages_count }}</span>
+            <span class="badge badge-sm sm:badge-md">{{ stats.gift_messages_count }}</span>
+          </button>
+          <button @click="isSentView = true; hasGift = null" :class="{'tab-active': isSentView}" class="tab tab-md sm:tab-lg px-4 sm:px-10 space-x-2 tab-bordered">
+            <span>Sent</span>
           </button>
         </div>
       </div>
@@ -130,6 +133,7 @@ async function loadStats(): Promise<void> {
 const route = useRoute();
 const { state: authState } = useAuth();
 const hasGift = ref<boolean | null>(false);
+const isSentView = ref(false);
 const isOwnWall = computed(() => authState.isLoggedIn && authState.user?.expand?.details?.student_id === recipient.value);
 
 if (route.params.recipientId && authState.isLoggedIn) {
@@ -158,16 +162,23 @@ onBeforeRouteUpdate((to, from) => {
 });
 
 const { hasNextPage, fetchNextPage, ...query } = useInfiniteQuery(
-  ['wall', recipient, hasGift],
+  ['wall', recipient, hasGift, isSentView],
   async ({ pageParam = 1 }) => {
-    let hasGiftsFilter = '';
-    if (hasGift.value !== null) {
-      hasGiftsFilter = '&& ' + (hasGift.value ? `gifts != "[]"` : `gifts = "[]"`);
+    let filterStr = '';
+
+    if (isSentView.value) {
+      filterStr = `user = "${authState.user!.details}"`;
+    } else {
+      let hasGiftsFilter = '';
+      if (hasGift.value !== null) {
+        hasGiftsFilter = '&& ' + (hasGift.value ? `gifts != "[]"` : `gifts = "[]"`);
+      }
+      filterStr = recipient.value ? `(recipient = "${recipient.value}" ${hasGiftsFilter})` : 'recipient = "everyone"';
     }
 
     const resp = await pb.collection('messages').getList(pageParam, 10, { 
       sort: '-created',
-      filter: recipient.value ? `(recipient = "${recipient.value}" ${hasGiftsFilter})` : 'recipient = "everyone"',
+      filter: filterStr,
       expand: 'gifts'
     });
 
@@ -209,6 +220,14 @@ onMounted(() => {
 
     pb.collection('messages').subscribe('*', (data) => {
       if (data.action === 'create') {
+        // Sent view: show messages sent by current user
+        if (isSentView.value) {
+          if (authState.isLoggedIn && data.record.user === authState.user!.details) {
+            rawCurrentMessages.unshift(data.record);
+          }
+          return;
+        }
+
         // For recent wall (no recipient), only show "everyone" messages
         if (!recipient.value && data.record.recipient !== 'everyone') return;
         // For specific recipient wall, only show messages for that recipient

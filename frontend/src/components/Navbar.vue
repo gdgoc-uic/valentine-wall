@@ -48,15 +48,15 @@
     <header ref="mainNavbar" :class="[isHome ? 'pt-2 lg:pt-8' : 'py-2 lg:py-8']" class="navbar mb-2 px-2 lg:px-10 items-center bg-gradient-to-b from-[#FFEFEF] via-[#ffefef7e] to-transparent">
       <!-- TODO: mobile view -->
       <div class="flex-none flex lg:hidden">
-        <button @click="menuOpen = !menuOpen" class="btn btn-square btn-ghost">
-          <icon-menu class="h-6 w-6 inline-block" />
+        <button @click="menuOpen = !menuOpen" class="btn btn-square btn-ghost btn-sm">
+          <icon-menu class="h-5 w-5 inline-block" />
         </button>
       </div>
-      <router-link :class="[isHome ? 'md:hidden' : 'lg:flex']" :to="{ name: 'home-page' }" class="flex-none flex-nowrap mr-2 lg:mr-8 space-x-2">
-        <img src="../assets/images/icon.png" class="h-full w-14 md:w-20" alt="Icon" />
+      <router-link :class="[isHome ? 'md:hidden' : 'lg:flex']" :to="{ name: 'home-page' }" class="flex-none flex items-center flex-nowrap lg:mr-8 space-x-2">
+        <img src="../assets/images/icon.png" class="w-8 h-8 sm:w-14 sm:h-14 md:w-20 md:h-20" alt="Icon" />
         <span class="flex-1 text-lg hidden md:hidden lg:block"> <span class="font-bold">Valentine</span>Wall </span>
       </router-link>
-      <search-form :class="{'md:hidden': isHome}" class="flex-1 lg:flex-none mr-1 md:mr-2 lg:mr-0 lg:w-1/3 min-w-0">
+      <search-form :class="{'md:hidden': isHome}" class="flex-1 lg:flex-none lg:w-1/3 min-w-0 ml-1 sm:ml-2">
         <div class="form-control p-1 lg:p-2 bg-white shadow-md rounded-xl w-full">
           <div class="flex space-x-2 items-center">
             <input

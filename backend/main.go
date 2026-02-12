@@ -39,7 +39,7 @@ func main() {
 		switch e.Record.Collection().Name {
 		case "messages":
 			return onBeforeAddMessage(app.Dao(), e)
-		case "message_repies":
+		case "message_replies":
 			return onBeforeAddMessageReply(app.Dao(), e)
 		}
 

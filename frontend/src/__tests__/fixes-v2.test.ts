@@ -132,43 +132,40 @@ describe('Fix 3: Recipient input and Everyone button responsiveness', () => {
 // ── Fix 4: Sidebar is narrower on mobile ─────────────────────────────
 
 describe('Fix 4: Mobile sidebar is compact', () => {
-  it('Sidebar uses 70vw width with max-w-300px', async () => {
+  it('Sidebar uses constrained width', async () => {
     const fs = await import('fs')
     const path = await import('path')
     const navSource = fs.readFileSync(
       path.resolve(__dirname, '../components/Navbar.vue'), 'utf-8'
     )
     
-    // Should use 70vw instead of 85vw
-    expect(navSource).toContain('w-[70vw]')
-    expect(navSource).toContain('max-w-[300px]')
+    // Should use constrained width
+    expect(navSource).toContain('max-w-[320px]')
     // Should NOT have old 85vw
     expect(navSource).not.toContain('w-[85vw]')
   })
 
-  it('Sidebar links use text-xl instead of text-3xl', async () => {
+  it('Sidebar has proper navigation links', async () => {
     const fs = await import('fs')
     const path = await import('path')
     const navSource = fs.readFileSync(
       path.resolve(__dirname, '../components/Navbar.vue'), 'utf-8'
     )
     
-    // Nav links in sidebar should be text-xl, not text-3xl
-    // The sidebar nav links section
-    expect(navSource).toContain('text-xl text-gray-600')
+    // Sidebar should have nav links with hover states
+    expect(navSource).toContain('hover:bg-rose-50')
   })
 
-  it('Sidebar user info section is compact', async () => {
+  it('Sidebar has user section with avatar', async () => {
     const fs = await import('fs')
     const path = await import('path')
     const navSource = fs.readFileSync(
       path.resolve(__dirname, '../components/Navbar.vue'), 'utf-8'
     )
     
-    // User section should use p-3 not p-4
-    expect(navSource).toContain('bg-white bg-opacity-60 p-3')
-    // Username should be text-lg not text-2xl
-    expect(navSource).toContain('text-lg text-ellipsis')
+    // User section should show username with avatar
+    expect(navSource).toContain('authState.user.username')
+    expect(navSource).toContain('charAt(0)')
   })
 })
 

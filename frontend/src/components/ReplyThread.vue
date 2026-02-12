@@ -121,8 +121,8 @@ const { mutate: deleteReply } = useMutation((id: string) => {
 
 const unsubscribeFunc = ref<UnsubscribeFunc | null>(null);
 
-onMounted(() => {
-  pb.collection('message_replies').subscribe('*', (data) => {
+onMounted(async () => {
+  unsubscribeFunc.value = await pb.collection('message_replies').subscribe('*', (data) => {
     if (!message?.value || data.record.message !== message.value.id) {
       return;
     }
