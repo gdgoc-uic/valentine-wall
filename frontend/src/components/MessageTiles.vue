@@ -5,8 +5,8 @@
         :to="{ name: 'message-page', params: { recipientId: msg.recipient, messageId: msg.id } }"
         class="message-paper"
         :class="[msg.gifts.length != 0 ? 'paper-variant-gift' : `paper-variant-${msg.paperColor}`]">
-          <div v-if="msg.gifts.length == 0" class="px-6 pt-6">
-            <p>{{ msg.content }}</p>
+          <div v-if="msg.gifts.length == 0" class="px-6 pt-6 overflow-hidden">
+            <p class="break-words">{{ msg.content }}</p>
           </div>
           <div v-else class="flex flex-col w-full h-full items-center justify-center space-y-2">
             <div class="flex flex-row space-x-2 items-center justify-center flex-wrap">

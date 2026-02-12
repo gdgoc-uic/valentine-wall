@@ -43,7 +43,7 @@
                   <td class="w-2/6 md:text-xl text-gray-500 text-center">
                     <div>
                       <span class="text-rose-500 font-bold">{{ r.total_coins }}</span>
-                      <span class="md:text-2xl">ღ</span>
+                      <span class="md:text-2xl">₱</span>
                     </div>
                   </td>
                 </tr>

@@ -4,7 +4,7 @@
     <div class="flex flex-col space-y-4">
       <div class="bg-gray-200 text-3xl flex items-center justify-center p-3 rounded-md">
         <icon-coin class="mr-2" />
-        <span>ღ{{ authState.user?.expand.wallet?.balance.toFixed(2) ?? 'unknown' }}</span>
+        <span>₱{{ authState.user?.expand.wallet?.balance.toFixed(2) ?? 'unknown' }}</span>
       </div>
 
       <div>
@@ -19,7 +19,7 @@
 
             <div class="w-1/4 text-xl flex items-center">
               <icon-coin class="mr-2" />
-              <span>ღ{{ ht.amount }}</span>
+              <span>₱{{ ht.amount }}</span>
             </div>
           </div>
         </div>
@@ -45,7 +45,7 @@
         </router-link>
       </div>
     </div>
-    <header ref="mainNavbar" :class="[isHome ? 'pt-2 lg:pt-8' : 'py-2 lg:py-8']" class="navbar mb-2 px-2 lg:px-10 items-center bg-gradient-to-b from-[#FFEFEF] via-[#ffefef7e] to-transparent']">
+    <header ref="mainNavbar" :class="[isHome ? 'pt-2 lg:pt-8' : 'py-2 lg:py-8']" class="navbar mb-2 px-2 lg:px-10 items-center bg-gradient-to-b from-[#FFEFEF] via-[#ffefef7e] to-transparent">
       <!-- TODO: mobile view -->
       <div class="flex-none flex lg:hidden">
         <button @click="menuOpen = !menuOpen" class="btn btn-square btn-ghost">
@@ -56,7 +56,7 @@
         <img src="../assets/images/icon.png" class="h-full w-14 md:w-20" alt="Icon" />
         <span class="flex-1 text-lg hidden md:hidden lg:block"> <span class="font-bold">Valentine</span>Wall </span>
       </router-link>
-      <search-form :class="{'md:hidden': isHome}" class="flex-1 lg:flex-none md:mr-2 lg:mr-0 lg:w-1/3">
+      <search-form :class="{'md:hidden': isHome}" class="flex-1 lg:flex-none mr-1 md:mr-2 lg:mr-0 lg:w-1/3 min-w-0">
         <div class="form-control p-1 lg:p-2 bg-white shadow-md rounded-xl w-full">
           <div class="flex space-x-2 items-center">
             <input
@@ -99,7 +99,7 @@
             :class="[!shouldSendButtonHide ? 'rounded-none' : 'rounded-l-none']" 
             class="btn shadow-md normal-case text-black bg-white border-0 hover:bg-gray-100">
             <icon-coin class="mr-2" />
-            <span>ღ{{ authState.user!.expand.wallet?.balance.toFixed(2) ?? 'unknown' }}</span>
+            <span>₱{{ authState.user!.expand.wallet?.balance.toFixed(2) ?? 'unknown' }}</span>
           </button>
           <button
             v-if="!isReadOnly() && !shouldSendButtonHide && authState.isLoggedIn"
@@ -114,64 +114,96 @@
       </client-only>
     </header>
 
-    <div 
-      @click.self="menuOpen = false" 
-      :class="[menuOpen ? 'block' : 'hidden']" 
-      style="z-index: 99999;"
-      class="lg:hidden bg-[#FFEFEF] bg-opacity-50 h-screen fixed inset-x-0 bottom-0">
-      <div class="bg-[#FFEFEF] flex h-full lg:hidden p-8 flex-col w-[85vw] drop-shadow-xl">
-        <button
-          @click="menuOpen = false"
-          style="right: 20px; top: 20px;"
-          class="bg-rose-500 hover:bg-rose-600 transition-colors text-white p-2 rounded-full absolute">
-          <icon-close />
-        </button>
-        <client-only>
-          <div class="py-8 flex flex-col space-y-8">
-            <router-link
-              :key="'links_' + i"
-              v-for="(link, i) in navbarLinks"
-              :to="link.to"
-              @click="menuOpen = false"
-              class="text-3xl text-gray-600 hover:text-gray-800">
-              {{ link.label }}
-            </router-link>
+    <!-- Mobile Sidebar Overlay -->
+    <Transition name="sidebar-overlay">
+      <div 
+        v-if="menuOpen"
+        @click.self="menuOpen = false" 
+        style="z-index: 99999;"
+        class="lg:hidden fixed inset-0 bg-black/30 backdrop-blur-sm">
+        <!-- Sidebar Panel -->
+        <Transition name="sidebar-slide">
+          <div v-if="menuOpen" class="bg-white h-full w-[75vw] max-w-[320px] flex flex-col shadow-2xl">
+            <!-- Header -->
+            <div class="flex items-center justify-between px-5 py-4 bg-gradient-to-r from-rose-500 to-rose-400">
+              <router-link :to="{ name: 'home-page' }" @click="menuOpen = false" class="flex items-center space-x-2">
+                <img src="../assets/images/icon.png" class="w-8 h-8" alt="Icon" />
+                <span class="text-white font-bold text-lg">Valentine Wall</span>
+              </router-link>
+              <button @click="menuOpen = false" class="text-white/80 hover:text-white p-1">
+                <icon-close class="w-5 h-5" />
+              </button>
+            </div>
+
+            <client-only>
+              <!-- User Card -->
+              <div v-if="!isReadOnly() && authState.isLoggedIn" class="px-5 py-4 bg-rose-50 border-b border-rose-100">
+                <div class="flex items-center space-x-3">
+                  <div class="w-10 h-10 rounded-full bg-rose-400 flex items-center justify-center text-white font-bold text-lg">
+                    {{ authState.user.username?.charAt(0)?.toUpperCase() || '?' }}
+                  </div>
+                  <div class="min-w-0 flex-1">
+                    <p class="font-semibold text-gray-800 truncate">{{ authState.user.username }}</p>
+                    <button @click="isCoinsModalOpen = true; menuOpen = false" class="flex items-center space-x-1 text-sm text-gray-500 hover:text-rose-500">
+                      <icon-coin class="w-4 h-4" />
+                      <span>₱{{ authState.user!.expand.wallet?.balance.toFixed(2) ?? '0.00' }}</span>
+                    </button>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Nav Links -->
+              <nav class="flex-1 overflow-y-auto py-2">
+                <div class="px-3">
+                  <router-link
+                    :key="'links_' + i"
+                    v-for="(link, i) in navbarLinks"
+                    :to="link.to"
+                    @click="menuOpen = false"
+                    class="flex items-center px-3 py-3 rounded-lg text-gray-700 hover:bg-rose-50 hover:text-rose-600 transition-colors font-medium">
+                    {{ link.label }}
+                  </router-link>
+                </div>
+
+                <!-- Divider -->
+                <div v-if="!isReadOnly() && authState.isLoggedIn" class="my-2 border-t border-gray-100"></div>
+
+                <!-- Account Links -->
+                <div v-if="!isReadOnly() && authState.isLoggedIn" class="px-3">
+                  <div
+                    :key="'account_link_' + i"
+                    v-for="(al, i) in accountLinks"
+                    @click="menuOpen = false">
+                    <component 
+                      :is="al.tag" 
+                      v-bind="al.props"
+                      class="flex items-center px-3 py-3 rounded-lg hover:bg-rose-50 transition-colors font-medium"
+                      :class="al.liClass">
+                      {{ al.children }}
+                    </component>
+                  </div>
+                </div>
+              </nav>
+
+              <!-- Bottom Action -->
+              <div v-if="!isReadOnly() && authState.isLoggedIn" class="p-4 border-t border-gray-100">
+                <button
+                  v-if="!shouldSendButtonHide"
+                  @click="store.state.isSendMessageModalOpen = true; menuOpen = false"
+                  class="btn border-none w-full bg-rose-500 hover:bg-rose-600 text-white rounded-xl space-x-2">
+                  <icon-send />
+                  <span>Send a Message</span>
+                </button>
+              </div>
+
+              <div v-if="!authState.isLoggedIn" class="p-4 mt-auto border-t border-gray-100">
+                <login-button @click="menuOpen = false" class="w-full" />
+              </div>
+            </client-only>
           </div>
-          <div v-if="!isReadOnly() && authState.isLoggedIn" class="bg-white bg-opacity-60 p-4 rounded-xl mt-auto">
-            <p>Signing in as</p>
-            <h3 class="text-2xl text-ellipsis overflow-hidden font-bold">
-              {{ authState.user.username }}
-            </h3>
-            <ul class="space-y-4 py-4">
-              <li class="text-xl"
-                  @click="menuOpen = false"
-                  :class="al.liClass"
-                  :key="'account_link_' + i"
-                  v-for="(al, i) in accountLinks">
-                <component :is="al.tag" v-bind="al.props">
-                  {{ al.children }}
-                </component>
-              </li>
-            </ul>
-            <button
-              v-if="!isReadOnly() && authState.isLoggedIn" 
-              @click="isCoinsModalOpen = true"
-              class="btn shadow-md normal-case text-black bg-white border-0 hover:bg-gray-100 w-full mb-2">
-              <icon-coin class="mr-2" />
-              <span>ღ{{ authState.user!.expand.wallet?.balance.toFixed(2) ?? 'unknown' }}</span>
-            </button>
-            <button
-              v-if="!shouldSendButtonHide"
-              @click="store.state.isSendMessageModalOpen = true; menuOpen = false"
-              class="shadow-md btn border-none w-full bg-rose-500 hover:bg-rose-600 px-8 space-x-2">
-              <icon-send />
-              <span>Send a Message</span>
-            </button>
-          </div>
-          <login-button v-else @click="menuOpen = false" class="mt-auto" />
-        </client-only>
+        </Transition>
       </div>
-    </div>
+    </Transition>
   </div>
   </div>
 </template>
@@ -274,3 +306,24 @@ const shouldSendButtonHide = computed(() => {
     route.path.startsWith('/about');
 });
 </script>
+
+<style scoped>
+.sidebar-overlay-enter-active,
+.sidebar-overlay-leave-active {
+  transition: opacity 0.25s ease;
+}
+.sidebar-overlay-enter-from,
+.sidebar-overlay-leave-to {
+  opacity: 0;
+}
+.sidebar-slide-enter-active {
+  transition: transform 0.25s ease-out;
+}
+.sidebar-slide-leave-active {
+  transition: transform 0.2s ease-in;
+}
+.sidebar-slide-enter-from,
+.sidebar-slide-leave-to {
+  transform: translateX(-100%);
+}
+</style>

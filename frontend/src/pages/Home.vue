@@ -95,17 +95,16 @@ const recentsSSE = ref<UnsubscribeFunc>();
 onMounted(() => {
   if (!import.meta.env.SSR) {
     pb.collection('messages').getList(1, 10, {
-      filter: 'gifts = "[]"',
+      filter: 'recipient = "everyone"',
       sort: '-created',
       expand: 'gifts'
     }).then(records => {
       recentMessages.push(...records.items);
 
       return pb.collection('messages').subscribe('*', (e) => {
-        if (e.action !== 'create' || e.record.gifts.length !== 0) return;
+        if (e.action !== 'create' || e.record.recipient !== 'everyone') return;
 
-        recentMessages.splice(0, recentMessages.length);
-        recentMessages.push(e.record);
+        recentMessages.unshift(e.record);
       });
     }).then(unsub => {
       if (!unsub) return;

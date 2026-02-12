@@ -23,7 +23,7 @@
     <div class="flex items-center space-x-2 mt-4">
       <content-counter ref="counter" :content="content" class="mr-auto" />
       <div class="indicator">
-        <div v-if="shouldSend" class="indicator-item badge badge-primary">ღ150.0</div> 
+        <div v-if="shouldSend" class="indicator-item badge badge-primary">₱150.0</div> 
         <button @click="() => submitReply()" 
           class="space-x-2 btn bg-rose-500 hover:bg-rose-600 border-none hover:border-none" :disabled="!shouldSend || isSending">
           <icon-send />

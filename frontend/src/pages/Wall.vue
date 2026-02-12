@@ -18,7 +18,7 @@
         class="max-w-3xl bg-white p-6 md:p-8 mb-4 md:mb-8 mx-auto w-full space-y-2 rounded-2xl shadow-md h-full">
         <h2 class="text-3xl font-bold text-center">Send a message</h2>
 
-        <send-message-form :existing-recipient="recipient" />
+        <send-message-form :existing-recipient="isOwnWall ? undefined : recipient" />
       </div>
       
       <div class="max-w-7xl mx-auto w-full bg-white rounded-xl shadow-lg flex justify-center">
@@ -130,6 +130,7 @@ async function loadStats(): Promise<void> {
 const route = useRoute();
 const { state: authState } = useAuth();
 const hasGift = ref<boolean | null>(false);
+const isOwnWall = computed(() => authState.isLoggedIn && authState.user?.expand?.details?.student_id === recipient.value);
 
 if (route.params.recipientId && authState.isLoggedIn) {
   hasGift.value = null;
@@ -166,7 +167,7 @@ const { hasNextPage, fetchNextPage, ...query } = useInfiniteQuery(
 
     const resp = await pb.collection('messages').getList(pageParam, 10, { 
       sort: '-created',
-      filter: recipient.value ? `(recipient = "${recipient.value}" ${hasGiftsFilter})` : 'gifts:length = 0',
+      filter: recipient.value ? `(recipient = "${recipient.value}" ${hasGiftsFilter})` : 'recipient = "everyone"',
       expand: 'gifts'
     });
 
@@ -207,7 +208,12 @@ onMounted(() => {
     }
 
     pb.collection('messages').subscribe('*', (data) => {
-      if (data.action === 'create' && (!recipient.value || data.record.recipient === recipient.value)) {
+      if (data.action === 'create') {
+        // For recent wall (no recipient), only show "everyone" messages
+        if (!recipient.value && data.record.recipient !== 'everyone') return;
+        // For specific recipient wall, only show messages for that recipient
+        if (recipient.value && data.record.recipient !== recipient.value) return;
+
         if (recipient.value) {
           if (data.record.gifts.length === 0) {
             stats.messages_count++;

@@ -19,7 +19,7 @@
               <p v-else class="text-gray-500 text-xl mb-2">For {{ getDisplayName(message!.recipient) }}</p>
               <div class="mb-8 mt-8 bg-amber-100 rounded-lg text-center" :class="{ 'px-8 py-16': revealContent || !hasGifts }">
                 <button v-if="hasGifts && !revealContent" class="w-full p-4 hover:bg-amber-200 rounded-lg" @click="revealContent = true">Reveal note</button>
-                <div v-if="!hasGifts || revealContent" class="font-bold text-4xl">
+                <div v-if="!hasGifts || revealContent" class="font-bold text-4xl break-words">
                   <p :key="'content_' + ci" v-for="(c, ci) in message!.content.split('\r\n')">{{ c }}</p>
                 </div>
               </div>

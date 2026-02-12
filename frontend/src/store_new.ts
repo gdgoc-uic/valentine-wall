@@ -167,23 +167,9 @@ export function createAuthStore(): Store<AuthState, AuthMethods> {
         }
       });
 
-      // Subscribe to new messages for this user
-      const userStudentId = user.expand.details.student_id;
-      const messageUnsub = await pb.collection('messages').subscribe('*', (data) => {
-        if (data.action === 'create') {
-          const messageRecipient = data.record.recipient;
-          
-          // Notify user if they are the recipient (not "everyone" messages)
-          if (messageRecipient === userStudentId && messageRecipient !== 'everyone') {
-            notify({ 
-              type: 'success', 
-              text: `💌 You received a new message! Click to view.`
-            });
-          }
-        }
-      });
-      
-      state.messageUnsubscribe = messageUnsub;
+      // Message notification subscription removed to avoid conflicting with
+      // component-level SSE subscriptions (Home.vue, Wall.vue) which share
+      // the same PocketBase 'messages/*' topic.
     } catch (e) {
       console.error(e);
       logout();

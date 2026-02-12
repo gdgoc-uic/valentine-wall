@@ -5,11 +5,11 @@
       <fieldset class="gift-list-checkboxes">
         <div class="gift-item tooltip tooltip-top z-10" :data-tip="gift.label" :key="'gift_' + gift.uid" v-for="gift in store.state.giftList">
           <div class="gift-item-btn-wrapper indicator">
-            <div class="indicator-bottom indicator-center indicator-item badge" :class="[gift.is_remittable ? 'badge-success' : 'badge-primary']">ღ{{ gift.price }}</div> 
+            <div class="indicator-bottom indicator-center indicator-item badge" :class="[gift.is_remittable ? 'badge-success' : 'badge-primary']">₱{{ gift.price }}</div> 
             <input class="absolute appearance-none top-0 left-0" type="checkbox" 
               :checked="gifts.includes(gift.id)" :name="'gift_ids['+gift.id+']'" :id="gift.uid">
             <label class="btn btn-checkbox rounded-xl p-1 flex flex-col text-center h-full w-full" :for="gift.uid">
-              <gift-icon :uid="gift.uid" class="text-4xl" />
+              <gift-icon :uid="gift.uid" class="text-5xl" />
             </label>
           </div>
         </div>
@@ -31,17 +31,17 @@
       <label class="label">
         <span class="label-text">Recipient</span>
       </label>
-      <div class="flex space-x-2">
+      <div class="flex flex-col sm:flex-row gap-2">
         <input
-          class="input input-bordered flex-1" 
+          class="input input-bordered flex-1 min-w-0" 
           type="text"
           name="recipient_id"
           v-model="recipientId"
           pattern="[0-9]{6,12}|everyone" 
-          placeholder="6 to 12-digit Student ID (e.g. 200xxxxxxxxx) or 'everyone'">
+          placeholder="6-12 digit Student ID or 'everyone'">
 
         <Tooltip v-if="!existingRecipient">
-          <button @click.prevent="recipientId = 'everyone'" class="btn">Everyone</button>
+          <button @click.prevent="recipientId = 'everyone'" class="btn btn-sm sm:btn-md whitespace-nowrap">Everyone</button>
 
           <template #popper>
             <p>Click this if you don't know the person or want to send a message to all</p>
@@ -76,7 +76,7 @@
       <div class="w-full md:w-auto space-x-4 flex items-center justify-end">
         <content-counter ref="counter" :content="content" :newline-count="13" />
         <div class="indicator">
-          <div v-if="shouldSend" class="indicator-item badge badge-primary">ღ{{ (SEND_PRICE + totalGiftPrice).toFixed(2) }}</div> 
+          <div v-if="shouldSend" class="indicator-item badge badge-primary">₱{{ (SEND_PRICE + totalGiftPrice).toFixed(2) }}</div> 
           <button
             class="self-end px-12 btn bg-rose-500 hover:bg-rose-600 border-none"
             type="submit"
@@ -203,7 +203,7 @@ const { mutateAsync: sendMessage } = useMutation((message: {
 }
 
 .gift-list-checkboxes .gift-item .gift-item-btn-wrapper {
-  height: 6.3rem;
+  height: 7.5rem;
   @apply w-full relative;
 }
 

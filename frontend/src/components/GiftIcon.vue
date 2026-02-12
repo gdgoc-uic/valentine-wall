@@ -41,7 +41,7 @@ export default {
     // Render emoji as text
     return h('span', {
       ...this.$props,
-      style: 'font-size: inherit; line-height: 1;'
+      style: 'font-size: inherit; line-height: 1; display: inline-block;'
     }, emoji);
   }
 };

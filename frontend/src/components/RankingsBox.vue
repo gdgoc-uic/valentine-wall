@@ -29,7 +29,7 @@
             <div class="flex w-3/12 px-2 bg-white">
               <div class="pl-1 inline-flex items-center space-x-1 py-6">
                 <icon-coin />
-                <span>{{ r.total_coins }}ღ</span>
+                <span>₱{{ r.total_coins }}</span>
               </div>
             </div>
           </div>

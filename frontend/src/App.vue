@@ -169,10 +169,18 @@ if (!import.meta.env.SSR) {
 
 html {
   height: 100%;
+  overflow-x: hidden;
+  overscroll-behavior-x: none;
 }
 
 body {
   min-height: 100%;
+  overflow-x: hidden;
+  overscroll-behavior-x: none;
+}
+
+#app {
+  overflow-x: clip;
 }
 
 .background {
@@ -181,13 +189,13 @@ body {
   background-repeat: no-repeat;
   background-position: top center;
   height: 110vh;
-  widows: 100vw;
+  width: 100%;
   z-index: -1;
   position: absolute;
   top: 0;
   left: 0;
   right: 0;
-  bottom: 0;
+  overflow: hidden;
 }
 
 @media screen(md) {

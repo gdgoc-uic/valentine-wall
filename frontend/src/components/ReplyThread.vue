@@ -21,7 +21,7 @@
                     class="font-bold text-lg mb-2">{{ reply.expand.sender.student_id  }}</span>
                   <span class="text-gray-500">{{ fromNow(reply.created) }}</span>
                 </div>
-                <p class="text-lg">{{ reply.content }}</p>
+                <p class="text-lg break-words">{{ reply.content }}</p>
                 <div class="space-x-1 text-sm flex mt-6 items-center" v-if="reply.liked && (authState.isLoggedIn && reply.sender === authState.user.details)">
                   <icon-heart class="text-rose-500" />
 
