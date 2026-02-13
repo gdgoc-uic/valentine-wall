@@ -12,16 +12,16 @@ const members = rawMembers.map(m => ({
 }))
 
 describe('About / Team Members', () => {
-  it('should include Geoff in the members list', () => {
-    const geoff = members.find(m => m.firstName === 'Geoff')
+  it('should include Geoffrey in the members list', () => {
+    const geoff = members.find(m => m.firstName === 'Geoffrey')
     expect(geoff).toBeDefined()
-    expect(geoff!.name).toContain('Geoff')
+    expect(geoff!.name).toContain('Geoffrey')
   })
 
-  it('should have Geoff.jpg in the public/about directory', () => {
-    const aboutDir = path.resolve(__dirname, '../../public/about')
-    const files = fs.readdirSync(aboutDir)
-    expect(files).toContain('Geoff.jpg')
+  it('should have Geoffrey.jpg in the public/about directory', () => {
+    const publicAboutDir = path.resolve(__dirname, '../../public/about');
+    const files = fs.readdirSync(publicAboutDir);
+    expect(files).toContain('Geoffrey.jpg')
   })
 
   it('should have a matching image for every team member', () => {
