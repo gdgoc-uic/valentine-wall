@@ -81,6 +81,7 @@ import { pb } from '../client';
 import { Record as PbRecord, UnsubscribeFunc } from 'pocketbase';
 import { onMounted, onUnmounted, ref, reactive } from 'vue';
 import { useAuth } from '../store_new';
+import { notify } from '../notify';
 
 // welcome modal but in home page
 import IconWelcomeFeature1 from '~icons/home-icons/welcome_feature_1';
@@ -102,7 +103,21 @@ onMounted(() => {
       recentMessages.push(...records.items);
 
       return pb.collection('messages').subscribe('*', (e) => {
-        if (e.action !== 'create' || e.record.recipient !== 'everyone') return;
+        if (e.action !== 'create') return;
+
+        // Toast notification for incoming personal messages
+        if (authState.isLoggedIn && authState.user?.expand?.details?.student_id &&
+            e.record.recipient === authState.user.expand.details.student_id) {
+          const hasGifts = e.record.gifts && e.record.gifts.length > 0;
+          notify({
+            type: 'success',
+            text: hasGifts
+              ? '🎁 You received a new message with a gift!'
+              : '💌 You received a new message!'
+          } as any);
+        }
+
+        if (e.record.recipient !== 'everyone') return;
 
         recentMessages.unshift(e.record);
       });

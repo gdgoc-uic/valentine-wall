@@ -64,91 +64,80 @@ describe('Notification System', () => {
 })
 
 describe('Real-time Message Notifications', () => {
+  // Helper that simulates the notification logic used in Home.vue and Wall.vue
+  function simulateIncomingMessage(
+    authState: { isLoggedIn: boolean; user: any },
+    record: { recipient: string; gifts?: string[] }
+  ) {
+    if (authState.isLoggedIn && authState.user?.expand?.details?.student_id &&
+        record.recipient === authState.user.expand.details.student_id) {
+      const hasGifts = record.gifts && record.gifts.length > 0
+      notify({
+        type: 'success',
+        text: hasGifts
+          ? '🎁 You received a new message with a gift!'
+          : '💌 You received a new message!'
+      } as any)
+    }
+  }
+
   it('should notify user when they receive a new message', () => {
-    // This test simulates the subscription callback
-    const userStudentId: string = '202012345678'
-    
-    const mockData: { action: string; record: { recipient: string; content: string } } = {
-      action: 'create',
-      record: {
-        recipient: '202012345678',
-        content: 'Test message'
-      }
+    const authState = {
+      isLoggedIn: true,
+      user: { expand: { details: { student_id: '202012345678' } } }
     }
 
-    // Simulate the subscription callback logic
-    if (mockData.action === 'create') {
-      const messageRecipient: string = mockData.record.recipient
-      if (messageRecipient === userStudentId && messageRecipient !== 'everyone') {
-        notify({
-          type: 'success',
-          text: '💌 You received a new message! Click to view.',
-          duration: 8000
-        } as any)
-      }
-    }
+    simulateIncomingMessage(authState, { recipient: '202012345678', gifts: [] })
 
     expect(vi.mocked(notiwind.notify)).toHaveBeenCalledWith({
       type: 'success',
-      text: '💌 You received a new message! Click to view.',
-      duration: 8000
+      text: '💌 You received a new message!'
+    })
+  })
+
+  it('should notify with gift text when message has gifts', () => {
+    const authState = {
+      isLoggedIn: true,
+      user: { expand: { details: { student_id: '202012345678' } } }
+    }
+
+    simulateIncomingMessage(authState, { recipient: '202012345678', gifts: ['gift1'] })
+
+    expect(vi.mocked(notiwind.notify)).toHaveBeenCalledWith({
+      type: 'success',
+      text: '🎁 You received a new message with a gift!'
     })
   })
 
   it('should not notify for "everyone" messages', () => {
-    const userStudentId: string = '202012345678'
-    
-    const mockData: { action: string; record: { recipient: string } } = {
-      action: 'create',
-      record: {
-        recipient: 'everyone'
-      }
+    const authState = {
+      isLoggedIn: true,
+      user: { expand: { details: { student_id: '202012345678' } } }
     }
 
-    // Clear previous calls
     vi.clearAllMocks()
-
-    // Simulate the subscription callback logic
-    if (mockData.action === 'create') {
-      const messageRecipient: string = mockData.record.recipient
-      const shouldNotify = messageRecipient === userStudentId && messageRecipient !== 'everyone'
-      if (shouldNotify) {
-        notify({
-          type: 'success',
-          text: '💌 You received a new message! Click to view.',
-          duration: 8000
-        } as any)
-      }
-    }
+    simulateIncomingMessage(authState, { recipient: 'everyone', gifts: [] })
 
     expect(vi.mocked(notiwind.notify)).not.toHaveBeenCalled()
   })
 
   it('should not notify when message is for different recipient', () => {
-    const userStudentId: string = '202012345678'
-    
-    const mockData: { action: string; record: { recipient: string } } = {
-      action: 'create',
-      record: {
-        recipient: '202087654321'
-      }
+    const authState = {
+      isLoggedIn: true,
+      user: { expand: { details: { student_id: '202012345678' } } }
     }
 
-    // Clear previous calls
     vi.clearAllMocks()
+    simulateIncomingMessage(authState, { recipient: '202087654321', gifts: [] })
 
-    // Simulate the subscription callback logic
-    if (mockData.action === 'create') {
-      const messageRecipient: string = mockData.record.recipient
-      const shouldNotify = messageRecipient === userStudentId && messageRecipient !== 'everyone'
-      if (shouldNotify) {
-        notify({
-          type: 'success',
-          text: '💌 You received a new message! Click to view.',
-          duration: 8000
-        } as any)
-      }
-    }
+    expect(vi.mocked(notiwind.notify)).not.toHaveBeenCalled()
+  })
+
+  it('should not notify when user is not logged in', () => {
+    const authState = { isLoggedIn: false, user: null }
+
+    vi.clearAllMocks()
+    simulateIncomingMessage(authState, { recipient: '202012345678', gifts: [] })
 
     expect(vi.mocked(notiwind.notify)).not.toHaveBeenCalled()
   })

@@ -81,6 +81,11 @@
       "name": "Lemuel G. Abellana",
       "org_id": 0,
       "role_ids": [1, 9]
+    },
+    {
+      "name": "Geoffrey Diapana",
+      "org_id": 0,
+      "role_ids": [9, 1]
     }
   ]
 }

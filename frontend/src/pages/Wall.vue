@@ -94,6 +94,7 @@ import { useInfiniteQuery } from '@tanstack/vue-query';
 import { ClientResponseError, Record as PbRecord, UnsubscribeFunc } from 'pocketbase';
 import { useAuth } from '../store_new';
 import { isReadOnly } from '../utils';
+import { notify } from '../notify';
 
 function isEmptyError(error: unknown) {
   if (error instanceof ClientResponseError && error.status === 404) {
@@ -220,6 +221,18 @@ onMounted(() => {
 
     pb.collection('messages').subscribe('*', (data) => {
       if (data.action === 'create') {
+        // Toast notification for incoming personal messages
+        if (authState.isLoggedIn && authState.user?.expand?.details?.student_id &&
+            data.record.recipient === authState.user.expand.details.student_id) {
+          const hasGifts = data.record.gifts && data.record.gifts.length > 0;
+          notify({
+            type: 'success',
+            text: hasGifts
+              ? '🎁 You received a new message with a gift!'
+              : '💌 You received a new message!'
+          } as any);
+        }
+
         // Sent view: show messages sent by current user
         if (isSentView.value) {
           if (authState.isLoggedIn && data.record.user === authState.user!.details) {
