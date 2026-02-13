@@ -122,7 +122,7 @@ Host github.com
 
 Save: `Ctrl+X`, `Y`, `Enter`
 
-**✅ Test:** Run `ssh -T git@github.com` - should see "Hi username! You've successfully authenticated"
+**✅ Test:** Run `IdentityFile ~/.ssh/valentine_wall` - should see "Hi username! You've successfully authenticated"
 
 ### Clone Repository
 
@@ -294,7 +294,7 @@ curl -I https://valentine.yourdomain.com/pb/api/health
 
 ---
 
-## 7. Production Security Hardening
+## 8. Production Security Hardening
 
 ### Step 1: Create Deployment User
 
@@ -786,7 +786,7 @@ crontab -e
 
 ---
 
-## 9. Troubleshooting
+## 10. Troubleshooting
 
 ### Containers Won't Start
 

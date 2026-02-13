@@ -4,8 +4,8 @@ import { getAnalytics, setAnalyticsCollectionEnabled } from 'firebase/analytics'
 
 let analytics: Analytics | undefined;
 
-// Initialize analytics only in production and client-side
-if (!import.meta.env.SSR && import.meta.env.PROD) {
+// Initialize analytics only in production, client-side, and when Firebase is configured
+if (!import.meta.env.SSR && import.meta.env.PROD && app) {
   analytics = getAnalytics(app);
 }
 

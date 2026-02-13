@@ -1,7 +1,7 @@
-import { initializeApp } from 'firebase/app';
+import { initializeApp, FirebaseApp } from 'firebase/app';
 import { getAnalytics, setAnalyticsCollectionEnabled } from 'firebase/analytics';
 
-export const app = initializeApp({
+const firebaseConfig = {
   apiKey: import.meta.env.VITE_FIREBASE_API_KEY,
   authDomain: import.meta.env.VITE_FIREBASE_AUTH_DOMAIN,
   projectId: import.meta.env.VITE_FIREBASE_PROJECT_ID,
@@ -9,4 +9,9 @@ export const app = initializeApp({
   messagingSenderId: import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID,
   appId: import.meta.env.VITE_FIREBASE_APP_ID,
   measurementId: import.meta.env.VITE_FIREBASE_MEASUREMENT_ID
-});
+};
+
+// Only initialize Firebase if projectId is configured
+export const app: FirebaseApp | undefined = firebaseConfig.projectId
+  ? initializeApp(firebaseConfig)
+  : undefined;
