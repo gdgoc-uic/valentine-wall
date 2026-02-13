@@ -12,7 +12,7 @@ func TestDepartmentsEndpoint(t *testing.T) {
 	app, _ := tests.NewTestApp()
 	defer app.Cleanup()
 
-	req := httptest.NewRequest(http.MethodGet, "/departments", nil)
+	_ = httptest.NewRequest(http.MethodGet, "/departments", nil)
 	res := httptest.NewRecorder()
 
 	// This test assumes the route is set up

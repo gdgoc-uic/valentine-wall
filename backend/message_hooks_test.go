@@ -174,3 +174,118 @@ func TestOnBeforeAddMessage_InsufficientFunds(t *testing.T) {
 		t.Error("Expected insufficient funds error, got nil")
 	}
 }
+
+func TestOnAddMessageReply_RepliesCountIncremented(t *testing.T) {
+	app := newTestApp(t)
+	defer app.Cleanup()
+
+	dao := app.Dao()
+
+	// Create auth user (sender of the reply)
+	userCollection, _ := dao.FindCollectionByNameOrId("users")
+	authUser := models.NewRecord(userCollection)
+	dao.SaveRecord(authUser)
+
+	// Create user_details for the reply sender
+	userDetailsCollection, _ := dao.FindCollectionByNameOrId("user_details")
+	senderDetails := models.NewRecord(userDetailsCollection)
+	senderDetails.Set("user", authUser.Id)
+	senderDetails.Set("student_id", "202099990001")
+	dao.SaveRecord(senderDetails)
+
+	// Create wallet with enough balance for the reply sender
+	walletCollection, _ := dao.FindCollectionByNameOrId("virtual_wallets")
+	senderWallet := models.NewRecord(walletCollection)
+	senderWallet.Set("user", authUser.Id)
+	senderWallet.Set("balance", 1000.0)
+	dao.SaveRecord(senderWallet)
+
+	// Create the original message (the one being replied to)
+	messageCollection, _ := dao.FindCollectionByNameOrId("messages")
+	message := models.NewRecord(messageCollection)
+	message.Set("content", "Original message")
+	message.Set("recipient", "202099990001")
+	message.Set("replies_count", 0)
+	dao.SaveRecord(message)
+
+	// Create the reply record
+	replyCollection, _ := dao.FindCollectionByNameOrId("message_replies")
+	reply := models.NewRecord(replyCollection)
+	reply.Set("content", "This is a reply")
+	reply.Set("sender", senderDetails.Id)
+	reply.Set("message", message.Id)
+	dao.SaveRecord(reply)
+
+	e := &core.RecordCreateEvent{
+		Record: reply,
+	}
+
+	err := onAddMessageReply(app, e)
+	if err != nil {
+		t.Fatalf("onAddMessageReply failed: %v", err)
+	}
+
+	// Reload the message and verify replies_count was incremented
+	updatedMsg, err := dao.FindRecordById("messages", message.Id)
+	if err != nil {
+		t.Fatalf("Failed to find updated message: %v", err)
+	}
+
+	if updatedMsg.GetInt("replies_count") != 1 {
+		t.Errorf("Expected replies_count to be 1, got %d", updatedMsg.GetInt("replies_count"))
+	}
+}
+
+func TestOnRemoveMessageReply_RepliesCountDecremented(t *testing.T) {
+	app := newTestApp(t)
+	defer app.Cleanup()
+
+	dao := app.Dao()
+
+	// Create auth user
+	userCollection, _ := dao.FindCollectionByNameOrId("users")
+	authUser := models.NewRecord(userCollection)
+	dao.SaveRecord(authUser)
+
+	// Create user_details for the sender
+	userDetailsCollection, _ := dao.FindCollectionByNameOrId("user_details")
+	senderDetails := models.NewRecord(userDetailsCollection)
+	senderDetails.Set("user", authUser.Id)
+	senderDetails.Set("student_id", "202099990002")
+	dao.SaveRecord(senderDetails)
+
+	// Create the original message with replies_count = 1
+	messageCollection, _ := dao.FindCollectionByNameOrId("messages")
+	message := models.NewRecord(messageCollection)
+	message.Set("content", "Original message")
+	message.Set("recipient", "202099990002")
+	message.Set("replies_count", 1)
+	dao.SaveRecord(message)
+
+	// Create the reply record
+	replyCollection, _ := dao.FindCollectionByNameOrId("message_replies")
+	reply := models.NewRecord(replyCollection)
+	reply.Set("content", "Reply to delete")
+	reply.Set("sender", senderDetails.Id)
+	reply.Set("message", message.Id)
+	dao.SaveRecord(reply)
+
+	e := &core.RecordDeleteEvent{
+		Record: reply,
+	}
+
+	err := onRemoveMessageReply(dao, e)
+	if err != nil {
+		t.Fatalf("onRemoveMessageReply failed: %v", err)
+	}
+
+	// Reload the message and verify replies_count was decremented
+	updatedMsg, err := dao.FindRecordById("messages", message.Id)
+	if err != nil {
+		t.Fatalf("Failed to find updated message: %v", err)
+	}
+
+	if updatedMsg.GetInt("replies_count") != 0 {
+		t.Errorf("Expected replies_count to be 0, got %d", updatedMsg.GetInt("replies_count"))
+	}
+}

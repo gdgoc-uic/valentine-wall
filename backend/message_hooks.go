@@ -4,7 +4,6 @@ import (
 	"fmt"
 
 	"github.com/pocketbase/dbx"
-	"github.com/pocketbase/pocketbase"
 	"github.com/pocketbase/pocketbase/apis"
 	"github.com/pocketbase/pocketbase/core"
 	"github.com/pocketbase/pocketbase/daos"
@@ -122,7 +121,7 @@ func onBeforeAddMessage(dao *daos.Dao, e *core.RecordCreateEvent) error {
 	return checkSufficientFunds(dao, user.GetString("user"), sendPrice+totalAmount)
 }
 
-func onAddMessage(app *pocketbase.PocketBase, e *core.RecordCreateEvent) error {
+func onAddMessage(app core.App, e *core.RecordCreateEvent) error {
 	dao := app.Dao()
 	expandMessage(dao, e.Record)
 
@@ -194,7 +193,7 @@ func onRemoveMessage(dao *daos.Dao, e *core.RecordDeleteEvent) error {
 	return nil
 }
 
-func onAddMessageReply(app *pocketbase.PocketBase, e *core.RecordCreateEvent) error {
+func onAddMessageReply(app core.App, e *core.RecordCreateEvent) error {
 	dao := app.Dao()
 	expandMessageReply(dao, e.Record)
 	user := e.Record.Expand()["sender"].(*models.Record)
@@ -210,14 +209,14 @@ func onAddMessageReply(app *pocketbase.PocketBase, e *core.RecordCreateEvent) er
 		msg.Set("replies_count", msg.GetInt("replies_count")+1)
 		passivePrintError(dao.SaveRecord(msg))
 		expandMessage(dao, msg)
-		recipient, isRecipientAccessible := e.Record.Expand()["recipient"].(*models.Record)
+		recipient, isRecipientAccessible := msg.Expand()["recipient"].(*models.Record)
 		if isRecipientAccessible {
-			if msg, err := emailTemplates.reply.With(map[string]any{
+			if mailMsg, err := emailTemplates.reply.With(map[string]any{
 				"Email":       recipient.GetString("email"),
 				"RecipientID": msg.GetString("recipient"),
 				"MessageURL":  fmt.Sprintf("%s/wall/%s/%s", frontendUrl, msg.GetString("recipient"), e.Record.Id),
 			}).Message(app.Settings().Meta, recipient.GetString("email")); err == nil {
-				passivePrintError(app.NewMailClient().Send(msg))
+				passivePrintError(app.NewMailClient().Send(mailMsg))
 			}
 		}
 	}
